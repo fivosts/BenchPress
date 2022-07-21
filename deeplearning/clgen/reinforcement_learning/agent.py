@@ -359,12 +359,12 @@ class Agent(object):
         l.logger().warn(lm_indices)
 
         # Input tensors.
-        lm_feature_ids  = torch.index_select(feature_ids, 0, lm_indices)
-        lm_feature_mask = lm_feature_ids != self.feature_tokenizer.padToken
-        lm_feat_pos_ids = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
-        lm_input_ids    = torch.index_select(masked_input_ids, 0, lm_indices)
-        lm_input_mask   = lm_input_ids != self.tokenizer.padToken
-        lm_pos_ids      = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
+        lm_feature_ids   = torch.index_select(feature_ids, 0, lm_indices)
+        lm_feature_mask  = lm_feature_ids != self.feature_tokenizer.padToken
+        lm_feat_pos_ids  = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
+        lm_input_ids     = torch.index_select(masked_input_ids, 0, lm_indices)
+        lm_input_mask    = lm_input_ids != self.tokenizer.padToken
+        lm_input_pos_ids = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
 
         l.logger().warn("Fifth checkpoint: LM inputs")
         l.logger().warn(lm_feature_ids.shape)
@@ -372,7 +372,7 @@ class Agent(object):
         l.logger().warn(lm_feat_pos_ids.shape)
         l.logger().warn(lm_input_ids.shape)
         l.logger().warn(lm_input_mask.shape)
-        l.logger().warn(lm_pos_ids.shape)
+        l.logger().warn(lm_input_pos_ids.shape)
 
         # Run the token actor, get token logits.
         step_token_logits = self.token_actor(
@@ -381,7 +381,7 @@ class Agent(object):
           encoder_position_ids = lm_feat_pos_ids.to(pytorch.device),
           decoder_input_ids    = lm_input_ids.to(pytorch.device),
           decoder_input_mask   = lm_input_mask.to(pytorch.device),
-          decoder_position_ids = lm_pos_ids.to(pytorch.device),
+          decoder_position_ids = lm_input_pos_ids.to(pytorch.device),
         )['token_logits']
         # Keep the prediction scores only for the masked token.
         step_token_logits = torch.index_select(step_token_logits, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0])
@@ -392,7 +392,7 @@ class Agent(object):
           encoder_position_ids = lm_feat_pos_ids.to(pytorch.device),
           decoder_input_ids    = lm_input_ids.to(pytorch.device),
           decoder_input_mask   = lm_input_mask.to(pytorch.device),
-          decoder_position_ids = lm_pos_ids.to(pytorch.device),
+          decoder_position_ids = lm_input_pos_ids.to(pytorch.device),
         )['token_logits']
         # Get the critic's value only for masked index.
         step_token_values = torch.index_select(step_token_values, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0])
