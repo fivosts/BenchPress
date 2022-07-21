@@ -66,8 +66,10 @@ class Agent(object):
                ):
 
     self.cache_path = cache_path / "agent"
+    self.ckpt_path  = self.cache_path / "checkpoint"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
+      self.ckpt_path.mkdir(exist_ok = True, parents = True)
 
     self.config            = config
     self.language_model    = language_model
@@ -121,9 +123,12 @@ class Agent(object):
 
     for ep in range(num_epochs):
       # Run a batch of episodes.
-      batch_states, batch_actions, action_batch_rtgs, token_batch_rtgs, batch_lens = self.new_rollout(
+      action_values, action_predictions, action_policy_probs,\
+      token_values, token_predictions, token_policy_probs,\
+      use_lm, rewards, discounted_rewards, done = self.new_rollout(
         env, num_episodes, steps_per_episode, gamma,
       )
+
       input()
       # Compute Advantage at k_th iteration.
       (V_act, _, _), (V_tok, _, _) = self.evaluate_policy(batch_states, batch_actions)
