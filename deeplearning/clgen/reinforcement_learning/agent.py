@@ -105,15 +105,15 @@ class Agent(object):
     """
     Run PPO over policy and train the agent.
     """
-    actor_optim = {
-      'action': torch.optim.Adam(self.actor.action_parameters, lr = lr),
-      'token' : torch.optim.Adam(self.actor.token_parameters,  lr = lr),
-    }
+    # actor_optim = {
+    #   'action': torch.optim.Adam(self.actor.action_parameters, lr = lr),
+    #   'token' : torch.optim.Adam(self.actor.token_parameters,  lr = lr),
+    # }
 
-    critic_optim = {
-      'action': torch.optim.Adam(self.critic.action_parameters, lr = lr),
-      'token' : torch.optim.Adam(self.critic.token_parameters,  lr = lr),
-    }
+    # critic_optim = {
+    #   'action': torch.optim.Adam(self.critic.action_parameters, lr = lr),
+    #   'token' : torch.optim.Adam(self.critic.token_parameters,  lr = lr),
+    # }
 
     # self.action_cov_var = torch.full(size = (self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE),), fill_value = 0.5)
     # self.action_cov_mat = torch.diag(self.action_cov_var)
@@ -239,7 +239,7 @@ class Agent(object):
     # Action, token predictions and probs, critic values.
     action_predictions  = torch.zeros((num_episodes, steps_per_episode, self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE)), dtype = torch.long)
     action_policy_probs = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    action_values       = torch.zeros((num_episodes, steps_per_episode), 0.0, dtype = torch.float32,)
+    action_values       = torch.zeros((num_episodes, steps_per_episode), 0.0, dtype = torch.float32)
     token_predictions   = torch.zeros((num_episodes, steps_per_episode, self.tokenizer.vocab_size), dtype = torch.long)
     token_policy_probs  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
     token_values        = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
