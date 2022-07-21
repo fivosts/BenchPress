@@ -263,7 +263,7 @@ class Agent(object):
         decoder_input_ids    = input_ids.to(pytorch.device),
         decoder_input_mask   = input_mask.to(pytorch.device),
         decoder_position_ids = input_pos.to(pytorch.device),
-      )
+      )['action_logits']
       step_action_values = self.action_critic(
         encoder_feature_ids  = feature_ids.to(pytorch.device),
         encoder_feature_mask = feature_mask.to(pytorch.device),
@@ -271,11 +271,11 @@ class Agent(object):
         decoder_input_ids    = input_ids.to(pytorch.device),
         decoder_input_mask   = input_mask.to(pytorch.device),
         decoder_position_ids = input_pos.to(pytorch.device),
-      )
+      )['action_logits']
       # Batch action ids.
       step_actions = self.policy.SampleActions(step_action_logits)
       # Batch probabilities for selected actions.
-      step_action_probs = torch.index_select(step_action_logits, 0, step_actions)
+      step_action_probs = torch.index_select(step_action_logits, -1, step_actions)
 
       ## Find which sequences need to sample a token.
       step_use_lm, lm_input_ids = env.intermediate_step(input_ids, step_actions)
@@ -283,7 +283,7 @@ class Agent(object):
       if len(lm_input_ids) > 0:
         lm_indices = torch.where(step_use_lm == True)
 
-        lm_feature_ids  = torch.index_select(feature_ids, 0, lm_indices)
+        lm_feature_ids  = torch.index_select(feature_ids, -1, lm_indices)
         lm_feature_mask = lm_feature_ids != self.feature_tokenizer.padToken
         lm_pos_ids      = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
 
@@ -297,7 +297,8 @@ class Agent(object):
           decoder_input_ids    = lm_input_ids.to(pytorch.device),
           decoder_input_mask   = lm_input_mask.to(pytorch.device),
           decoder_position_ids = lm_pos_ids.to(pytorch.device),
-        )
+        )['token_logits']
+        step_token_logits = torch.index_select(step_token_logits, -1, torch.where(lm_input_ids == self.tokenizer.holeToken))
         step_token_values = self.token_critic(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
           encoder_feature_mask = lm_feature_mask.to(pytorch.device),
@@ -305,9 +306,10 @@ class Agent(object):
           decoder_input_ids    = lm_input_ids.to(pytorch.device),
           decoder_input_mask   = lm_input_mask.to(pytorch.device),
           decoder_position_ids = lm_pos_ids.to(pytorch.device),
-        )
+        )['token_logits']
+        step_token_values = torch.index_select(step_token_values, -1, torch.where(lm_input_ids == self.tokenizer.holeToken))
         step_tokens = self.policy.SampleTokens(step_token_logits)
-        step_token_probs = torch.index_select(step_token_logits, 0, step_tokens)
+        step_token_probs = torch.index_select(step_token_logits, -1, step_tokens)
         ## Save token data to rollout buffers.
         # First extend to original dimensions.
         augmented_step_token_values = torch.zeros((num_episodes), dtype = torch.float32)
