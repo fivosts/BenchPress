@@ -140,24 +140,21 @@ class Agent(object):
       else:
         A_k_token = None
 
-      print("Back from eval policy.")
-      print(A_k_action)
-      print(A_k_token)
-
       # Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
       # our advantages and makes convergence much more stable and faster. I added this because
       # solving some environments was too unstable without it.
       if A_k_action is not None:
         A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
+        A_k_action = torch.reshape(A_k_action, (-1, 1)).repeat(1, self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE))
       if A_k_token is not None:
         A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
-
-      rollout_act_labels = torch.LongTensor([a.indexed_action for a in batch_actions if a.indexed_action is not None])
-      rollout_tok_labels = torch.LongTensor([a.token for a in batch_actions if a.token is not None])
+      
+      rollout_act_probs = torch.LongTensor([[float(x) for x in a.action_logits.squeeze(0)] for a in batch_actions if a.indexed_action is not None])
+      rollout_tok_probs = torch.LongTensor([[float(x) for x in a.token_logits.squeeze(0)] for a in batch_actions if a.token is not None])
 
       for i in range(num_updates_per_batch):
         # Calculate V_phi and pi_theta(a_t | s_t)
-        (V_act, action_probs, old_act_labels), (V_tok, token_probs, old_tok_labels) = self.evaluate_policy(batch_states, batch_actions)
+        (V_act, action_logits, old_act_labels), (V_tok, token_logits, old_tok_labels) = self.evaluate_policy(batch_states, batch_actions)
 
         # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
         # NOTE: we just subtract the logs, which is the same as
@@ -166,8 +163,8 @@ class Agent(object):
         # here's a great explanation: 
         # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
         # TL;DR makes gradient ascent easier behind the scenes.
-        if action_probs is not None:
-          act_ratios = torch.exp(action_probs - rollout_act_labels)
+        if action_logits is not None:
+          act_ratios = torch.exp(action_logits - rollout_act_probs)
           # Calculate surrogate losses.
           act_surr1 = act_ratios * A_k_action
           act_surr2 = torch.clamp(act_surr1, 1 - clip, 1 + clip) * A_k_action
@@ -179,12 +176,6 @@ class Agent(object):
           act_critic_loss = torch.nn.MSELoss()(V_act, action_batch_rtgs)
           action_loss.requires_grad = True
           act_critic_loss.requires_grad = True
-          print(action_probs)
-          print(rollout_act_labels)
-          print(action_probs - rollout_act_labels)
-          print(act_ratios)
-          print(act_surr1)
-          print(act_surr2)
           print(action_loss.item())
           print(act_critic_loss.item())
           # Calculate gradients and perform backward propagation for actor network
@@ -195,8 +186,8 @@ class Agent(object):
           critic_optim['action'].zero_grad()
           act_critic_loss.backward(retain_graph = True)
           critic_optim['action'].step()
-        if token_probs is not None:
-          tok_ratios = torch.exp(token_probs - rollout_tok_labels)
+        if token_logits is not None:
+          tok_ratios = torch.exp(token_logits - rollout_tok_probs)
           # Calculate surrogate losses.
           tok_surr1 = tok_ratios * A_k_token
           tok_surr2 = torch.clamp(tok_surr1, 1 - clip, 1 + clip) * A_k_token
@@ -216,6 +207,118 @@ class Agent(object):
           critic_optim['token'].step()
 
     return
+
+  def new_rollout(self, env, num_episodes, steps_per_episode, gamma):
+    """
+    TODO
+    """
+    """
+    1. Initialize all tensors [(num_episodes x batch_size?) x steps_per_episode x state_tensor_size]
+
+    2. for step in steps_per_episode:
+      a) slice state tensor
+      b) slice action tensor
+      c) Pass through model
+      d) env.step and assign new state to state tensor.
+      e) Compute rewards and rtgs.
+    """
+    ## Reset the environment.
+    state = env.reset()
+    self.action_actor.eval()
+    self.action_critic.eval()
+    self.token_actor.eval()
+    self.token_critic.eval()
+    seq_len, feat_seq_len = len(state.encoded_code), len(state.encoded_features)
+    ## Create state and action tensors.
+    # State workload inputs.
+    batch_feature_ids   = torch.zeros((num_episodes, steps_per_episode, feat_seq_len), dtype = torch.long)
+    batch_input_ids     = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
+    # Action, token predictions and probs, critic values.
+    action_predictions  = torch.zeros((num_episodes, steps_per_episode, self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE)), dtype = torch.long)
+    action_policy_probs = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    action_values       = torch.zeros((num_episodes, steps_per_episode), 0.0, dtype = torch.float32,)
+    token_predictions   = torch.zeros((num_episodes, steps_per_episode, self.tokenizer.vocab_size), dtype = torch.long)
+    token_policy_probs  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    token_values        = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    use_lm              = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
+    ## Reward placeholders.
+    rewards             = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    discounted_rewards  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    done                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
+    ## Run execution loop.
+    for step in range(steps_per_episode):
+      ## This loop unfolds all batch_size trajectories.
+      feature_ids  = batch_feature_ids[:, step]
+      feature_mask = feature_ids != self.feature_tokenizer.padToken
+      feature_pos  = torch.arange(feat_seq_len, dtype = torch.long)
+      input_ids    = batch_input_ids[:, step]
+      input_mask   = input_ids != self.tokenizer.padToken
+      input_pos    = torch.arange(seq_len, dtype = torch.long)
+
+      l.logger().warn("Insert apply_normalizer here to state if step > 0")
+
+      # Run models.
+      step_action_logits = self.action_actor(
+        encoder_feature_ids  = feature_ids.to(pytorch.device),
+        encoder_feature_mask = feature_mask.to(pytorch.device),
+        encoder_position_ids = feature_pos.to(pytorch.device),
+        decoder_input_ids    = input_ids.to(pytorch.device),
+        decoder_input_mask   = input_mask.to(pytorch.device),
+        decoder_position_ids = input_pos.to(pytorch.device),
+      )
+      step_action_values = self.action_critic(
+        encoder_feature_ids  = feature_ids.to(pytorch.device),
+        encoder_feature_mask = feature_mask.to(pytorch.device),
+        encoder_position_ids = feature_pos.to(pytorch.device),
+        decoder_input_ids    = input_ids.to(pytorch.device),
+        decoder_input_mask   = input_mask.to(pytorch.device),
+        decoder_position_ids = input_pos.to(pytorch.device),
+      )
+      # Batch action ids.
+      step_actions = self.policy.SampleActions(step_action_logits)
+      # Batch probabilities for selected actions.
+      step_action_probs = torch.index_select(step_action_logits, 0, step_actions)
+
+      ## Find which sequences need to sample a token.
+      step_use_lm, step_lm_input_ids = env.intermediate_step(input_ids, step_actions)
+      # step_lm_input_ids are already reduced to the indices where step_use_lm is True.
+      if len(step_lm_input_ids) > 0:
+        lm_indices = torch.where(step_use_lm == True)
+        step_lm_feature_ids = torch.index_select(feature_ids, 0, lm_indices)
+        step_token_logits = self.token_actor(
+          ## TODO
+        )
+        step_token_values = self.token_critic(
+          ## TODO
+        )
+        step_tokens = self.policy.SampleTokens(step_token_logits)
+        step_token_probs = torch.index_select(step_token_logits, 0, step_tokens)
+        ## Save token data to rollout buffers.
+        # First extend to original dimensions.
+        augmented_step_token_values = torch.zeros((num_episodes), dtype = torch.float32)
+        augmented_step_tokens       = torch.zeros((num_episodes), dtype = torch.long)
+        augmented_step_token_probs  = torch.zeros((num_episodes), dtype = torch.float32)
+        for nidx, lm_idx in zip(range(step_tokens.shape[0]), lm_indices):
+          augmented_step_token_values[lm_idx] = step_token_values[nidx]
+          augmented_step_tokens[lm_idx]       = step_tokens[nidx]
+          augmented_step_token_probs[lm_idx]  = step_token_probs[nidx]
+        # Assign to wherever need be assigned.
+        token_values      [:, step] = augmented_step_token_values.detach().cpu()
+        token_predictions [:, step] = augmented_step_tokens.detach().cpu()
+        token_policy_probs[:, step] = augmented_step_token_probs.detach().cpu()
+
+      ## Step environment and compute rewards.
+      l.logger().warn("Warning, you must also step the states.")
+      reward, discounted_reward, d = env.step(step_actions, step_tokens, use_lm)
+
+      ## Save data to rollout buffers.
+      action_values      [:, step] = step_action_values.detach().cpu()
+      action_predictions [:, step] = step_actions.detach().cpu()
+      action_policy_probs[:, step] = step_action_probs.detach().cpu()
+      use_lm             [:, step] = step_use_lm
+      rewards            [:, step] = reward
+      discounted_rewards [:, step] = discounted_reward
+      done               [:, step] = done
 
   def rollout(self,
               env                       : env.Environment,
@@ -305,8 +408,8 @@ class Agent(object):
     """
     # Query critic network for a value V for each batch_obs. Shape of V should be same as batch_rtgs
     V_actions, V_tokens = [], []
-    old_action_probs, old_token_probs = [], []
-    action_probs, token_probs = [], []
+    old_action_logits, old_token_logits = [], []
+    action_logits, token_logits = [], []
 
     for state, action in tqdm.tqdm(zip(states, actions), total = len(states), desc = "Evaluate Policy"):
 
@@ -315,9 +418,9 @@ class Agent(object):
       critic_logits  = self.critic.SampleAction(state)
 
       ## Store a) critic values, b) updated batch action log probs, c) old log probs to batch.
-      V_actions       .append(critic_logits['action_logits'].cpu())
-      action_probs    .append([float(x) for x in updated_action.action_probs.squeeze(0)])
-      old_action_probs.append([float(x) for x in action.action_probs.squeeze(0)])
+      V_actions        .append(critic_logits['action_logits'].cpu())
+      action_logits    .append([float(x) for x in updated_action.action_logits.squeeze(0)])
+      old_action_logits.append([float(x) for x in action.action_logits.squeeze(0)])
 
       ## If there was any meaningful token addition.
       if updated_action.token_logits is not None:
@@ -325,28 +428,30 @@ class Agent(object):
           state, updated_action.index, self.tokenizer, self.feature_tokenizer,
         )
         V_tokens       .append(critic_logits['token_logits'][:,updated_action.index].cpu())
-        token_probs    .append([float(x) for x in updated_action.token_probs.squeeze(0)])
-        old_token_probs.append([float(x) for x in action.token_probs.squeeze(0)])
+        token_logits    .append([float(x) for x in updated_action.token_logits.squeeze(0)])
+        if action.token_logits is not None:
+          old_token_logits.append([float(x) for x in action.token_logits.squeeze(0)])
 
-    if len(old_action_probs) > 0:
+    if len(old_action_logits) > 0:
       V_actions        = torch.FloatTensor(V_actions)
-      action_probs     = torch.FloatTensor(action_probs)
-      old_action_probs = torch.FloatTensor(old_action_probs)
+      action_logits     = torch.FloatTensor(action_logits)
+      old_action_logits = torch.FloatTensor(old_action_logits)
     else:
       V_actions        = None
-      action_probs     = None
-      old_action_probs = None
+      action_logits     = None
+      old_action_logits = None
     
-    if len(old_token_probs) > 0:
-      token_probs     = torch.FloatTensor(token_probs)
-      old_token_probs = torch.FloatTensor(old_token_probs)
+    if len(old_token_logits) > 0:
+      token_logits     = torch.FloatTensor(token_logits)
+      old_token_logits = torch.FloatTensor(old_token_logits)
     else:
       V_tokens        = None
-      token_probs     = None
-      old_token_probs = None
+      token_logits     = None
+      old_token_logits = None
+    print(action_logits.shape)
     # Return the value vector V of each observation in the batch
     # and log probabilities log_probs of each action in the batch
-    return (V_actions, action_probs, old_action_probs), (V_tokens, token_probs, old_token_probs)
+    return (V_actions, action_logits, old_action_logits), (V_tokens, token_logits, old_token_logits)
 
   def make_action(self, state: interactions.State) -> interactions.Action:
     """
@@ -367,6 +472,7 @@ class Agent(object):
           state, action_index, self.tokenizer, self.feature_tokenizer
         )
         token_logits = logits['token_logits'][:,action_index]
+        token_probs  = logits['token_probs'][:,action_index]
         token        = self.policy.SelectToken(token_logits).cpu()
         token_logits = token_logits.cpu()
         comment      += ", index: {}, token: '{}'".format(action_index, self.tokenizer.decoder[int(token)])
@@ -403,11 +509,11 @@ class Agent(object):
       action         = action_type,
       index          = action_index,
       indexed_action = indexed_action,
-      action_logits  = action_logits,
       action_probs   = action_probs,
+      action_logits  = action_logits,
       token          = token,
-      token_logits   = token_logits,
       token_probs    = token_probs,
+      token_logits   = token_logits,
       comment        = comment,
     )
 
