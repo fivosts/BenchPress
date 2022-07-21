@@ -29,7 +29,7 @@ class Policy(object):
     self.token_temperature  = token_temp
     return
 
-  def SelectAction(self, action_logits: torch.FloatTensor) -> typing.Tuple[int, int]:
+  def SampleActions(self, action_logits: torch.FloatTensor) -> typing.Tuple[int, int]:
     """
     Get the Q-Values for action and apply policy on it.
     """
@@ -38,11 +38,10 @@ class Policy(object):
         logits = action_logits,
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
-    likely = torch.argmax(ct, dim = -1)
-    action, index = likely % len(interactions.ACTION_TYPE_SPACE), likely // len(interactions.ACTION_TYPE_SPACE)
-    return int(action), int(index), int(likely)
+    actions = torch.argmax(ct, dim = -1)
+    return actions
 
-  def SelectToken(self, token_logits: torch.FloatTensor) -> int:
+  def SampleTokens(self, token_logits: torch.FloatTensor) -> int:
     """
     Get logit predictions for token and apply policy on it.
     """
@@ -51,7 +50,8 @@ class Policy(object):
         logits = token_logits,
         validate_args = False if "1.9." in torch.__version__ else None,
       ).sample()
-    return torch.argmax(ct, dim = -1)
+    tokens = torch.argmax(ct, dim = -1)
+    return tokens
 
 class Agent(object):
   """
