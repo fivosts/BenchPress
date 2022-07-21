@@ -326,7 +326,12 @@ class Agent(object):
 
       ## Step environment and compute rewards.
       l.logger().warn("Warning, you must also step the states.")
-      reward, discounted_reward, d = env.step(step_actions, step_tokens, use_lm)
+      reward, discounted_reward, d = env.step(
+        input_ids,
+        step_actions,
+        step_tokens,
+        use_lm
+      )
 
       ## Save data to rollout buffers.
       action_values      [:, step] = step_action_values.detach().cpu()
