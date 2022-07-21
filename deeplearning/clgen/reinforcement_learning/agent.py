@@ -239,7 +239,7 @@ class Agent(object):
     # Action, token predictions and probs, critic values.
     action_predictions  = torch.zeros((num_episodes, steps_per_episode, self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE)), dtype = torch.long)
     action_policy_probs = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    action_values       = torch.zeros((num_episodes, steps_per_episode), 0.0, dtype = torch.float32)
+    action_values       = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
     token_predictions   = torch.zeros((num_episodes, steps_per_episode, self.tokenizer.vocab_size), dtype = torch.long)
     token_policy_probs  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
     token_values        = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
