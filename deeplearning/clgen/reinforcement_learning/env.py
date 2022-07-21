@@ -96,7 +96,9 @@ class Environment(gym.Env):
         new_code = code[:code.shape[0]]
         lm_input_ids[idx] = new_code
       elif act_type == interactions.interactions.ACTION_TYPE_SPACE['REPLACE']:
-        lm_input_ids[idx][act_index] = self.tokenizer.holeToken
+        new_code            = code
+        new_code[act_index] = self.tokenizer.holeToken
+        lm_input_ids[idx]   = new_code
     return use_lm, lm_input_ids
 
   def new_step(self,
