@@ -97,7 +97,7 @@ class Environment(gym.Env):
         lm_input_ids[idx] = new_code
       elif act_type == interactions.interactions.ACTION_TYPE_SPACE['REPLACE']:
         lm_input_ids[idx][act_index] = self.tokenizer.holeToken
-    return use_lm, torch.index_select(lm_input_ids, -1, torch.where(use_lm == True))
+    return use_lm, lm_input_ids
 
   def new_step(self,
                state_code   : torch.LongTensor,
