@@ -250,10 +250,10 @@ class Agent(object):
       ## This loop unfolds all batch_size trajectories.
       feature_ids  = batch_feature_ids[:, step]
       feature_mask = feature_ids != self.feature_tokenizer.padToken
-      feature_pos  = torch.arange(feat_seq_len, dtype = torch.long)
+      feature_pos  = torch.arange(feat_seq_len, dtype = torch.long).repeat(feature_ids.shape[0], 1)
       input_ids    = batch_input_ids[:, step]
       input_mask   = input_ids != self.tokenizer.padToken
-      input_pos    = torch.arange(seq_len, dtype = torch.long)
+      input_pos    = torch.arange(seq_len, dtype = torch.long).repeat(input_ids.shape[0], 1)
 
       l.logger().warn("Insert apply_normalizer here to state if step > 0")
 
@@ -280,16 +280,33 @@ class Agent(object):
       step_action_probs = torch.index_select(step_action_logits, 0, step_actions)
 
       ## Find which sequences need to sample a token.
-      step_use_lm, step_lm_input_ids = env.intermediate_step(input_ids, step_actions)
+      step_use_lm, lm_input_ids = env.intermediate_step(input_ids, step_actions)
       # step_lm_input_ids are already reduced to the indices where step_use_lm is True.
-      if len(step_lm_input_ids) > 0:
+      if len(lm_input_ids) > 0:
         lm_indices = torch.where(step_use_lm == True)
-        step_lm_feature_ids = torch.index_select(feature_ids, 0, lm_indices)
+
+        lm_feature_ids  = torch.index_select(feature_ids, 0, lm_indices)
+        lm_feature_mask = lm_feature_ids != self.feature_tokenizer.padToken
+        lm_pos_ids      = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
+
+        lm_input_mask   = lm_input_ids != self.tokenizer.padToken
+        lm_pos_ids      = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
+
         step_token_logits = self.token_actor(
-          ## TODO
+          encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
+          encoder_feature_mask = lm_feature_mask.to(pytorch.device),
+          encoder_position_ids = lm_pos_ids.to(pytorch.device),
+          decoder_input_ids    = lm_input_ids.to(pytorch.device),
+          decoder_input_mask   = lm_input_mask.to(pytorch.device),
+          decoder_position_ids = lm_pos_ids.to(pytorch.device),
         )
         step_token_values = self.token_critic(
-          ## TODO
+          encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
+          encoder_feature_mask = lm_feature_mask.to(pytorch.device),
+          encoder_position_ids = lm_pos_ids.to(pytorch.device),
+          decoder_input_ids    = lm_input_ids.to(pytorch.device),
+          decoder_input_mask   = lm_input_mask.to(pytorch.device),
+          decoder_position_ids = lm_pos_ids.to(pytorch.device),
         )
         step_tokens = self.policy.SampleTokens(step_token_logits)
         step_token_probs = torch.index_select(step_token_logits, 0, step_tokens)
