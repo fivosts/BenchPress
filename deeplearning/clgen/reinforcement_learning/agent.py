@@ -414,7 +414,7 @@ class Agent(object):
     value_loss = 0.5 * torch.max(value_losses, value_losses_clipped)
 
     token_value_loss = value_loss.mean()
-    token_entropy_loss = torch.mean(new_action_entropy)
+    token_entropy_loss = torch.mean(new_token_entropy)
 
     # Compute the final loss and backward.
     token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coef * token_entropy_loss
