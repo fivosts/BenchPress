@@ -509,19 +509,19 @@ class Agent(object):
       discounted_rewards [:, step]   = traj_disc_rewards
       done               [:, step]   = d
     return (
-      batch_input_ids,       # source code states.
-      batch_masked_input_ids # Masked source code for the language model.
-      batch_feature_ids,     # Target feature vector state.
-      action_values,         # Critic action logits.
-      action_predictions,    # Actor sampled label actions.
-      action_policy_probs,   # Actor probabilities of sampled actions.
-      token_values,          # Critic token values.
-      token_predictions,     # Actor sampled label tokens.
-      token_policy_probs,    # Actor probabilities of sampled tokens.
-      use_lm,                # Indices of actions that  required language model.
-      rewards,               # Rewards of each step.
-      discounted_rewards,    # Discounted rewards of each step.
-      done,                  # Whether this step concludes the episode.
+      batch_input_ids,        # source code states.
+      batch_masked_input_ids, # Masked source code for the language model.
+      batch_feature_ids,      # Target feature vector state.
+      action_values,          # Critic action logits.
+      action_predictions,     # Actor sampled label actions.
+      action_policy_probs,    # Actor probabilities of sampled actions.
+      token_values,           # Critic token values.
+      token_predictions,      # Actor sampled label tokens.
+      token_policy_probs,     # Actor probabilities of sampled tokens.
+      use_lm,                 # Indices of actions that  required language model.
+      rewards,                # Rewards of each step.
+      discounted_rewards,     # Discounted rewards of each step.
+      done,                   # Whether this step concludes the episode.
     )
 
   def gae(self, rewards, action_values, token_values, use_lm, episode_ends, gamma, lam):
