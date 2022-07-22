@@ -351,10 +351,12 @@ class Agent(object):
     raise NotImplementedError("Now take care of the token model.")
     return
 
-  def rollout(self, env, num_episodes, steps_per_episode, gamma):
-    """
-    TODO
-    """
+  def rollout(self,
+              env               : env.Environment,
+              num_episodes      : int,
+              steps_per_episode : int,
+              gamma             : float,
+              ) -> typing.Tuple[torch.Tensor]:
     """
     1. Initialize all tensors [(num_episodes x batch_size?) x steps_per_episode x state_tensor_size]
 
