@@ -141,6 +141,9 @@ class Agent(object):
             clip              : float,
             lr                : float,
             lam               : float,
+            epsilon           : float,
+            value_loss_coeff  : float,
+            entropy_coef      : float,
             ) -> None:
     """
     Run PPO over policy and train the agent.
@@ -198,6 +201,9 @@ class Agent(object):
           end = (batch + 1) * batch_size
           # Step batch
           self.ppo_train_step(
+            epsilon,
+            value_loss_coeff,
+            entropy_coef,
             action_optim,
             token_optim,
             action_advantages   [start:end],
