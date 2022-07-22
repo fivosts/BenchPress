@@ -598,17 +598,6 @@ class Agent(object):
       done,                   # Whether this step concludes the episode.
     )
 
-  def apply_normalizer(self,
-                       rewards            : torch.FloatTensor,
-                       reward_normalizer  : RunningMeanStd,
-                       discounted_rewards : torch.FloatTensor,
-                       center : bool
-                       ) -> torch.FloatTensor:
-    """
-    Apply normalization to rewards.
-    """
-    return normalized_rewards
-
   def gae(self, rewards, action_values, token_values, use_lm, episode_ends, gamma, lam):
     """
     Compute generalized advantage estimate.
