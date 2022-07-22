@@ -236,13 +236,48 @@ class Agent(object):
                      token_values        : torch.FloatTensor,
                      action_predictions  : torch.LongTensor,
                      token_predictions   : torch.LongTensor,
+                     use_lm              : torch.BoolTensor,
                      input_ids           : torch.LongTensor,
+                     masked_input_ids    : torch.LongTensor,
                      feature_ids         : torch.LongTensor,
                      action_policy_probs : torch.FloatTensor,
                      token_policy_probs  : torch.FloatTensor,
                      ) -> None:
     """
     Run a batch through PPO training.
+    Inputs:
+      action_optim:
+        Adam optimizer that handles action actor and critic.
+      token_optim:
+        Adam optimizer that handles token actor and critic.
+      action_advantages:
+        Calculated advantages for action model.
+      token_advantages:
+        Calculated advantages for token model.
+      action_reward_to_go:
+        Aggregated rewards for actions trajectory.
+      token_reward_to_go:
+        Aggregated rewards for tokens trajectory.
+      action_values:
+        Predicted values by action critic.
+      token_values:
+        Predicted values by token critic.
+      action_predictions:
+        Predicted action labels by action actor.
+      token_predictions:
+        Predicted token labels by token actor.
+      use_lm:
+        Indices of states that used the language model.
+      input_ids:
+        Input code for the action model.
+      masked_input_ids:
+        Masked input code for the token model. Contains masked code where use_lm==True, zeros otherwise.
+      feature_ids:
+        Tokenized vector of target state features.
+      action_policy_probs:
+        Predicted action label's probability.
+      token_policy_probs:
+        Predicted token label's probability.
     """
     # Enable training mode for these little fuckers.
     self.action_actor.train()
@@ -304,8 +339,9 @@ class Agent(object):
     action_value_loss = value_loss.mean()
     action_entropy_loss = torch.mean(new_action_entropy)
 
-    loss = action_ppo_loss + value_loss_coeff * action_value_loss - entropy_coef * action_entropy_loss
-    loss.backward()
+    # Compute the final loss and backward.
+    action_loss = action_ppo_loss + value_loss_coeff * action_value_loss - entropy_coef * action_entropy_loss
+    action_loss.backward()
     torch.nn.utils.clip_grad_norm_(self.action_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
     action_optim.step()
@@ -502,6 +538,7 @@ class Agent(object):
     gae_step = np.zeros((N, ))
     action_advantages = np.zeros((N, T))
     token_advantages  = np.zeros((N, T))
+    l.logger().warn("You might need to mask out token delta when LM is not used.")
     for t in reversed(range(T - 1)):
       # First compute delta, which is the one-step TD error
       action_delta = rewards[:, t] + gamma * action_values[:, t + 1] * episode_ends[:, t] - action_values[:, t]
