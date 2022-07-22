@@ -152,7 +152,7 @@ class Agent(object):
       # Run a batch of episodes.
       input_ids, feature_ids, action_values, action_predictions, action_policy_probs,\
       token_values, token_predictions, token_policy_probs,\
-      use_lm, rewards, discounted_rewards, done = self.new_rollout(
+      use_lm, rewards, discounted_rewards, done = self.rollout(
         env, num_episodes, steps_per_episode, gamma,
       )
       action_advantages, token_advantages = self.gae(
@@ -213,90 +213,99 @@ class Agent(object):
             action_policy_probs [start:end],
             token_policy_probs  [start:end],
           )
-
-      raise NotImplementedError
-      # Compute Advantage at k_th iteration.
-      (V_act, _, _), (V_tok, _, _) = self.evaluate_policy(batch_states, batch_actions)
-
-
-      if V_act is not None:
-        A_k_action = action_batch_rtgs - V_act.detach()
-      else:
-        A_k_action = None
-      if V_tok is not None:
-        A_k_token = token_batch_rtgs - V_tok.detach()
-      else:
-        A_k_token = None
-
-      # Normalizing advantages isn't theoretically necessary, but in practice it decreases the variance of 
-      # our advantages and makes convergence much more stable and faster. I added this because
-      # solving some environments was too unstable without it.
-      if A_k_action is not None:
-        A_k_action = (A_k_action - A_k_action.mean()) / (A_k_action.std() + 1e-10)
-        A_k_action = torch.reshape(A_k_action, (-1, 1)).repeat(1, self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE))
-      if A_k_token is not None:
-        A_k_token  = (A_k_token - A_k_token.mean())   / (A_k_token.std() + 1e-10)
-      
-      rollout_act_probs = torch.LongTensor([[float(x) for x in a.action_logits.squeeze(0)] for a in batch_actions if a.indexed_action is not None])
-      rollout_tok_probs = torch.LongTensor([[float(x) for x in a.token_logits.squeeze(0)] for a in batch_actions if a.token is not None])
-
-      for i in range(num_updates_per_batch):
-        # Calculate V_phi and pi_theta(a_t | s_t)
-        (V_act, action_logits, old_act_labels), (V_tok, token_logits, old_tok_labels) = self.evaluate_policy(batch_states, batch_actions)
-
-        # Calculate the ratio pi_theta(a_t | s_t) / pi_theta_k(a_t | s_t)
-        # NOTE: we just subtract the logs, which is the same as
-        # dividing the values and then canceling the log with e^log.
-        # For why we use log probabilities instead of actual probabilities,
-        # here's a great explanation: 
-        # https://cs.stackexchange.com/questions/70518/why-do-we-use-the-log-in-gradient-based-reinforcement-algorithms
-        # TL;DR makes gradient ascent easier behind the scenes.
-        if action_logits is not None:
-          act_ratios = torch.exp(action_logits - rollout_act_probs)
-          # Calculate surrogate losses.
-          act_surr1 = act_ratios * A_k_action
-          act_surr2 = torch.clamp(act_surr1, 1 - clip, 1 + clip) * A_k_action
-          # Calculate actor and critic losses.
-          # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
-          # the performance function, but Adam minimizes the loss. So minimizing the negative
-          # performance function maximizes it.
-          action_loss = (-torch.min(act_surr1, act_surr2)).mean()
-          act_critic_loss = torch.nn.MSELoss()(V_act, action_batch_rtgs)
-          action_loss.requires_grad = True
-          act_critic_loss.requires_grad = True
-          print(action_loss.item())
-          print(act_critic_loss.item())
-          # Calculate gradients and perform backward propagation for actor network
-          actor_optim['action'].zero_grad()
-          action_loss.backward(retain_graph = True)
-          actor_optim['action'].step()
-          # Calculate gradients and perform backward propagation for critic network      
-          critic_optim['action'].zero_grad()
-          act_critic_loss.backward(retain_graph = True)
-          critic_optim['action'].step()
-        if token_logits is not None:
-          tok_ratios = torch.exp(token_logits - rollout_tok_probs)
-          # Calculate surrogate losses.
-          tok_surr1 = tok_ratios * A_k_token
-          tok_surr2 = torch.clamp(tok_surr1, 1 - clip, 1 + clip) * A_k_token
-          # Calculate actor and critic losses.
-          # NOTE: we take the negative min of the surrogate losses because we're trying to maximize
-          # the performance function, but Adam minimizes the loss. So minimizing the negative
-          # performance function maximizes it.
-          token_loss  = (-torch.min(tok_surr1, tok_surr2)).mean()
-          tok_critic_loss = torch.nn.MSELoss()(V_tok, token_batch_rtgs)
-          # Calculate gradients and perform backward propagation for actor network
-          actor_optim['token'].zero_grad()
-          token_loss.backward()
-          actor_optim['token'].step()
-          # Calculate gradients and perform backward propagation for critic network      
-          critic_optim['token'].zero_grad()
-          tok_critic_loss.backward()
-          critic_optim['token'].step()
-
+        # Probably here save the necessary checkpoints.
     return
 
-  def new_rollout(self, env, num_episodes, steps_per_episode, gamma):
+  def ppo_train_step(self,
+                     epsilon             : float,
+                     value_loss_coeff    : float,
+                     entropy_coef        : float,
+                     action_optim        : torch.optim.Adam,
+                     token_optim         : torch.optim.Adam,
+                     action_advantages   : torch.FloatTensor,
+                     token_advantages    : torch.FloatTensor,
+                     action_reward_to_go : torch.FloatTensor,
+                     token_reward_to_go  : torch.FloatTensor,
+                     action_values       : torch.FloatTensor,
+                     token_values        : torch.FloatTensor,
+                     action_predictions  : torch.LongTensor,
+                     token_predictions   : torch.LongTensor,
+                     input_ids           : torch.LongTensor,
+                     feature_ids         : torch.LongTensor,
+                     action_policy_probs : torch.FloatTensor,
+                     token_policy_probs  : torch.FloatTensor,
+                     ) -> None:
+    """
+    Run a batch through PPO training.
+    """
+    # Enable training mode for these little fuckers.
+    self.action_actor.train()
+    self.action_critic.train()
+    self.token_actor.train()
+    self.token_critic.train()
+
+    action_optim.zero_grad()
+    token_optim.zero_grad()
+
+    # Prepare model inputs.
+    feature_mask = feature_ids != self.feature_tokenizer.padToken
+    feature_pos  = torch.arange(feature_ids.shape[-1], dtype = torch.long).repeat(feature_ids.shape[0], 1)
+    input_mask   = feature_ids != self.feature_tokenizer.padToken
+    input_pos    = torch.arange(input_ids.shape[-1], dtype = torch.long).repeat(feature_ids.shape[0], 1)
+
+    # Run the batch again in actor/critic.
+    # Actor model returns logits of action.
+    new_action_logits = self.action_actor(
+      encoder_feature_ids  = feature_ids.to(pytorch.device),
+      encoder_feature_mask = feature_mask.to(pytorch.device),
+      encoder_position_ids = feature_pos.to(pytorch.device),
+      decoder_input_ids    = input_ids.to(pytorch.device),
+      decoder_input_mask   = input_mask.to(pytorch.device),
+      decoder_position_ids = input_pos.to(pytorch.device),
+    )['action_logits']
+    # Critic model returns value logit.
+    new_action_values = self.action_critic(
+      encoder_feature_ids  = feature_ids.to(pytorch.device),
+      encoder_feature_mask = feature_mask.to(pytorch.device),
+      encoder_position_ids = feature_pos.to(pytorch.device),
+      decoder_input_ids    = input_ids.to(pytorch.device),
+      decoder_input_mask   = input_mask.to(pytorch.device),
+      decoder_position_ids = input_pos.to(pytorch.device),
+    )['action_logits']
+    # Sample the most likely action.
+    step_actions = self.policy.SampleActions(new_action_logits)
+    # Collect the probability of said selected action, per episode.
+    new_action_probs = new_action_logits[(torch.arange(new_action_logits.shape[0]), step_actions)]
+    # Compute entropy of actions
+    new_action_entropy = torch.distributions.categorical.Categorical(logits = new_action_logits).entropy()
+    # Flatten the critic values.
+    new_action_values = new_action_values.flatten()
+
+    # Compute the PPO loss
+    action_prob_ratio = torch.exp(new_action_probs) / torch.exp(action_policy_probs)
+    a = action_prob_ratio * action_advantages
+    b = torch.clamp(action_prob_ratio, 1 - epsilon, 1 + epsilon) * action_advantages
+    action_ppo_loss = -1 * torch.mean(torch.min(a, b))
+
+    # Compute the value function loss
+    # Clipped loss - same idea as PPO loss, don't allow value to move too
+    # far from where it was previously
+    value_pred_clipped = action_values + (new_action_values - action_values).clamp(-epsilon, epsilon)
+    value_losses = (new_action_values - action_reward_to_go) ** 2
+    value_losses_clipped = (value_pred_clipped - action_reward_to_go) ** 2
+    value_loss = 0.5 * torch.max(value_losses, value_losses_clipped)
+
+    action_value_loss = value_loss.mean()
+    action_entropy_loss = torch.mean(new_action_entropy)
+
+    loss = action_ppo_loss + value_loss_coeff * action_value_loss - entropy_coef * action_entropy_loss
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(self.action_actor.parameters(), .5)
+    torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
+    action_optim.step()
+    return
+
+  def rollout(self, env, num_episodes, steps_per_episode, gamma):
     """
     TODO
     """
@@ -369,7 +378,7 @@ class Agent(object):
       # Sample the most likely action.
       step_actions = self.policy.SampleActions(step_action_logits)
       # Collect the probability of said selected action, per episode.
-      step_action_probs = step_action_logits[(torch.arange(step_action_logits.shape[0]), step_actions)] # torch.index_select(step_action_logits, -1, step_actions)
+      step_action_probs = step_action_logits[(torch.arange(step_action_logits.shape[0]), step_actions)]
 
       ## Find which sequences need to sample a token.
       step_use_lm, masked_input_ids = env.intermediate_step(input_ids, step_actions)
