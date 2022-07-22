@@ -247,7 +247,7 @@ class RLModel(object):
       lr                = lr,
       lam               = lam,
       epsilon           = epsilon,
-      value_loss_coef   = value_loss_coeff,
+      value_loss_coeff  = value_loss_coeff,
       entropy_coeff     = entropy_coeff,
     )
 
