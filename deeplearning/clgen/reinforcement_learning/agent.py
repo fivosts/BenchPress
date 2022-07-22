@@ -399,15 +399,29 @@ class Agent(object):
     # Flatten critic values.
     new_token_values  = new_token_values.flatten()
 
-    # Sample the most likely token.
-    raise NotImplementedError("TODO")
+    # Compute the PPO loss
+    token_prob_ratio = torch.exp(new_token_probs) / torch.exp(token_policy_probs)
+    a = token_prob_ratio * token_advantages
+    b = torch.clamp(token_prob_ratio, 1 - epsilon, 1 + epsilon) * token_advantages
+    token_ppo_loss = -1 * torch.mean(torch.min(a, b))
 
-    # Compute token PPO Loss
-    raise NotImplementedError("TODO")
+    # Compute the value function loss
+    # Clipped loss - same idea as PPO loss, don't allow value to move too
+    # far from where it was previously
+    value_pred_clipped = token_values + (new_token_values - token_values).clamp(-epsilon, epsilon)
+    value_losses = (new_token_values - token_reward_to_go) ** 2
+    value_losses_clipped = (value_pred_clipped - token_reward_to_go) ** 2
+    value_loss = 0.5 * torch.max(value_losses, value_losses_clipped)
 
-    # Compute the final loss and backward the optimizer
-    raise NotImplementedError("TODO")
+    token_value_loss = value_loss.mean()
+    token_entropy_loss = torch.mean(new_action_entropy)
 
+    # Compute the final loss and backward.
+    token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coef * token_entropy_loss
+    token_loss.backward()
+    torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
+    torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
+    token_optim.step()
     return
 
   def rollout(self,
