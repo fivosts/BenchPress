@@ -292,11 +292,13 @@ class Agent(object):
     action_optim.zero_grad()
     token_optim.zero_grad()
 
+    seq_len, feat_seq_len, batch_size = input_ids.shape[-1], feature_ids.shape[-1]
+
     # Prepare model inputs.
     feature_mask = feature_ids != self.feature_tokenizer.padToken
-    feature_pos  = torch.arange(feature_ids.shape[-1], dtype = torch.long).repeat(feature_ids.shape[0], 1)
+    feature_pos  = torch.arange(feat_seq_len, dtype = torch.long).repeat(batch_size, 1)
     input_mask   = feature_ids != self.feature_tokenizer.padToken
-    input_pos    = torch.arange(input_ids.shape[-1], dtype = torch.long).repeat(feature_ids.shape[0], 1)
+    input_pos    = torch.arange(seq_len, dtype = torch.long).repeat(batch_size, 1)
 
     # Run the batch again in actor/critic.
     # Actor model returns logits of action.
@@ -350,7 +352,62 @@ class Agent(object):
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
     action_optim.step()
 
-    raise NotImplementedError("Now take care of the token model.")
+    # Get the indices where use_lm is True.
+    lm_indices = torch.where(use_lm == True)[0]
+    # Prepare token model inputs.
+    lm_feature_ids  = torch.index_select(feature_ids, 0, lm_indices)
+    lm_feature_mask = lm_feature_ids != self.feature_tokenizer.padToken
+    lm_feat_pos_id  = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
+    lm_input_ids    = torch.index_select(input_ids, 0, lm_indices)
+    lm_input_mask   = lm_input_ids != self.tokenizer.padToken
+    lm_pos_id       = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
+
+    # Keep track of where [HOLE] reside.
+    ep_idx, seq_idx = torch.where(lm_input_ids == self.tokenizer.holeToken)
+
+    # Run the batch in actor/critic.
+    # The input indices are based on those the rollout action actor decided to use the LM.
+    # We directly use masked_input_ids for this reason.
+    # Actor model returns logits of the token predictions.
+    new_token_logits = self.token_actor(
+      encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
+      encoder_feature_mask = lm_feature_mask.to(pytorch.device),
+      encoder_position_ids = lm_feat_pos_id.to(pytorch.device),
+      decoder_input_ids    = lm_input_ids.to(pytorch.device),
+      decoder_input_mask   = lm_input_mask.to(pytorch.device),
+      decoder_position_ids = lm_pos_id.to(pytorch.device),
+    )['action_logits']
+    # Collect the logits but only for the hole indices.
+    new_token_logits = new_token_logits[(ep_idx, seq_idx)]
+    # Critic model returns value logit.
+    new_token_values = self.token_critic(
+      encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
+      encoder_feature_mask = lm_feature_mask.to(pytorch.device),
+      encoder_position_ids = lm_feat_pos_id.to(pytorch.device),
+      decoder_input_ids    = lm_input_ids.to(pytorch.device),
+      decoder_input_mask   = lm_input_mask.to(pytorch.device),
+      decoder_position_ids = lm_pos_id.to(pytorch.device),
+    )['action_logits']
+    # Collect the critic's value for this hole index.
+    new_token_values  = new_token_values[(ep_idx, seq_idx)]
+    # According to policy, select the best token.
+    new_tokens        = self.policy.SampleTokens(new_token_logits)
+    # Get probability of said token, per sequence.
+    new_token_probs   = new_token_logits[(torch.arange(new_token_logits.shape[0]), new_tokens)]
+    # Calculate the entropy of new token logits.
+    new_token_entropy = torch.distributions.categorical.Categorical(logits = new_token_logits).entropy()
+    # Flatten critic values.
+    new_token_values  = new_token_values.flatten()
+
+    # Sample the most likely token.
+    raise NotImplementedError("TODO")
+
+    # Compute token PPO Loss
+    raise NotImplementedError("TODO")
+
+    # Compute the final loss and backward the optimizer
+    raise NotImplementedError("TODO")
+
     return
 
   def rollout(self,
@@ -474,7 +531,7 @@ class Agent(object):
         # According to policy, select the best token.
         step_tokens = self.policy.SampleTokens(step_token_logits)
         # Get probability of said token, per episode.
-        step_token_probs = step_token_logits[(torch.arange(step_token_logits.shape[0]) ,step_tokens)] # torch.index_select(step_token_logits, -1, step_tokens)
+        step_token_probs = step_token_logits[(torch.arange(step_token_logits.shape[0]), step_tokens)]
 
         # First extend to original dimensions.
         # Store the modified - with token LM - codes to the original tensors.
