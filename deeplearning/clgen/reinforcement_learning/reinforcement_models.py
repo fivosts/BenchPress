@@ -230,12 +230,12 @@ class RLModel(object):
     num_episodes      = 2
     steps_per_episode = 64
     num_updates       = 200
-    gamma = 0.99
-    lam   = 0.95
-    clip  = 0.2
-    lr    = 0.015
-    value_loss_coeff = 0.5
-    entropy_coeff    = 0.01
+    gamma             = 0.99
+    lam               = 0.95
+    epsilon           = 0.1
+    lr                = 0.015
+    value_loss_coeff  = 0.5
+    entropy_coeff     = 0.01
 
     self.agent.Train(
       env               = self.env,
@@ -243,12 +243,12 @@ class RLModel(object):
       num_episodes      = num_episodes,
       steps_per_episode = steps_per_episode,
       num_updates       = num_updates,
-      gamma = gamma,
-      clip  = clip,
-      lr    = lr,
-      lam   = lam,
-      value_loss_coef = value_loss_coeff,
-      entropy_coeff   = entropy_coeff,
+      gamma             = gamma,
+      lr                = lr,
+      lam               = lam,
+      epsilon           = epsilon,
+      value_loss_coef   = value_loss_coeff,
+      entropy_coeff     = entropy_coeff,
     )
 
     ## Start the RL training pipeline.
