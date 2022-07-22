@@ -92,12 +92,12 @@ class Environment(gym.Env):
       act_type  = int(action) % len(interactions.ACTION_TYPE_SPACE)
       act_index = int(action) // len(interactions.ACTION_TYPE_SPACE)
       if act_type == interactions.ACTION_TYPE_SPACE['ADD']:
-        new_code = torch.cat(code[:act_index + 1], torch.LongTensor([self.tokenizer.holeToken]), code[act_index + 1:])
-        new_code = code[:code.shape[0]]
+        new_code = torch.cat((code[:act_index + 1], torch.LongTensor([self.tokenizer.holeToken]), code[act_index + 1:]))
+        new_code = new_code[:code.shape[0]]
         lm_input_ids[idx] = new_code
         use_lm[idx]       = True
       elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
-        new_code            = code
+        new_code            = torch.clone(code)
         new_code[act_index] = self.tokenizer.holeToken
         lm_input_ids[idx]   = new_code
         use_lm[idx]         = True
@@ -130,11 +130,11 @@ class Environment(gym.Env):
         reward[idx] = -1.0
 
       if act_type == interactions.ACTION_TYPE_SPACE['ADD']:
-        new_code = torch.cat(code[:act_index + 1], torch.LongTensor([token_id]), code[act_index + 1:])
-        new_code = code[:code.shape[0]]
+        new_code = torch.cat((code[:act_index + 1], torch.LongTensor([token_id]), code[act_index + 1:]))
+        new_code = new_code[:code.shape[0]]
         state_code[idx] = new_code
       elif act_type == interactions.ACTION_TYPE_SPACE['REM']:
-        new_code = torch.cat(code[:act_index], code[act_index + 1:], torch.LongTensor([self.tokenizer.padToken]))
+        new_code = torch.cat((code[:act_index], code[act_index + 1:], torch.LongTensor([self.tokenizer.padToken])))
         state_code[idx] = new_code
       elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
         state_code[idx][act_index] = token_id
