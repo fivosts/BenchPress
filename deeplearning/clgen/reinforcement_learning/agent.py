@@ -272,32 +272,36 @@ class Agent(object):
     seq_len, feat_seq_len = len(state.encoded_code), len(state.encoded_features)
     ## Create state and action tensors.
     # State workload inputs.
-    batch_feature_ids   = torch.zeros((num_episodes, steps_per_episode, feat_seq_len), dtype = torch.long)
+    l.logger().warn("Here you must assign the current state's target feature vector.")
+    # batch_feature_ids   = torch.zeros((num_episodes, steps_per_episode, feat_seq_len), dtype = torch.long)
     batch_input_ids     = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
+    batch_feature_ids = torch.LongTensor(state.encoded_features).unsqueeze(0).unsqueeze(0).repeat(num_episodes, steps_per_episode, 1)
+    batch_input_ids[:, 0] = torch.LongTensor(state.encoded_code)
     # Action, token predictions and probs, critic values.
-    action_predictions  = torch.zeros((num_episodes, steps_per_episode, self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE)), dtype = torch.long)
-    action_policy_probs = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    action_values       = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    token_predictions   = torch.zeros((num_episodes, steps_per_episode, self.tokenizer.vocab_size), dtype = torch.long)
-    token_policy_probs  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    token_values        = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    action_predictions  = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
+    action_policy_probs = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
+    action_values       = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
+    token_predictions   = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
+    token_policy_probs  = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
+    token_values        = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
     use_lm              = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
     ## Reward placeholders.
     rewards             = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
     discounted_rewards  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    traj_disc_rewards   = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    traj_disc_rewards   = torch.zeros((num_episodes), dtype = torch.float32)
     done                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
 
-    l.logger().warn("First checkpoint.")
-    l.logger().warn(batch_feature_ids.shape)
-    l.logger().warn(batch_input_ids.shape)
-    l.logger().warn(action_predictions.shape)
-    l.logger().warn(token_predictions.shape)
-    l.logger().warn(token_policy_probs.shape)
+    # l.logger().warn("First checkpoint.")
+    # l.logger().warn(batch_feature_ids.shape)
+    # l.logger().warn(batch_input_ids.shape)
+    # l.logger().warn(action_predictions.shape)
+    # l.logger().warn(token_predictions.shape)
+    # l.logger().warn(token_policy_probs.shape)
     # input()
     ## Run execution loop.
     for step in range(steps_per_episode):
       ## This loop unfolds all batch_size trajectories.
+      l.logger().warn(step)
       # Input tensors
       feature_ids  = batch_feature_ids[:, step]
       feature_mask = feature_ids != self.feature_tokenizer.padToken
@@ -306,15 +310,15 @@ class Agent(object):
       input_mask   = input_ids != self.tokenizer.padToken
       input_pos    = torch.arange(seq_len, dtype = torch.long).repeat(input_ids.shape[0], 1)
 
-      l.logger().warn("Insert apply_normalizer here to state if step > 0")
+      # l.logger().warn("Insert apply_normalizer here to state if step > 0")
 
-      l.logger().warn("Second checkpoint: input to action models.")
-      l.logger().warn(feature_ids.shape)
-      l.logger().warn(feature_mask.shape)
-      l.logger().warn(feature_pos.shape)
-      l.logger().warn(input_ids.shape)
-      l.logger().warn(input_mask.shape)
-      l.logger().warn(input_pos.shape)
+      # l.logger().warn("Second checkpoint: input to action models.")
+      # l.logger().warn(feature_ids.shape)
+      # l.logger().warn(feature_mask.shape)
+      # l.logger().warn(feature_pos.shape)
+      # l.logger().warn(input_ids.shape)
+      # l.logger().warn(input_mask.shape)
+      # l.logger().warn(input_pos.shape)
       # input()
 
       # Actor model returns logits of action.
@@ -338,13 +342,13 @@ class Agent(object):
       # Sample the most likely action.
       step_actions = self.policy.SampleActions(step_action_logits)
       # Collect the probability of said selected action, per episode.
-      step_action_probs = torch.index_select(step_action_logits, -1, step_actions)
+      step_action_probs = step_action_logits[(torch.arange(step_action_logits.shape[0]), step_actions)] # torch.index_select(step_action_logits, -1, step_actions)
 
-      l.logger().warn("Third checkpoint: model outputs.")
-      l.logger().warn(step_action_logits.shape)
-      l.logger().warn(step_action_values.shape)
-      l.logger().warn(step_actions.shape)
-      l.logger().warn(step_action_probs.shape)
+      # l.logger().warn("Third checkpoint: model outputs.")
+      # l.logger().warn(step_action_logits.shape)
+      # l.logger().warn(step_action_values.shape)
+      # l.logger().warn(step_actions.shape)
+      # l.logger().warn(step_action_probs.shape)
       # input()
 
       ## Find which sequences need to sample a token.
@@ -355,9 +359,6 @@ class Agent(object):
         # Indices of starting tensors that need the LM.
         lm_indices = torch.where(step_use_lm == True)[0]
 
-        l.logger().warn("Fourth checkpoint: LM_indices")
-        l.logger().warn(lm_indices)
-
         # Input tensors.
         lm_feature_ids   = torch.index_select(feature_ids, 0, lm_indices)
         lm_feature_mask  = lm_feature_ids != self.feature_tokenizer.padToken
@@ -366,14 +367,19 @@ class Agent(object):
         lm_input_mask    = lm_input_ids != self.tokenizer.padToken
         lm_input_pos_ids = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
 
-        l.logger().warn("Fifth checkpoint: LM inputs")
-        l.logger().warn(lm_feature_ids.shape)
-        l.logger().warn(lm_feature_mask.shape)
-        l.logger().warn(lm_feat_pos_ids.shape)
-        l.logger().warn(lm_input_ids.shape)
-        l.logger().warn(lm_input_mask.shape)
-        l.logger().warn(lm_input_pos_ids.shape)
+        # l.logger().warn("Fifth checkpoint: LM inputs")
+        # l.logger().warn(lm_feature_ids.shape)
+        # l.logger().warn(lm_feature_mask.shape)
+        # l.logger().warn(lm_feat_pos_ids.shape)
+        # l.logger().warn(lm_input_ids.shape)
+        # l.logger().warn(lm_input_mask.shape)
+        # l.logger().warn(lm_input_pos_ids.shape)
 
+        # Keep the hole indices to dereference the prediction logits.
+        ep_idx, seq_idx = torch.where(lm_input_ids == self.tokenizer.holeToken)
+        # l.logger().info(self.tokenizer.holeToken)
+        # l.logger().info(lm_input_ids)
+        # l.logger().info(torch.where(lm_input_ids == self.tokenizer.holeToken))
         # Run the token actor, get token logits.
         step_token_logits = self.token_actor(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
@@ -384,7 +390,7 @@ class Agent(object):
           decoder_position_ids = lm_input_pos_ids.to(pytorch.device),
         )['token_logits']
         # Keep the prediction scores only for the masked token.
-        step_token_logits = torch.index_select(step_token_logits, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0].to(pytorch.device))
+        step_token_logits = step_token_logits[(ep_idx, seq_idx)]
         # Collect value logit from critic.
         step_token_values = self.token_critic(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
@@ -395,46 +401,54 @@ class Agent(object):
           decoder_position_ids = lm_input_pos_ids.to(pytorch.device),
         )['token_logits']
         # Get the critic's value only for masked index.
-        step_token_values = torch.index_select(step_token_values, -1, torch.where(lm_input_ids == self.tokenizer.holeToken)[0].to(pytorch.device))
+        step_token_values = step_token_values[(ep_idx, seq_idx)]
         # According to policy, select the best token.
         step_tokens = self.policy.SampleTokens(step_token_logits)
         # Get probability of said token, per episode.
-        step_token_probs = torch.index_select(step_token_logits, -1, step_tokens)
+        step_token_probs = step_token_logits[(torch.arange(step_token_logits.shape[0]) ,step_tokens)] # torch.index_select(step_token_logits, -1, step_tokens)
+
+        # l.logger().warn("Sixth checkpoint: LM outputs")
+        # l.logger().warn(step_token_logits.shape)
+        # l.logger().warn(step_token_values.shape)
+        # l.logger().warn(step_tokens.shape)
+        # l.logger().warn(step_tokens)
+        # l.logger().warn(step_token_probs.shape)
 
         # First extend to original dimensions.
         # Store the modified - with token LM - codes to the original tensors.
-        augmented_step_token_values = torch.zeros((num_episodes), dtype = torch.float32)
-        augmented_step_tokens       = torch.zeros((num_episodes), dtype = torch.long)
-        augmented_step_token_probs  = torch.zeros((num_episodes), dtype = torch.float32)
+        augmented_step_token_values = torch.zeros((num_episodes, 1), dtype = torch.float32)
+        augmented_step_tokens       = torch.zeros((num_episodes, 1), dtype = torch.long)
+        augmented_step_token_probs  = torch.zeros((num_episodes, 1), dtype = torch.float32)
         for nidx, lm_idx in zip(range(step_tokens.shape[0]), lm_indices):
           augmented_step_token_values[lm_idx] = step_token_values[nidx]
           augmented_step_tokens[lm_idx]       = step_tokens[nidx]
           augmented_step_token_probs[lm_idx]  = step_token_probs[nidx]
+
         # Here is the appropriate storing back.
         token_values      [:, step] = augmented_step_token_values.detach().cpu()
         token_predictions [:, step] = augmented_step_tokens.detach().cpu()
         token_policy_probs[:, step] = augmented_step_token_probs.detach().cpu()
 
       ## Step environment and compute rewards.
-      l.logger().warn("Warning, you must also step the states.")
-      reward, discounted_reward, d = env.new_step(
+      input_ids, reward, discounted_reward, d = env.new_step(
         input_ids,
         step_actions,
-        step_tokens,
+        augmented_step_tokens,
         traj_disc_rewards,
         step_use_lm,
         gamma
       )
-
       ## Save data to rollout buffers.
-      action_values      [:, step] = step_action_values.detach().cpu()
-      action_predictions [:, step] = step_actions.detach().cpu()
-      action_policy_probs[:, step] = step_action_probs.detach().cpu()
-      use_lm             [:, step] = step_use_lm
-      rewards            [:, step] = reward
-      traj_disc_rewards            = discounted_reward
-      discounted_rewards [:, step] = traj_disc_rewards
-      done               [:, step] = d
+      if step < steps_per_episode - 1:
+        batch_input_ids  [:, step+1] = input_ids
+      action_values      [:, step]   = step_action_values.detach().cpu()
+      action_predictions [:, step]   = step_actions.unsqueeze(0).reshape((-1, 1)).detach().cpu()
+      action_policy_probs[:, step]   = step_action_probs.unsqueeze(0).reshape((-1, 1)).detach().cpu()
+      use_lm             [:, step]   = step_use_lm
+      rewards            [:, step]   = reward
+      traj_disc_rewards              = discounted_reward
+      discounted_rewards [:, step]   = traj_disc_rewards
+      done               [:, step]   = d
     return (
       action_values,       # Critic action logits.
       action_predictions,  # Actor sampled label actions.
