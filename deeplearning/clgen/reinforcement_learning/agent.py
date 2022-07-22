@@ -303,6 +303,8 @@ class Agent(object):
     torch.nn.utils.clip_grad_norm_(self.action_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
     action_optim.step()
+
+    raise NotImplementedError("Now take care of the token model.")
     return
 
   def rollout(self, env, num_episodes, steps_per_episode, gamma):
