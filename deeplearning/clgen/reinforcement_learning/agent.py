@@ -143,7 +143,7 @@ class Agent(object):
             lam               : float,
             epsilon           : float,
             value_loss_coeff  : float,
-            entropy_coef      : float,
+            entropy_coeff     : float,
             ) -> None:
     """
     Run PPO over policy and train the agent.
@@ -205,7 +205,7 @@ class Agent(object):
           self.ppo_train_step(
             epsilon,
             value_loss_coeff,
-            entropy_coef,
+            entropy_coeff,
             action_optim,
             token_optim,
             action_advantages   [start:end],
@@ -229,7 +229,7 @@ class Agent(object):
   def ppo_train_step(self,
                      epsilon             : float,
                      value_loss_coeff    : float,
-                     entropy_coef        : float,
+                     entropy_coeff       : float,
                      action_optim        : torch.optim.Adam,
                      token_optim         : torch.optim.Adam,
                      action_advantages   : torch.FloatTensor,
@@ -346,7 +346,7 @@ class Agent(object):
     action_entropy_loss = torch.mean(new_action_entropy)
 
     # Compute the final loss and backward.
-    action_loss = action_ppo_loss + value_loss_coeff * action_value_loss - entropy_coef * action_entropy_loss
+    action_loss = action_ppo_loss + value_loss_coeff * action_value_loss - entropy_coeff * action_entropy_loss
     action_loss.backward()
     torch.nn.utils.clip_grad_norm_(self.action_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
@@ -417,7 +417,7 @@ class Agent(object):
     token_entropy_loss = torch.mean(new_token_entropy)
 
     # Compute the final loss and backward.
-    token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coef * token_entropy_loss
+    token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coeff * token_entropy_loss
     token_loss.backward()
     torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
@@ -598,6 +598,17 @@ class Agent(object):
       discounted_rewards,     # Discounted rewards of each step.
       done,                   # Whether this step concludes the episode.
     )
+
+  def apply_normalizer(self,
+                       rewards            : torch.FloatTensor,
+                       reward_normalizer  : RunningMeanStd,
+                       discounted_rewards : torch.FloatTensor,
+                       center : bool
+                       ) -> torch.FloatTensor:
+    """
+    Apply normalization to rewards.
+    """
+    return normalized_rewards
 
   def gae(self, rewards, action_values, token_values, use_lm, episode_ends, gamma, lam):
     """
