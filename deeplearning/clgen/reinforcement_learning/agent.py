@@ -138,7 +138,6 @@ class Agent(object):
             steps_per_episode : int, # Depth length of single trajectory.
             num_updates       : int,
             gamma             : float,
-            clip              : float,
             lr                : float,
             lam               : float,
             epsilon           : float,
