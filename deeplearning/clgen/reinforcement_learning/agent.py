@@ -483,9 +483,10 @@ class Agent(object):
           augmented_step_token_probs[lm_idx]  = step_token_probs[nidx]
 
         # Here is the appropriate storing back.
-        token_values      [:, step] = augmented_step_token_values.detach().cpu()
-        token_predictions [:, step] = augmented_step_tokens.detach().cpu()
-        token_policy_probs[:, step] = augmented_step_token_probs.detach().cpu()
+        batch_masked_input_ids[:, step] = masked_input_ids
+        token_values          [:, step] = augmented_step_token_values.detach().cpu()
+        token_predictions     [:, step] = augmented_step_tokens.detach().cpu()
+        token_policy_probs    [:, step] = augmented_step_token_probs.detach().cpu()
 
       ## Step environment and compute rewards.
       input_ids, reward, discounted_reward, d = env.new_step(
