@@ -147,8 +147,8 @@ class Agent(object):
     """
     Run PPO over policy and train the agent.
     """
-    action_optim = torch.optim.Adam(self.action_actor.parameters() + self.action_critic.parameters(), lr = lr)
-    token_optim  = torch.optim.Adam(self.token_actor.parameters() + self.token_critic.parameters(), lr = lr)
+    action_optim = torch.optim.Adam(list(self.action_actor.parameters()) + list(self.action_critic.parameters()), lr = lr)
+    token_optim  = torch.optim.Adam(list(self.token_actor.parameters()) + list(self.token_critic.parameters()), lr = lr)
 
     for ep in range(num_epochs):
       # Run a batch of episodes.
@@ -614,9 +614,9 @@ class Agent(object):
     token_values  = token_values.squeeze(-1)
     N = rewards.shape[0]
     T = rewards.shape[1]
-    gae_step = np.zeros((N, ))
-    action_advantages = np.zeros((N, T))
-    token_advantages  = np.zeros((N, T))
+    gae_step = torch.zeros((N, ))
+    action_advantages = torch.zeros((N, T))
+    token_advantages  = torch.zeros((N, T))
     l.logger().warn("You might need to mask out token delta when LM is not used.")
     for t in reversed(range(T - 1)):
       # First compute delta, which is the one-step TD error
