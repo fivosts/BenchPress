@@ -153,7 +153,7 @@ class Agent(object):
 
     for ep in range(num_epochs):
       # Run a batch of episodes.
-      input_ids, feature_ids, action_values, action_predictions, action_policy_probs,\
+      input_ids, masked_input_ids, feature_ids, action_values, action_predictions, action_policy_probs,\
       token_values, token_predictions, token_policy_probs,\
       use_lm, rewards, discounted_rewards, done = self.rollout(
         env, num_episodes, steps_per_episode, gamma,
@@ -190,6 +190,7 @@ class Agent(object):
       action_predictions  = torch.reshape((-1, action_predictions.shape[-1]))
       token_predictions   = torch.reshape((-1, token_predictions.shape[-1]))
       input_ids           = torch.reshape((-1, input_ids.shape[-1]))
+      masked_input_ids    = torch.reshape((-1, masked_input_ids.shape[-1]))
       feature_ids         = torch.reshape((-1, feature_ids.shape[-1]))
       action_policy_probs = torch.reshape((-1, action_policy_probs.shape[-1]))
       token_policy_probs  = torch.reshape((-1, token_policy_probs.shape[-1]))
@@ -215,6 +216,7 @@ class Agent(object):
             action_predictions  [start:end],
             token_predictions   [start:end],
             input_ids           [start:end],
+            masked_input_ids    [start:end],
             feature_ids         [start:end],
             action_policy_probs [start:end],
             token_policy_probs  [start:end],
@@ -372,22 +374,23 @@ class Agent(object):
     seq_len, feat_seq_len = len(state.encoded_code), len(state.encoded_features)
     ## Create state and action tensors.
     # State workload inputs.
-    batch_input_ids     = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
-    batch_feature_ids = torch.LongTensor(state.encoded_features).unsqueeze(0).unsqueeze(0).repeat(num_episodes, steps_per_episode, 1)
-    batch_input_ids[:, 0] = torch.LongTensor(state.encoded_code)
+    batch_feature_ids      = torch.LongTensor(state.encoded_features).unsqueeze(0).unsqueeze(0).repeat(num_episodes, steps_per_episode, 1)
+    batch_input_ids        = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
+    batch_input_ids[:, 0]  = torch.LongTensor(state.encoded_code)
+    batch_masked_input_ids = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
     # Action, token predictions and probs, critic values.
-    action_predictions  = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
-    action_policy_probs = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
-    action_values       = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
-    token_predictions   = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
-    token_policy_probs  = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
-    token_values        = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
-    use_lm              = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
+    action_predictions     = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
+    action_policy_probs    = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
+    action_values          = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
+    token_predictions      = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
+    token_policy_probs     = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
+    token_values           = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
+    use_lm                 = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
     ## Reward placeholders.
-    rewards             = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    discounted_rewards  = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    traj_disc_rewards   = torch.zeros((num_episodes), dtype = torch.float32)
-    done                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
+    rewards                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    discounted_rewards     = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
+    traj_disc_rewards      = torch.zeros((num_episodes), dtype = torch.float32)
+    done                   = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
 
     ## Run execution loop.
     for step in range(steps_per_episode):
@@ -505,18 +508,19 @@ class Agent(object):
       discounted_rewards [:, step]   = traj_disc_rewards
       done               [:, step]   = d
     return (
-      batch_input_ids,     # source code states.
-      batch_feature_ids,   # Target feature vector state.
-      action_values,       # Critic action logits.
-      action_predictions,  # Actor sampled label actions.
-      action_policy_probs, # Actor probabilities of sampled actions.
-      token_values,        # Critic token values.
-      token_predictions,   # Actor sampled label tokens.
-      token_policy_probs,  # Actor probabilities of sampled tokens.
-      use_lm,              # Indices of actions that  required language model.
-      rewards,             # Rewards of each step.
-      discounted_rewards,  # Discounted rewards of each step.
-      done,                # Whether this step concludes the episode.
+      batch_input_ids,       # source code states.
+      batch_masked_input_ids # Masked source code for the language model.
+      batch_feature_ids,     # Target feature vector state.
+      action_values,         # Critic action logits.
+      action_predictions,    # Actor sampled label actions.
+      action_policy_probs,   # Actor probabilities of sampled actions.
+      token_values,          # Critic token values.
+      token_predictions,     # Actor sampled label tokens.
+      token_policy_probs,    # Actor probabilities of sampled tokens.
+      use_lm,                # Indices of actions that  required language model.
+      rewards,               # Rewards of each step.
+      discounted_rewards,    # Discounted rewards of each step.
+      done,                  # Whether this step concludes the episode.
     )
 
   def gae(self, rewards, action_values, token_values, use_lm, episode_ends, gamma, lam):
