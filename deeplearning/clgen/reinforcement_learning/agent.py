@@ -189,6 +189,7 @@ class Agent(object):
       token_values        = torch.reshape((-1, token_values.shape[-1]))
       action_predictions  = torch.reshape((-1, action_predictions.shape[-1]))
       token_predictions   = torch.reshape((-1, token_predictions.shape[-1]))
+      use_lm              = torch.reshape((-1, use_lm.shape[-1]))
       input_ids           = torch.reshape((-1, input_ids.shape[-1]))
       masked_input_ids    = torch.reshape((-1, masked_input_ids.shape[-1]))
       feature_ids         = torch.reshape((-1, feature_ids.shape[-1]))
@@ -215,6 +216,7 @@ class Agent(object):
             token_values        [start:end],
             action_predictions  [start:end],
             token_predictions   [start:end],
+            use_lm              [start:end],
             input_ids           [start:end],
             masked_input_ids    [start:end],
             feature_ids         [start:end],
