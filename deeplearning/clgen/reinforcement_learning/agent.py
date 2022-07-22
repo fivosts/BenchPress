@@ -136,38 +136,85 @@ class Agent(object):
             num_epochs        : int,
             num_episodes      : int, # Equivalent to batch size
             steps_per_episode : int, # Depth length of single trajectory.
+            num_updates       : int,
             gamma             : float,
             clip              : float,
             lr                : float,
+            lam               : float,
             ) -> None:
     """
     Run PPO over policy and train the agent.
     """
-    # actor_optim = {
-    #   'action': torch.optim.Adam(self.actor.action_parameters, lr = lr),
-    #   'token' : torch.optim.Adam(self.actor.token_parameters,  lr = lr),
-    # }
-
-    # critic_optim = {
-    #   'action': torch.optim.Adam(self.critic.action_parameters, lr = lr),
-    #   'token' : torch.optim.Adam(self.critic.token_parameters,  lr = lr),
-    # }
-
-    # self.action_cov_var = torch.full(size = (self.qv_config.max_position_embeddings * len(interactions.ACTION_TYPE_SPACE),), fill_value = 0.5)
-    # self.action_cov_mat = torch.diag(self.action_cov_var)
-
-    # self.token_cov_var = torch.full(size = (self.tokenizer.vocab_size,), fill_value = 0.5)
-    # self.token_cov_mat = torch.diag(self.token_cov_var)
+    action_optim = torch.optim.Adam(self.action_actor.parameters() + self.action_critic.parameters(), lr = lr)
+    token_optim  = torch.optim.Adam(self.token_actor.parameters() + self.token_critic.parameters(), lr = lr)
 
     for ep in range(num_epochs):
       # Run a batch of episodes.
-      action_values, action_predictions, action_policy_probs,\
+      input_ids, feature_ids, action_values, action_predictions, action_policy_probs,\
       token_values, token_predictions, token_policy_probs,\
       use_lm, rewards, discounted_rewards, done = self.new_rollout(
         env, num_episodes, steps_per_episode, gamma,
       )
+      action_advantages, token_advantages = self.gae(
+        rewards,
+        action_values,
+        token_values,
+        use_lm,
+        done,
+        gamma,
+        lam
+      )
 
-      input()
+      # Compute reward-to-gos.
+      action_reward_to_go = action_advantages + action_values.squeeze(-1)
+      token_reward_to_go  = token_advantages  + token_values.squeeze(-1)
+
+      # Nornmalize advantages.
+      action_advantages = (action_advantages - action_advantages.mean()) / (action_advantages.std() + 1e-5)
+      token_advantages  = (token_advantages - token_advantages.mean()) / (token_advantages.std() + 1e-5)
+
+      # Set the batch size.
+      batch_size  = int(input_ids.shape[0])
+      num_batches = int(input_ids.shape[1])
+
+      # Reshape to 2 dimensions.
+      action_advantages   = torch.reshape((-1, action_advantages.shape[-1]))
+      token_advantages    = torch.reshape((-1, token_advantages.shape[-1]))
+      action_reward_to_go = torch.reshape((-1, action_reward_to_go.shape[-1]))
+      token_reward_to_go  = torch.reshape((-1, token_reward_to_go.shape[-1]))
+      action_values       = torch.reshape((-1, action_values.shape[-1]))
+      token_values        = torch.reshape((-1, token_values.shape[-1]))
+      action_predictions  = torch.reshape((-1, action_predictions.shape[-1]))
+      token_predictions   = torch.reshape((-1, token_predictions.shape[-1]))
+      input_ids           = torch.reshape((-1, input_ids.shape[-1]))
+      feature_ids         = torch.reshape((-1, feature_ids.shape[-1]))
+      action_policy_probs = torch.reshape((-1, action_policy_probs.shape[-1]))
+      token_policy_probs  = torch.reshape((-1, token_policy_probs.shape[-1]))
+
+      # Split the data into batches in the num_workers dimension
+      for epoch in range(num_updates):
+        for batch in range(num_batches):
+          start = batch * batch_size
+          end = (batch + 1) * batch_size
+          # Step batch
+          self.ppo_train_step(
+            action_optim,
+            token_optim,
+            action_advantages   [start:end],
+            token_advantages    [start:end],
+            action_reward_to_go [start:end],
+            token_reward_to_go  [start:end],
+            action_values       [start:end],
+            token_values        [start:end],
+            action_predictions  [start:end],
+            token_predictions   [start:end],
+            input_ids           [start:end],
+            feature_ids         [start:end],
+            action_policy_probs [start:end],
+            token_policy_probs  [start:end],
+          )
+
+      raise NotImplementedError
       # Compute Advantage at k_th iteration.
       (V_act, _, _), (V_tok, _, _) = self.evaluate_policy(batch_states, batch_actions)
 
@@ -405,6 +452,8 @@ class Agent(object):
       discounted_rewards [:, step]   = traj_disc_rewards
       done               [:, step]   = d
     return (
+      batch_input_ids,     # source code states.
+      batch_feature_ids,   # Target feature vector state.
       action_values,       # Critic action logits.
       action_predictions,  # Actor sampled label actions.
       action_policy_probs, # Actor probabilities of sampled actions.
@@ -416,6 +465,37 @@ class Agent(object):
       discounted_rewards,  # Discounted rewards of each step.
       done,                # Whether this step concludes the episode.
     )
+
+  def gae(self, rewards, action_values, token_values, use_lm, episode_ends, gamma, lam):
+    """
+    Compute generalized advantage estimate.
+      rewards: a list of rewards at each step.
+      values: the value estimate of the state at each step.
+      episode_ends: an array of the same shape as rewards, with a 1 if the
+          episode ended at that step and a 0 otherwise.
+      gamma: the discount factor.
+      lam: the GAE lambda parameter.
+    """
+    # Invert episode_ends to have 0 if the episode ended and 1 otherwise
+    episode_ends = (episode_ends * -1) + 1
+    action_values = action_values.squeeze(-1)
+    token_values  = token_values.squeeze(-1)
+    N = rewards.shape[0]
+    T = rewards.shape[1]
+    gae_step = np.zeros((N, ))
+    action_advantages = np.zeros((N, T))
+    token_advantages  = np.zeros((N, T))
+    for t in reversed(range(T - 1)):
+      # First compute delta, which is the one-step TD error
+      action_delta = rewards[:, t] + gamma * action_values[:, t + 1] * episode_ends[:, t] - action_values[:, t]
+      token_delta  = rewards[:, t] + gamma * token_values[:, t + 1]  * episode_ends[:, t] - token_values[:, t]
+      # Then compute the current step's GAE by discounting the previous step
+      # of GAE, resetting it to zero if the episode ended, and adding this
+      # step's delta
+      # And store it
+      action_advantages[:, t] = action_delta + gamma * lam * episode_ends[:, t] * gae_step
+      token_advantages[:, t]  = token_delta  + gamma * lam * episode_ends[:, t] * gae_step
+    return action_advantages, token_advantages
 
   def saveCheckpoint(self) -> None:
     """
