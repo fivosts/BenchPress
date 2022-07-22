@@ -226,28 +226,33 @@ class RLModel(object):
     self.Create(**kwargs)
     ## First, train the Language model backend.
 
-    num_epochs              = 10
-    num_updates_per_batch   = 100
-    timesteps_per_batch     = 200
-    max_timesteps_per_episode = 100
-    gamma = 0.95
+    num_epochs        = 20
+    num_episodes      = 2
+    steps_per_episode = 64
+    num_updates       = 200
+    gamma = 0.99
+    lam   = 0.95
     clip  = 0.2
-    lr    = 0.005
+    lr    = 0.015
+    value_loss_coeff = 0.5
+    entropy_coeff    = 0.01
 
     self.agent.Train(
-      env        = self.env,
-      num_epochs = num_epochs,
-      num_updates_per_batch = num_updates_per_batch,
-      timesteps_per_batch = timesteps_per_batch,
-      max_timesteps_per_episode = max_timesteps_per_episode,
+      env               = self.env,
+      num_epochs        = num_epochs,
+      num_episodes      = num_episodes,
+      steps_per_episode = steps_per_episode,
+      num_updates       = num_updates,
       gamma = gamma,
       clip  = clip,
       lr    = lr,
+      lam   = lam,
+      value_loss_coef = value_loss_coeff,
+      entropy_coeff   = entropy_coeff,
     )
 
     ## Start the RL training pipeline.
     # for ep in range(num_epochs):
-
 
       # self.env.reset()
       # is_term = False
