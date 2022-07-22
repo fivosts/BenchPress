@@ -201,7 +201,8 @@ class ActionLanguageModelQV(torch.nn.Module):
       position_ids          = decoder_position_ids,
       encoder_hidden_states = encoder_memory,
     )
-    token_logits = self.decoder(decoder_out['hidden_states'])
+    decoded_source = decoder_out['hidden_states']
+    token_logits = self.decoder(decoded_source)
     token_probs  = self.softmax(token_logits)
     return {
       'token_logits' : token_logits,
