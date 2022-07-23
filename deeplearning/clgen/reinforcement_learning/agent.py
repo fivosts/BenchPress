@@ -362,81 +362,82 @@ class Agent(object):
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
     action_optim.step()
 
-    # Get the indices where use_lm is True.
-    lm_indices = torch.where(use_lm == True)[0]
-    # Prepare token model inputs.
-    lm_feature_ids  = torch.index_select(feature_ids, 0, lm_indices)
-    lm_feature_mask = lm_feature_ids != self.feature_tokenizer.padToken
-    lm_feat_pos_id  = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
-    lm_input_ids    = torch.index_select(masked_input_ids, 0, lm_indices)
-    lm_input_mask   = lm_input_ids != self.tokenizer.padToken
-    lm_pos_id       = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
+    if torch.any(use_lm):
+      # Get the indices where use_lm is True.
+      lm_indices = torch.where(use_lm == True)[0]
+      # Prepare token model inputs.
+      lm_feature_ids  = torch.index_select(feature_ids, 0, lm_indices)
+      lm_feature_mask = lm_feature_ids != self.feature_tokenizer.padToken
+      lm_feat_pos_id  = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
+      lm_input_ids    = torch.index_select(masked_input_ids, 0, lm_indices)
+      lm_input_mask   = lm_input_ids != self.tokenizer.padToken
+      lm_pos_id       = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
 
-    # Keep track of where [HOLE] reside.
-    ep_idx, seq_idx = torch.where(lm_input_ids == self.tokenizer.holeToken)
+      # Keep track of where [HOLE] reside.
+      ep_idx, seq_idx = torch.where(lm_input_ids == self.tokenizer.holeToken)
 
-    # Run the batch in actor/critic.
-    # The input indices are based on those the rollout action actor decided to use the LM.
-    # We directly use masked_input_ids for this reason.
-    # Actor model returns logits of the token predictions.
-    token_actor_out = self.token_actor(
-      encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
-      encoder_feature_mask = lm_feature_mask.to(pytorch.device),
-      encoder_position_ids = lm_feat_pos_id.to(pytorch.device),
-      decoder_input_ids    = lm_input_ids.to(pytorch.device),
-      decoder_input_mask   = lm_input_mask.to(pytorch.device),
-      decoder_position_ids = lm_pos_id.to(pytorch.device),
-    )
-    new_token_logits, new_token_probs = token_actor_out['token_logits'], token_actor_out['token_probs']
-    # Collect the logits but only for the hole indices.
-    new_token_logits = new_token_logits[(ep_idx, seq_idx)]
-    new_token_probs  = new_token_probs[(ep_idx, seq_idx)]
-    # Critic model returns value logit.
-    token_critic_out = self.token_critic(
-      encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
-      encoder_feature_mask = lm_feature_mask.to(pytorch.device),
-      encoder_position_ids = lm_feat_pos_id.to(pytorch.device),
-      decoder_input_ids    = lm_input_ids.to(pytorch.device),
-      decoder_input_mask   = lm_input_mask.to(pytorch.device),
-      decoder_position_ids = lm_pos_id.to(pytorch.device),
-    )
-    new_token_values, new_token_values_probs = token_critic_out['token_logits'], token_critic_out['token_probs']
-    # Collect the critic's value for this hole index.
-    new_token_values       = new_token_values[(ep_idx, seq_idx)]
-    new_token_values_probs = new_token_values_probs[(ep_idx, seq_idx)]
-    # According to policy, select the best token.
-    new_tokens        = self.policy.SampleTokens(new_token_logits)
-    # Get probability of said token, per sequence.
-    new_token_probs   = new_token_probs[(torch.arange(new_token_probs.shape[0]), new_tokens)]
-    # Calculate the entropy of new token logits.
-    new_token_entropy = torch.distributions.categorical.Categorical(logits = new_token_logits).entropy()
-    # Flatten critic values.
-    new_token_values  = new_token_values.flatten()
+      # Run the batch in actor/critic.
+      # The input indices are based on those the rollout action actor decided to use the LM.
+      # We directly use masked_input_ids for this reason.
+      # Actor model returns logits of the token predictions.
+      token_actor_out = self.token_actor(
+        encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
+        encoder_feature_mask = lm_feature_mask.to(pytorch.device),
+        encoder_position_ids = lm_feat_pos_id.to(pytorch.device),
+        decoder_input_ids    = lm_input_ids.to(pytorch.device),
+        decoder_input_mask   = lm_input_mask.to(pytorch.device),
+        decoder_position_ids = lm_pos_id.to(pytorch.device),
+      )
+      t, new_token_probs = token_actor_out['token_logits'], token_actor_out['token_probs']
+      # Collect the logits but only for the hole indices.
+      new_token_logits = t[(ep_idx, seq_idx)]
+      new_token_probs  = new_token_probs[(ep_idx, seq_idx)]
+      # Critic model returns value logit.
+      token_critic_out = self.token_critic(
+        encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
+        encoder_feature_mask = lm_feature_mask.to(pytorch.device),
+        encoder_position_ids = lm_feat_pos_id.to(pytorch.device),
+        decoder_input_ids    = lm_input_ids.to(pytorch.device),
+        decoder_input_mask   = lm_input_mask.to(pytorch.device),
+        decoder_position_ids = lm_pos_id.to(pytorch.device),
+      )
+      new_token_values, new_token_values_probs = token_critic_out['token_logits'], token_critic_out['token_probs']
+      # Collect the critic's value for this hole index.
+      new_token_values       = new_token_values[(ep_idx, seq_idx)]
+      new_token_values_probs = new_token_values_probs[(ep_idx, seq_idx)]
+      # According to policy, select the best token.
+      new_tokens        = self.policy.SampleTokens(new_token_logits)
+      # Get probability of said token, per sequence.
+      new_token_probs   = new_token_probs[(torch.arange(new_token_probs.shape[0]), new_tokens)]
+      # Calculate the entropy of new token logits.
+      new_token_entropy = torch.distributions.categorical.Categorical(logits = new_token_logits).entropy()
+      # Flatten critic values.
+      new_token_values  = new_token_values.flatten()
 
-    # Compute the PPO loss
-    token_prob_ratio = torch.exp(new_token_probs) / torch.exp(token_policy_probs.to(pytorch.device))
-    a = token_prob_ratio * token_advantages.to(pytorch.device)
-    b = torch.clamp(token_prob_ratio, 1 - epsilon, 1 + epsilon) * token_advantages
-    token_ppo_loss = -1 * torch.mean(torch.min(a, b))
+      # Compute the PPO loss
+      token_prob_ratio = torch.exp(new_token_probs) / torch.exp(token_policy_probs.to(pytorch.device))
+      a = token_prob_ratio * token_advantages.to(pytorch.device)
+      b = torch.clamp(token_prob_ratio, 1 - epsilon, 1 + epsilon) * token_advantages
+      token_ppo_loss = -1 * torch.mean(torch.min(a, b))
 
-    # Compute the value function loss
-    # Clipped loss - same idea as PPO loss, don't allow value to move too
-    # far from where it was previously
-    value_pred_clipped = token_values + (new_token_values - token_values).clamp(-epsilon, epsilon)
-    value_losses = (new_token_values - token_reward_to_go) ** 2
-    value_losses_clipped = (value_pred_clipped - token_reward_to_go) ** 2
-    value_loss = 0.5 * torch.max(value_losses, value_losses_clipped)
+      # Compute the value function loss
+      # Clipped loss - same idea as PPO loss, don't allow value to move too
+      # far from where it was previously
+      value_pred_clipped = token_values + (new_token_values - token_values).clamp(-epsilon, epsilon)
+      value_losses = (new_token_values - token_reward_to_go) ** 2
+      value_losses_clipped = (value_pred_clipped - token_reward_to_go) ** 2
+      value_loss = 0.5 * torch.max(value_losses, value_losses_clipped)
 
-    token_value_loss = value_loss.mean()
-    token_entropy_loss = torch.mean(new_token_entropy)
+      token_value_loss = value_loss.mean()
+      token_entropy_loss = torch.mean(new_token_entropy)
 
-    # Compute the final loss and backward.
-    token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coeff * token_entropy_loss
-    l.logger().info(token_loss.item())
-    token_loss.backward()
-    torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
-    torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
-    token_optim.step()
+      # Compute the final loss and backward.
+      token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coeff * token_entropy_loss
+      l.logger().info(token_loss.item())
+      token_loss.backward()
+      torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
+      torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
+      token_optim.step()
     return
 
   def rollout(self,
