@@ -142,7 +142,7 @@ class Environment(gym.Env):
         src = self.tokenizer.ArrayToCode([int(x) for x in code])
         try:
           _ = opencl.Compile(src)
-          features = extractor.ExtractFeatures(code, ext = [self.current_state.feature_space])
+          features = extractor.ExtractFeatures(src, ext = [self.current_state.feature_space])
           compiles = True
         except ValueError:
           compiles = False
