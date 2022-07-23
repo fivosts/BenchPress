@@ -157,6 +157,8 @@ class Environment(gym.Env):
             reward[idx] = 1.0
           else:
             reward[idx] = 1 / cur_dist
+        else:
+          reward[idx] = -1.0
       else:
         raise ValueError("Invalid action type: {}".format(act_type))
     discounted_reward = traj_disc_rewards * gamma + reward
