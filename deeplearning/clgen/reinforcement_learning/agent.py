@@ -128,7 +128,6 @@ class Agent(object):
       self.action_critic = torch.nn.DataParallel(self.action_critic)
       self.token_actor   = torch.nn.DataParallel(self.token_actor)
       self.token_critic  = torch.nn.DataParallel(self.token_critic)
-
     return
 
   def Train(self,
@@ -180,20 +179,20 @@ class Agent(object):
       num_batches = int(input_ids.shape[1])
 
       # Reshape to 2 dimensions.
-      action_advantages   = torch.reshape((-1, action_advantages.shape[-1]))
-      token_advantages    = torch.reshape((-1, token_advantages.shape[-1]))
-      action_reward_to_go = torch.reshape((-1, action_reward_to_go.shape[-1]))
-      token_reward_to_go  = torch.reshape((-1, token_reward_to_go.shape[-1]))
-      action_values       = torch.reshape((-1, action_values.shape[-1]))
-      token_values        = torch.reshape((-1, token_values.shape[-1]))
-      action_predictions  = torch.reshape((-1, action_predictions.shape[-1]))
-      token_predictions   = torch.reshape((-1, token_predictions.shape[-1]))
-      use_lm              = torch.reshape((-1, use_lm.shape[-1]))
-      input_ids           = torch.reshape((-1, input_ids.shape[-1]))
-      masked_input_ids    = torch.reshape((-1, masked_input_ids.shape[-1]))
-      feature_ids         = torch.reshape((-1, feature_ids.shape[-1]))
-      action_policy_probs = torch.reshape((-1, action_policy_probs.shape[-1]))
-      token_policy_probs  = torch.reshape((-1, token_policy_probs.shape[-1]))
+      action_advantages   = torch.reshape(action_advantages,   (-1, ) + action_advantages.shape[2:])
+      token_advantages    = torch.reshape(token_advantages,    (-1, ) + token_advantages.shape[2:])
+      action_reward_to_go = torch.reshape(action_reward_to_go, (-1, ) + action_reward_to_go.shape[2:])
+      token_reward_to_go  = torch.reshape(token_reward_to_go,  (-1, ) + token_reward_to_go.shape[2:])
+      action_values       = torch.reshape(action_values,       (-1, ) + action_values.shape[2:])
+      token_values        = torch.reshape(token_values,        (-1, ) + token_values.shape[2:])
+      action_predictions  = torch.reshape(action_predictions,  (-1, ) + action_predictions.shape[2:])
+      token_predictions   = torch.reshape(token_predictions,   (-1, ) + token_predictions.shape[2:])
+      use_lm              = torch.reshape(use_lm,              (-1, ) + use_lm.shape[2:])
+      input_ids           = torch.reshape(input_ids,           (-1, ) + input_ids.shape[2:])
+      masked_input_ids    = torch.reshape(masked_input_ids,    (-1, ) + masked_input_ids.shape[2:])
+      feature_ids         = torch.reshape(feature_ids,         (-1, ) + feature_ids.shape[2:])
+      action_policy_probs = torch.reshape(action_policy_probs, (-1, ) + action_policy_probs.shape[2:])
+      token_policy_probs  = torch.reshape(token_policy_probs,  (-1, ) + token_policy_probs.shape[2:])
 
       # Split the data into batches in the num_workers dimension
       for epoch in range(num_updates):
@@ -207,20 +206,20 @@ class Agent(object):
             entropy_coeff,
             action_optim,
             token_optim,
-            action_advantages   [start:end],
-            token_advantages    [start:end],
-            action_reward_to_go [start:end],
-            token_reward_to_go  [start:end],
-            action_values       [start:end],
-            token_values        [start:end],
+            action_advantages   [start:end].to(pytorch.device),
+            token_advantages    [start:end].to(pytorch.device),
+            action_reward_to_go [start:end].to(pytorch.device),
+            token_reward_to_go  [start:end].to(pytorch.device),
+            action_values       [start:end].to(pytorch.device),
+            token_values        [start:end].to(pytorch.device),
             action_predictions  [start:end],
             token_predictions   [start:end],
             use_lm              [start:end],
             input_ids           [start:end],
             masked_input_ids    [start:end],
             feature_ids         [start:end],
-            action_policy_probs [start:end],
-            token_policy_probs  [start:end],
+            action_policy_probs [start:end].to(pytorch.device),
+            token_policy_probs  [start:end].to(pytorch.device),
           )
         # Probably here save the necessary checkpoints.
     return
@@ -291,7 +290,7 @@ class Agent(object):
     action_optim.zero_grad()
     token_optim.zero_grad()
 
-    seq_len, feat_seq_len, batch_size = input_ids.shape[-1], feature_ids.shape[-1]
+    seq_len, feat_seq_len, batch_size = input_ids.shape[-1], feature_ids.shape[-1], input_ids.shape[0]
 
     # Prepare model inputs.
     feature_mask = feature_ids != self.feature_tokenizer.padToken
@@ -301,27 +300,29 @@ class Agent(object):
 
     # Run the batch again in actor/critic.
     # Actor model returns logits of action.
-    new_action_logits = self.action_actor(
+    action_actor_out = self.action_actor(
       encoder_feature_ids  = feature_ids.to(pytorch.device),
       encoder_feature_mask = feature_mask.to(pytorch.device),
       encoder_position_ids = feature_pos.to(pytorch.device),
       decoder_input_ids    = input_ids.to(pytorch.device),
       decoder_input_mask   = input_mask.to(pytorch.device),
       decoder_position_ids = input_pos.to(pytorch.device),
-    )['action_logits']
+    )
+    new_action_logits, new_action_probs = action_actor_out['action_logits'], action_actor_out['action_probs']
     # Critic model returns value logit.
-    new_action_values = self.action_critic(
+    action_critic_out = self.action_critic(
       encoder_feature_ids  = feature_ids.to(pytorch.device),
       encoder_feature_mask = feature_mask.to(pytorch.device),
       encoder_position_ids = feature_pos.to(pytorch.device),
       decoder_input_ids    = input_ids.to(pytorch.device),
       decoder_input_mask   = input_mask.to(pytorch.device),
       decoder_position_ids = input_pos.to(pytorch.device),
-    )['action_logits']
+    )
+    new_action_values, new_action_values_probs = action_critic_out['action_logits'], action_critic_out['action_probs']
     # Sample the most likely action.
     step_actions = self.policy.SampleActions(new_action_logits)
     # Collect the probability of said selected action, per episode.
-    new_action_probs = new_action_logits[(torch.arange(new_action_logits.shape[0]), step_actions)]
+    new_action_probs = new_action_probs[(torch.arange(new_action_probs.shape[0]), step_actions)]
     # Compute entropy of actions
     new_action_entropy = torch.distributions.categorical.Categorical(logits = new_action_logits).entropy()
     # Flatten the critic values.
@@ -331,6 +332,11 @@ class Agent(object):
     action_prob_ratio = torch.exp(new_action_probs) / torch.exp(action_policy_probs)
     a = action_prob_ratio * action_advantages
     b = torch.clamp(action_prob_ratio, 1 - epsilon, 1 + epsilon) * action_advantages
+    l.logger().critical(new_action_probs)
+    l.logger().critical(action_policy_probs)
+    l.logger().critical(action_prob_ratio)
+    l.logger().critical(a)
+    l.logger().critical(b)
     action_ppo_loss = -1 * torch.mean(torch.min(a, b))
 
     # Compute the value function loss
@@ -344,8 +350,13 @@ class Agent(object):
     action_value_loss = value_loss.mean()
     action_entropy_loss = torch.mean(new_action_entropy)
 
+    l.logger().error(action_ppo_loss)
+    l.logger().error(action_value_loss)
+    l.logger().error(action_entropy_loss)
+
     # Compute the final loss and backward.
     action_loss = action_ppo_loss + value_loss_coeff * action_value_loss - entropy_coeff * action_entropy_loss
+    l.logger().error(action_loss.item())
     action_loss.backward()
     torch.nn.utils.clip_grad_norm_(self.action_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
@@ -357,7 +368,7 @@ class Agent(object):
     lm_feature_ids  = torch.index_select(feature_ids, 0, lm_indices)
     lm_feature_mask = lm_feature_ids != self.feature_tokenizer.padToken
     lm_feat_pos_id  = torch.arange(feat_seq_len, dtype = torch.long).repeat(lm_feature_ids.shape[0], 1)
-    lm_input_ids    = torch.index_select(input_ids, 0, lm_indices)
+    lm_input_ids    = torch.index_select(masked_input_ids, 0, lm_indices)
     lm_input_mask   = lm_input_ids != self.tokenizer.padToken
     lm_pos_id       = torch.arange(seq_len, dtype = torch.long).repeat(lm_input_ids.shape[0], 1)
 
@@ -368,39 +379,41 @@ class Agent(object):
     # The input indices are based on those the rollout action actor decided to use the LM.
     # We directly use masked_input_ids for this reason.
     # Actor model returns logits of the token predictions.
-    new_token_logits = self.token_actor(
+    token_actor_out = self.token_actor(
       encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
       encoder_feature_mask = lm_feature_mask.to(pytorch.device),
       encoder_position_ids = lm_feat_pos_id.to(pytorch.device),
       decoder_input_ids    = lm_input_ids.to(pytorch.device),
       decoder_input_mask   = lm_input_mask.to(pytorch.device),
       decoder_position_ids = lm_pos_id.to(pytorch.device),
-    )['action_logits']
+    )
+    new_token_logits, new_token_probs = token_actor_out['token_logits'], token_actor_out['token_probs']
     # Collect the logits but only for the hole indices.
     new_token_logits = new_token_logits[(ep_idx, seq_idx)]
     # Critic model returns value logit.
-    new_token_values = self.token_critic(
+    token_critic_out = self.token_critic(
       encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
       encoder_feature_mask = lm_feature_mask.to(pytorch.device),
       encoder_position_ids = lm_feat_pos_id.to(pytorch.device),
       decoder_input_ids    = lm_input_ids.to(pytorch.device),
       decoder_input_mask   = lm_input_mask.to(pytorch.device),
       decoder_position_ids = lm_pos_id.to(pytorch.device),
-    )['action_logits']
+    )
+    new_token_values, new_token_values_probs = token_critic_out['token_logits'], token_critic_out['token_probs']
     # Collect the critic's value for this hole index.
     new_token_values  = new_token_values[(ep_idx, seq_idx)]
     # According to policy, select the best token.
     new_tokens        = self.policy.SampleTokens(new_token_logits)
     # Get probability of said token, per sequence.
-    new_token_probs   = new_token_logits[(torch.arange(new_token_logits.shape[0]), new_tokens)]
+    new_token_probs   = new_token_probs[(torch.arange(new_token_probs.shape[0]), new_tokens)]
     # Calculate the entropy of new token logits.
     new_token_entropy = torch.distributions.categorical.Categorical(logits = new_token_logits).entropy()
     # Flatten critic values.
     new_token_values  = new_token_values.flatten()
 
     # Compute the PPO loss
-    token_prob_ratio = torch.exp(new_token_probs) / torch.exp(token_policy_probs)
-    a = token_prob_ratio * token_advantages
+    token_prob_ratio = torch.exp(new_token_probs) / torch.exp(token_policy_probs.to(pytorch.device))
+    a = token_prob_ratio * token_advantages.to(pytorch.device)
     b = torch.clamp(token_prob_ratio, 1 - epsilon, 1 + epsilon) * token_advantages
     token_ppo_loss = -1 * torch.mean(torch.min(a, b))
 
@@ -417,6 +430,7 @@ class Agent(object):
 
     # Compute the final loss and backward.
     token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coeff * token_entropy_loss
+    l.logger().info(token_loss.item())
     token_loss.backward()
     torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
@@ -479,27 +493,29 @@ class Agent(object):
       input_pos    = torch.arange(seq_len, dtype = torch.long).repeat(input_ids.shape[0], 1)
 
       # Actor model returns logits of action.
-      step_action_logits = self.action_actor(
+      step_action_actor_out = self.action_actor(
         encoder_feature_ids  = feature_ids.to(pytorch.device),
         encoder_feature_mask = feature_mask.to(pytorch.device),
         encoder_position_ids = feature_pos.to(pytorch.device),
         decoder_input_ids    = input_ids.to(pytorch.device),
         decoder_input_mask   = input_mask.to(pytorch.device),
         decoder_position_ids = input_pos.to(pytorch.device),
-      )['action_logits']
+      )
+      step_action_logits, step_action_probs = step_action_actor_out['action_logits'], step_action_actor_out['action_probs']
       # Critic model returns value logit.
-      step_action_values = self.action_critic(
+      step_action_critic_out = self.action_critic(
         encoder_feature_ids  = feature_ids.to(pytorch.device),
         encoder_feature_mask = feature_mask.to(pytorch.device),
         encoder_position_ids = feature_pos.to(pytorch.device),
         decoder_input_ids    = input_ids.to(pytorch.device),
         decoder_input_mask   = input_mask.to(pytorch.device),
         decoder_position_ids = input_pos.to(pytorch.device),
-      )['action_logits']
+      )
+      step_action_values, step_action_values_probs = step_action_critic_out['action_logits'], step_action_critic_out['action_probs']
       # Sample the most likely action.
       step_actions = self.policy.SampleActions(step_action_logits)
       # Collect the probability of said selected action, per episode.
-      step_action_probs = step_action_logits[(torch.arange(step_action_logits.shape[0]), step_actions)]
+      step_action_probs = step_action_probs[(torch.arange(step_action_probs.shape[0]), step_actions)]
 
       ## Find which sequences need to sample a token.
       step_use_lm, masked_input_ids = env.intermediate_step(input_ids, step_actions)
@@ -520,14 +536,15 @@ class Agent(object):
         # Keep the hole indices to dereference the prediction logits.
         ep_idx, seq_idx = torch.where(lm_input_ids == self.tokenizer.holeToken)
         # Run the token actor, get token logits.
-        step_token_logits = self.token_actor(
+        step_token_actor_out = self.token_actor(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
           encoder_feature_mask = lm_feature_mask.to(pytorch.device),
           encoder_position_ids = lm_feat_pos_ids.to(pytorch.device),
           decoder_input_ids    = lm_input_ids.to(pytorch.device),
           decoder_input_mask   = lm_input_mask.to(pytorch.device),
           decoder_position_ids = lm_input_pos_ids.to(pytorch.device),
-        )['token_logits']
+        )
+        step_token_logits, step_token_probs = step_token_actor_out['token_logits'], step_token_actor_out['token_probs']
         # Keep the prediction scores only for the masked token.
         step_token_logits = step_token_logits[(ep_idx, seq_idx)]
         # Collect value logit from critic.
@@ -538,13 +555,14 @@ class Agent(object):
           decoder_input_ids    = lm_input_ids.to(pytorch.device),
           decoder_input_mask   = lm_input_mask.to(pytorch.device),
           decoder_position_ids = lm_input_pos_ids.to(pytorch.device),
-        )['token_logits']
+        )
+        step_token_values, step_token_values_probs = step_token_critic_out['token_logits'], step_token_critic_out['token_probs']
         # Get the critic's value only for masked index.
         step_token_values = step_token_values[(ep_idx, seq_idx)]
         # According to policy, select the best token.
         step_tokens = self.policy.SampleTokens(step_token_logits)
         # Get probability of said token, per episode.
-        step_token_probs = step_token_logits[(torch.arange(step_token_logits.shape[0]), step_tokens)]
+        step_token_probs = step_token_probs[(torch.arange(step_token_probs.shape[0]), step_tokens)]
 
         # First extend to original dimensions.
         # Store the modified - with token LM - codes to the original tensors.
