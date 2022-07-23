@@ -548,7 +548,7 @@ class Agent(object):
         # Keep the prediction scores only for the masked token.
         step_token_logits = step_token_logits[(ep_idx, seq_idx)]
         # Collect value logit from critic.
-        step_token_values = self.token_critic(
+        step_token_critic_out = self.token_critic(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
           encoder_feature_mask = lm_feature_mask.to(pytorch.device),
           encoder_position_ids = lm_feat_pos_ids.to(pytorch.device),
