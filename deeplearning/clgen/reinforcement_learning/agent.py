@@ -390,6 +390,7 @@ class Agent(object):
     new_token_logits, new_token_probs = token_actor_out['token_logits'], token_actor_out['token_probs']
     # Collect the logits but only for the hole indices.
     new_token_logits = new_token_logits[(ep_idx, seq_idx)]
+    new_token_probs  = new_token_probs[(ep_idx, seq_idx)]
     # Critic model returns value logit.
     token_critic_out = self.token_critic(
       encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
@@ -401,7 +402,8 @@ class Agent(object):
     )
     new_token_values, new_token_values_probs = token_critic_out['token_logits'], token_critic_out['token_probs']
     # Collect the critic's value for this hole index.
-    new_token_values  = new_token_values[(ep_idx, seq_idx)]
+    new_token_values       = new_token_values[(ep_idx, seq_idx)]
+    new_token_values_probs = new_token_values_probs[(ep_idx, seq_idx)]
     # According to policy, select the best token.
     new_tokens        = self.policy.SampleTokens(new_token_logits)
     # Get probability of said token, per sequence.
@@ -547,6 +549,7 @@ class Agent(object):
         step_token_logits, step_token_probs = step_token_actor_out['token_logits'], step_token_actor_out['token_probs']
         # Keep the prediction scores only for the masked token.
         step_token_logits = step_token_logits[(ep_idx, seq_idx)]
+        step_token_logits = step_token_probs[(ep_idx, seq_idx)]
         # Collect value logit from critic.
         step_token_critic_out = self.token_critic(
           encoder_feature_ids  = lm_feature_ids.to(pytorch.device),
@@ -558,7 +561,8 @@ class Agent(object):
         )
         step_token_values, step_token_values_probs = step_token_critic_out['token_logits'], step_token_critic_out['token_probs']
         # Get the critic's value only for masked index.
-        step_token_values = step_token_values[(ep_idx, seq_idx)]
+        step_token_values       = step_token_values[(ep_idx, seq_idx)]
+        step_token_values_probs = step_token_values_probs[(ep_idx, seq_idx)]
         # According to policy, select the best token.
         step_tokens = self.policy.SampleTokens(step_token_logits)
         # Get probability of said token, per episode.
