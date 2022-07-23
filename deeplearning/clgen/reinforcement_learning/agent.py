@@ -195,8 +195,8 @@ class Agent(object):
       token_policy_probs  = torch.reshape(token_policy_probs,  (-1, ) + token_policy_probs.shape[2:])
 
       # Split the data into batches in the num_workers dimension
-      for epoch in range(num_updates):
-        for batch in range(num_batches):
+      for epoch in tqdm.tqdm(range(num_updates), total = num_updates, desc = "Epoch"):
+        for batch in tqdm.tqdm(range(num_batches), total = num_batches, desc = "Batch"):
           start = batch * batch_size
           end = (batch + 1) * batch_size
           # Step batch
@@ -332,11 +332,6 @@ class Agent(object):
     action_prob_ratio = torch.exp(new_action_probs) / torch.exp(action_policy_probs)
     a = action_prob_ratio * action_advantages
     b = torch.clamp(action_prob_ratio, 1 - epsilon, 1 + epsilon) * action_advantages
-    l.logger().critical(new_action_probs)
-    l.logger().critical(action_policy_probs)
-    l.logger().critical(action_prob_ratio)
-    l.logger().critical(a)
-    l.logger().critical(b)
     action_ppo_loss = -1 * torch.mean(torch.min(a, b))
 
     # Compute the value function loss
@@ -350,13 +345,8 @@ class Agent(object):
     action_value_loss = value_loss.mean()
     action_entropy_loss = torch.mean(new_action_entropy)
 
-    l.logger().error(action_ppo_loss)
-    l.logger().error(action_value_loss)
-    l.logger().error(action_entropy_loss)
-
     # Compute the final loss and backward.
     action_loss = action_ppo_loss + value_loss_coeff * action_value_loss - entropy_coeff * action_entropy_loss
-    l.logger().error(action_loss.item())
     action_loss.backward()
     torch.nn.utils.clip_grad_norm_(self.action_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
@@ -438,6 +428,8 @@ class Agent(object):
       torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
       torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
       token_optim.step()
+    # else:
+    #   token_loss = 
     return
 
   def rollout(self,
@@ -520,6 +512,11 @@ class Agent(object):
       # Collect the probability of said selected action, per episode.
       step_action_probs = step_action_probs[(torch.arange(step_action_probs.shape[0]), step_actions)]
 
+      # Declare here the augmented token vectors.
+      augmented_step_token_values = torch.zeros((num_episodes, 1), dtype = torch.float32)
+      augmented_step_tokens       = torch.zeros((num_episodes, 1), dtype = torch.long)
+      augmented_step_token_probs  = torch.zeros((num_episodes, 1), dtype = torch.float32)
+
       ## Find which sequences need to sample a token.
       step_use_lm, masked_input_ids = env.intermediate_step(input_ids, step_actions)
       if torch.any(step_use_lm):
@@ -571,9 +568,6 @@ class Agent(object):
 
         # First extend to original dimensions.
         # Store the modified - with token LM - codes to the original tensors.
-        augmented_step_token_values = torch.zeros((num_episodes, 1), dtype = torch.float32)
-        augmented_step_tokens       = torch.zeros((num_episodes, 1), dtype = torch.long)
-        augmented_step_token_probs  = torch.zeros((num_episodes, 1), dtype = torch.float32)
         for nidx, lm_idx in zip(range(step_tokens.shape[0]), lm_indices):
           augmented_step_token_values[lm_idx] = step_token_values[nidx]
           augmented_step_tokens[lm_idx]       = step_tokens[nidx]
@@ -640,7 +634,6 @@ class Agent(object):
     gae_step = torch.zeros((N, ))
     action_advantages = torch.zeros((N, T))
     token_advantages  = torch.zeros((N, T))
-    l.logger().warn("You might need to mask out token delta when LM is not used.")
     for t in reversed(range(T - 1)):
       # First compute delta, which is the one-step TD error
       action_delta = rewards[:, t] + gamma * action_values[:, t + 1] * episode_ends[:, t] - action_values[:, t]
