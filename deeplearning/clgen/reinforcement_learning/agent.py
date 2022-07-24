@@ -412,6 +412,13 @@ class Agent(object):
       # Flatten critic values.
       new_token_values  = new_token_values.flatten()
 
+      # Keep only the advantages and policy probs for the indices where the LM was used.
+      lm_indices         = lm_indices.to(pytorch.device)
+      token_advantages   = torch.index_select(token_advantages,   0, lm_indices)
+      token_reward_to_go = torch.index_select(token_reward_to_go, 0, lm_indices)
+      token_policy_probs = torch.index_select(token_policy_probs, 0, lm_indices)
+      token_values       = torch.index_select(token_values,       0, lm_indices)
+
       # Compute the PPO loss
       token_prob_ratio = torch.exp(new_token_probs) / torch.exp(token_policy_probs.to(pytorch.device))
       a = token_prob_ratio * token_advantages.to(pytorch.device)
@@ -431,7 +438,6 @@ class Agent(object):
 
       # Compute the final loss and backward.
       token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coeff * token_entropy_loss
-      l.logger().info(token_loss.item())
       token_loss.backward()
       torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
       torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
@@ -484,9 +490,8 @@ class Agent(object):
     done                   = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
 
     ## Run execution loop.
-    for step in range(steps_per_episode):
+    for step in tqdm.tqdm(range(steps_per_episode), total = steps_per_episode, desc = "Rollout {} episodes".format(num_episodes)):
       ## This loop unfolds all batch_size trajectories.
-      l.logger().warn(step)
       # Input tensors
       feature_ids  = batch_feature_ids[:, step]
       feature_mask = feature_ids != self.feature_tokenizer.padToken
