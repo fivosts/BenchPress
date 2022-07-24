@@ -166,7 +166,7 @@ class Agent(object):
     """
     Run PPO over policy and train the agent.
     """
-    self._ConfigModelParams()
+    self._ConfigModelParams(learning_rate = lr)
     self.ckpt_step = max(0, self.loadCheckpoint())
 
     if self.is_world_process_zero():
