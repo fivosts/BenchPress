@@ -1,6 +1,7 @@
 """
 Agents module for reinforcement learning.
 """
+from cmath import inf
 from code import interact
 import pathlib
 import typing
@@ -171,7 +172,7 @@ class Agent(object):
 
     if self.is_world_process_zero():
       rollout_hook = hooks.tensorMonitorHook(
-        self.logfile_path,
+        self.log_path,
         self.ckpt_step,
         1, 1,
         average = False,
@@ -487,9 +488,15 @@ class Agent(object):
       torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
       torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
       self.token_optim.step()
-    # else:
-    #   token_loss = 
-    return mean_action_loss / action_backwards, mean_token_loss / token_backwards
+    try:
+      mean_action_loss = mean_action_loss / action_backwards
+    except ZeroDivisionError:
+      mean_action_loss = 0.0
+    try:
+      mean_token_loss = mean_token_loss / token_backwards
+    except ZeroDivisionError:
+      mean_token_loss = 0.0
+    return mean_action_loss, mean_token_loss
 
   def rollout(self,
               env               : env.Environment,
