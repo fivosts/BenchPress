@@ -29,16 +29,23 @@ class Policy(object):
     self.token_temperature  = token_temp
     return
 
-  def SampleActions(self, action_logits: torch.FloatTensor) -> typing.Tuple[int, int]:
+  def SampleActions(self,
+                    action_logits  : torch.FloatTensor,
+                    actual_lengths : typing.Tuple[torch.LongTensor, torch.LongTensor],
+                    ) -> typing.Tuple[int, int]:
     """
     Get the Q-Values for action and apply policy on it.
     """
-    ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-        temperature = self.action_temperature if self.action_temperature is not None else 1.0,
-        logits = action_logits,
-        validate_args = False if "1.9." in torch.__version__ else None,
-      ).sample()
-    actions = torch.argmax(ct, dim = -1)
+    actions = torch.zeros((action_logits.shape[0]), dtype = torch.long)
+    batch_idxs, seq_idxs = actual_lengths
+    for bidx, sidx, seq_logits in zip(batch_idxs, seq_idxs, action_logits):
+      ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
+          temperature = self.action_temperature if self.action_temperature is not None else 1.0,
+          logits = seq_logits[:(sidx * len(interactions.ACTION_TYPE_SPACE))],
+          validate_args = False if "1.9." in torch.__version__ else None,
+        ).sample()
+      action = torch.argmax(ct, dim = -1)
+      actions[bidx] = action
     return actions
 
   def SampleTokens(self, token_logits: torch.FloatTensor) -> int:
@@ -320,7 +327,8 @@ class Agent(object):
     )
     new_action_values, new_action_values_probs = action_critic_out['action_logits'], action_critic_out['action_probs']
     # Sample the most likely action.
-    step_actions = self.policy.SampleActions(new_action_logits)
+    actual_lengths = torch.where(input_ids == self.tokenizer.endToken)
+    step_actions   = self.policy.SampleActions(new_action_logits, actual_lengths)
     # Collect the probability of said selected action, per episode.
     new_action_probs = new_action_probs[(torch.arange(new_action_probs.shape[0]), step_actions)]
     # Compute entropy of actions
@@ -508,7 +516,8 @@ class Agent(object):
       )
       step_action_values, step_action_values_probs = step_action_critic_out['action_logits'], step_action_critic_out['action_probs']
       # Sample the most likely action.
-      step_actions = self.policy.SampleActions(step_action_logits)
+      actual_lengths = torch.where(input_ids == self.tokenizer.endToken)
+      step_actions   = self.policy.SampleActions(step_action_logits, actual_lengths)
       # Collect the probability of said selected action, per episode.
       step_action_probs = step_action_probs[(torch.arange(step_action_probs.shape[0]), step_actions)]
 
