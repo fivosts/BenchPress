@@ -722,8 +722,8 @@ class Agent(object):
         if pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
           pytorch.torch_xla_model.save(self.action_actor, ckpt_comp("actor", "action"))
           pytorch.torch_xla_model.save(self.action_critic, ckpt_comp("critic", "action"))
-          pytorch.torch_xla_model.save(self.action_optim, ckpt_comp("action_optimizer"))
-          pytorch.torch_xla_model.save(self.token_optim, ckpt_comp("token_optimizer"))
+          pytorch.torch_xla_model.save(self.action_optim, ckpt_comp("action", "optimizer"))
+          pytorch.torch_xla_model.save(self.token_optim, ckpt_comp("token", "optimizer"))
         pytorch.torch_xla.rendezvous("saving_optimizer_states")
       else:
         if isinstance(self.action_actor, torch.nn.DataParallel):
@@ -742,8 +742,8 @@ class Agent(object):
           torch.save(self.token_critic.module.state_dict(), ckpt_comp("critic", "token"))
         else:
           torch.save(self.token_critic.state_dict(), ckpt_comp("critic", "token"))
-        torch.save(self.action_optim.state_dict(), ckpt_comp("action_optimizer"))
-        torch.save(self.token_optim.state_dict(), ckpt_comp("token_optimizer"))
+        torch.save(self.action_optim.state_dict(), ckpt_comp("action", "optimizer"))
+        torch.save(self.token_optim.state_dict(), ckpt_comp("token", "optimizer"))
 
       with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
         mf.write("train_step: {}\n".format(self.ckpt_step))
@@ -878,10 +878,10 @@ class Agent(object):
 
     if self.action_optim is not None and self.token_optim is not None and ckpt_step > 0:
       self.action_optim.load_state_dict(
-        torch.load(ckpt_comp("action_optimizer"), map_location = pytorch.device)
+        torch.load(ckpt_comp("action", "optimizer"), map_location = pytorch.device)
       )
       self.token_optim.load_state_dict(
-        torch.load(ckpt_comp("token_optimizer"), map_location = pytorch.device)
+        torch.load(ckpt_comp("token", "optimizer"), map_location = pytorch.device)
       )
 
     self.action_actor.eval()
