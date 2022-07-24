@@ -19,6 +19,10 @@ from deeplearning.clgen.util import pytorch
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
 
+from absl import flags
+
+FLAGS = flags.FLAGS
+
 torch = pytorch.torch
 
 class Policy(object):
@@ -167,10 +171,14 @@ class Agent(object):
 
     if self.is_world_process_zero():
       rollout_hook = hooks.tensorMonitorHook(
-        self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
+        self.logfile_path,
+        self.current_step,
+        min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
       train_hook   = hooks.tensorMonitorHook(
-        self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
+        self.logfile_path,
+        self.current_step,
+        min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
 
     action_optim = torch.optim.Adam(list(self.action_actor.parameters()) + list(self.action_critic.parameters()), lr = lr)
