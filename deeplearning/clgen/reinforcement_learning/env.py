@@ -125,19 +125,40 @@ class Environment(gym.Env):
       act_index = int(act) // len(interactions.ACTION_TYPE_SPACE)
       token_id  = int(tok)
       lm        = bool(lm)
-      real_len  = torch.where(code == self.tokenizer.endToken)[0][0]
+      try:
+        real_len  = torch.where(code == self.tokenizer.endToken)[0][0]
+      except Exception as e:
+        # This exception is raised because you remove the endToken
+        l.logger().warn(code)
+        l.logger().error(torch.where(code == self.tokenizer.endToken))
+        l.logger().critical("No ENDTOKEN has been found.")
+        raise e
       if act_index >= real_len and act_type != interactions.ACTION_TYPE_SPACE['COMP']:
-        reward[idx] = -1.0
+        l.logger().critical(self.tokenizer.tokensToString([int(x) for x in code]))
+        l.logger().critical(act_type)
+        l.logger().critical(act_index)
+        l.logger().critical(real_len)
+        raise ValueError("Why did this run out of bounds ?")
 
+      ## ADD
       if act_type == interactions.ACTION_TYPE_SPACE['ADD']:
         new_code = torch.cat((code[:act_index + 1], torch.LongTensor([token_id]), code[act_index + 1:]))
         new_code = new_code[:code.shape[0]]
         state_code[idx] = new_code
+      ## REMOVE
       elif act_type == interactions.ACTION_TYPE_SPACE['REM']:
-        new_code = torch.cat((code[:act_index], code[act_index + 1:], torch.LongTensor([self.tokenizer.padToken])))
-        state_code[idx] = new_code
+        if int(code[act_index]) not in self.tokenizer.metaTokenValues:
+          new_code = torch.cat((code[:act_index], code[act_index + 1:], torch.LongTensor([self.tokenizer.padToken])))
+          state_code[idx] = new_code
+        else:
+          reward[idx] = -0.5
+      ## REPLACE
       elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
-        state_code[idx][act_index] = token_id
+        if int(code[act_index]) not in self.tokenizer.metaTokenValues:
+          state_code[idx][act_index] = token_id
+        else:
+          reward[idx] = -0.5
+      ## COMPILE
       elif act_type == interactions.ACTION_TYPE_SPACE['COMP']:
         src = self.tokenizer.ArrayToCode([int(x) for x in code])
         try:
