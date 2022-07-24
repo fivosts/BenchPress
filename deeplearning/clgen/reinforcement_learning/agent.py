@@ -93,11 +93,9 @@ class Agent(object):
       action_temp = self.qv_config.action_temperature,
       token_temp  = self.qv_config.token_temperature,
     )
-    self._ConfigModelParams()
-    self.ckpt_step = max(0, self.loadCheckpoint())
     return
 
-  def _ConfigModelParams(self) -> None:
+  def _ConfigModelParams(self, learning_rate: float) -> None:
     """
     Initialize torch models and send them to device.
     """
@@ -135,6 +133,14 @@ class Agent(object):
       self.action_critic = torch.nn.DataParallel(self.action_critic)
       self.token_actor   = torch.nn.DataParallel(self.token_actor)
       self.token_critic  = torch.nn.DataParallel(self.token_critic)
+    self.action_optim = torch.optim.Adam(
+      list(self.action_actor.parameters()) + list(self.action_critic.parameters()),
+      lr = learning_rate
+    )
+    self.token_optim  = torch.optim.Adam(
+      list(self.token_actor.parameters()) + list(self.token_critic.parameters()),
+      lr = learning_rate
+    )
     return
 
   def Train(self,
@@ -153,6 +159,9 @@ class Agent(object):
     """
     Run PPO over policy and train the agent.
     """
+    self._ConfigModelParams()
+    self.ckpt_step = max(0, self.loadCheckpoint())
+
     action_optim = torch.optim.Adam(list(self.action_actor.parameters()) + list(self.action_critic.parameters()), lr = lr)
     token_optim  = torch.optim.Adam(list(self.token_actor.parameters()) + list(self.token_critic.parameters()), lr = lr)
 
@@ -229,6 +238,8 @@ class Agent(object):
             token_policy_probs  [start:end].to(pytorch.device),
           )
         # Probably here save the necessary checkpoints.
+        # Also log the following stuff:
+        # Rewards, advantages (?), size of code ?, rtg ? Distribution of actions selected ?
     return
 
   def ppo_train_step(self,
@@ -666,28 +677,32 @@ class Agent(object):
     """
     if self.is_world_process_zero():
       ckpt_comp = lambda prefix, x: self.ckpt_path / "{}{}_model-{}.pt".format(prefix, x, self.ckpt_step)
-      if self.torch_tpu_available:
-        if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
-          self.pytorch.torch_xla_model.save(self.action_actor, ckpt_comp("actor", "action"))
-          self.pytorch.torch_xla_model.save(self.action_critic, ckpt_comp("critic", "action"))
-        self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+      if pytorch.torch_tpu_available:
+        if pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+          pytorch.torch_xla_model.save(self.action_actor, ckpt_comp("actor", "action"))
+          pytorch.torch_xla_model.save(self.action_critic, ckpt_comp("critic", "action"))
+          pytorch.torch_xla_model.save(self.action_optim, ckpt_comp("action_optimizer"))
+          pytorch.torch_xla_model.save(self.token_optim, ckpt_comp("token_optimizer"))
+        pytorch.torch_xla.rendezvous("saving_optimizer_states")
       else:
-        if isinstance(self.action_actor, self.torch.nn.DataParallel):
-          self.torch.save(self.action_actor.module.state_dict(), ckpt_comp("actor", "action"))
+        if isinstance(self.action_actor, torch.nn.DataParallel):
+          torch.save(self.action_actor.module.state_dict(), ckpt_comp("actor", "action"))
         else:
-          self.torch.save(self.action_actor.state_dict(), ckpt_comp("action", "action"))
-        if isinstance(self.action_critic, self.torch.nn.DataParallel):
-          self.torch.save(self.action_critic.module.state_dict(), ckpt_comp("critic", "action"))
+          torch.save(self.action_actor.state_dict(), ckpt_comp("action", "action"))
+        if isinstance(self.action_critic, torch.nn.DataParallel):
+          torch.save(self.action_critic.module.state_dict(), ckpt_comp("critic", "action"))
         else:
-          self.torch.save(self.action_critic.state_dict(), ckpt_comp("critic", "action"))
-        if isinstance(self.token_actor, self.torch.nn.DataParallel):
-          self.torch.save(self.token_actor.module.state_dict(), ckpt_comp("actor", "token"))
+          torch.save(self.action_critic.state_dict(), ckpt_comp("critic", "action"))
+        if isinstance(self.token_actor, torch.nn.DataParallel):
+          torch.save(self.token_actor.module.state_dict(), ckpt_comp("actor", "token"))
         else:
-          self.torch.save(self.token_actor.state_dict(), ckpt_comp("action", "token"))
-        if isinstance(self.token_critic, self.torch.nn.DataParallel):
-          self.torch.save(self.token_critic.module.state_dict(), ckpt_comp("critic", "token"))
+          torch.save(self.token_actor.state_dict(), ckpt_comp("action", "token"))
+        if isinstance(self.token_critic, torch.nn.DataParallel):
+          torch.save(self.token_critic.module.state_dict(), ckpt_comp("critic", "token"))
         else:
-          self.torch.save(self.token_critic.state_dict(), ckpt_comp("critic", "token"))
+          torch.save(self.token_critic.state_dict(), ckpt_comp("critic", "token"))
+        torch.save(self.action_optim.state_dict(), ckpt_comp("action_optimizer"))
+        torch.save(self.token_optim.state_dict(), ckpt_comp("token_optimizer"))
 
       with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
         mf.write("train_step: {}\n".format(self.ckpt_step))
@@ -728,7 +743,7 @@ class Agent(object):
       except RuntimeError:
         from collections import OrderedDict
         new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("actor", "action")).items():
+        for k, v in torch.load(ckpt_comp("actor", "action")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
@@ -756,7 +771,7 @@ class Agent(object):
       except RuntimeError:
         from collections import OrderedDict
         new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("actor", "critic")).items():
+        for k, v in torch.load(ckpt_comp("actor", "critic")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
@@ -784,7 +799,7 @@ class Agent(object):
       except RuntimeError:
         from collections import OrderedDict
         new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("token", "action")).items():
+        for k, v in torch.load(ckpt_comp("token", "action")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
@@ -812,13 +827,21 @@ class Agent(object):
       except RuntimeError:
         from collections import OrderedDict
         new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("token", "critic")).items():
+        for k, v in torch.load(ckpt_comp("token", "critic")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
             name = 'module.' + k # Add 'module.'
           new_state_dict[name] = v
         self.token_critic.load_state_dict(new_state_dict)
+
+    if self.action_optim is not None and self.token_optim is not None and ckpt_step > 0:
+      self.action_optim.load_state_dict(
+        torch.load(ckpt_comp("action_optimizer"), map_location = pytorch.device)
+      )
+      self.token_optim.load_state_dict(
+        torch.load(ckpt_comp("token_optimizer"), map_location = pytorch.device)
+      )
 
     self.action_actor.eval()
     self.action_critic.eval()
