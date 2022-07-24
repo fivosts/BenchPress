@@ -10,6 +10,7 @@ import numpy as np
 from deeplearning.clgen.reinforcement_learning import interactions
 from deeplearning.clgen.reinforcement_learning import model
 from deeplearning.clgen.reinforcement_learning import env
+from deeplearning.clgen.reinforcement_learning import hooks
 from deeplearning.clgen.reinforcement_learning.config import QValuesConfig
 from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
@@ -74,9 +75,11 @@ class Agent(object):
 
     self.cache_path = cache_path / "agent"
     self.ckpt_path  = self.cache_path / "checkpoint"
+    self.log_path   = self.cache_path / "logs"
     if environment.WORLD_RANK == 0:
       self.cache_path.mkdir(exist_ok = True, parents = True)
       self.ckpt_path.mkdir(exist_ok = True, parents = True)
+      self.log_path.mkdir(exist_ok = True, parents = True)
 
     self.config            = config
     self.language_model    = language_model
@@ -162,6 +165,14 @@ class Agent(object):
     self._ConfigModelParams()
     self.ckpt_step = max(0, self.loadCheckpoint())
 
+    if self.is_world_process_zero():
+      rollout_hook = hooks.tensorMonitorHook(
+        self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
+      )
+      train_hook   = hooks.tensorMonitorHook(
+        self.logfile_path if not pre_train else self.pre_logfile_path, self.current_step, min(self.steps_per_epoch, FLAGS.monitor_frequency)
+      )
+
     action_optim = torch.optim.Adam(list(self.action_actor.parameters()) + list(self.action_critic.parameters()), lr = lr)
     token_optim  = torch.optim.Adam(list(self.token_actor.parameters()) + list(self.token_critic.parameters()), lr = lr)
 
@@ -210,6 +221,9 @@ class Agent(object):
       action_policy_probs = torch.reshape(action_policy_probs, (-1, ) + action_policy_probs.shape[2:])
       token_policy_probs  = torch.reshape(token_policy_probs,  (-1, ) + token_policy_probs.shape[2:])
 
+      if environment.WORLD_SIZE > 1:
+        raise NotImplementedError("Gather all the tensors here ?")
+
       # Split the data into batches in the num_workers dimension
       for epoch in tqdm.tqdm(range(num_updates), total = num_updates, desc = "Epoch"):
         for batch in tqdm.tqdm(range(num_batches), total = num_batches, desc = "Batch"):
@@ -240,6 +254,7 @@ class Agent(object):
         # Probably here save the necessary checkpoints.
         # Also log the following stuff:
         # Rewards, advantages (?), size of code ?, rtg ? Distribution of actions selected ?
+        self.ckpt_step += 1
     return
 
   def ppo_train_step(self,
