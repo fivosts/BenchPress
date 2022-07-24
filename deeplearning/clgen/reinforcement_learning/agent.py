@@ -172,8 +172,9 @@ class Agent(object):
     if self.is_world_process_zero():
       rollout_hook = hooks.tensorMonitorHook(
         self.logfile_path,
-        self.current_step,
-        min(self.steps_per_epoch, FLAGS.monitor_frequency)
+        self.ckpt_step,
+        1, 1,
+        average = False,
       )
     #   train_hook   = hooks.tensorMonitorHook(
     #     self.logfile_path,
@@ -258,9 +259,12 @@ class Agent(object):
         # Probably here save the necessary checkpoints.
         # Also log the following stuff:
         # Rewards, advantages (?), size of code ?, rtg ? Distribution of actions selected ?
+        self.saveCheckpoint()
         if self.is_world_process_zero():
           rollout_hook.step(
-            
+            mean_action_loss  = mean_action_loss,
+            mean_token_loss   = mean_token_loss,
+            mean_final_reward = torch.mean(rewards[:,-1]),
           )
         self.ckpt_step += 1
     return
