@@ -175,11 +175,11 @@ class Agent(object):
         self.current_step,
         min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
-      train_hook   = hooks.tensorMonitorHook(
-        self.logfile_path,
-        self.current_step,
-        min(self.steps_per_epoch, FLAGS.monitor_frequency)
-      )
+    #   train_hook   = hooks.tensorMonitorHook(
+    #     self.logfile_path,
+    #     self.current_step,
+    #     min(self.steps_per_epoch, FLAGS.monitor_frequency)
+    #   )
 
     for ep in range(num_epochs):
       # Run a batch of episodes.
@@ -197,7 +197,8 @@ class Agent(object):
         gamma,
         lam
       )
-
+      torch.set_printoptions(profile = 'full')
+      l.logger().error(rewards[:,-1])
       # Compute reward-to-gos.
       action_reward_to_go = action_advantages + action_values.squeeze(-1)
       token_reward_to_go  = token_advantages  + token_values.squeeze(-1)
@@ -235,7 +236,7 @@ class Agent(object):
           start = batch * batch_size
           end = (batch + 1) * batch_size
           # Step batch
-          self.ppo_train_step(
+          mean_action_loss, mean_token_loss = self.ppo_train_step(
             epsilon,
             value_loss_coeff,
             entropy_coeff,
@@ -257,6 +258,10 @@ class Agent(object):
         # Probably here save the necessary checkpoints.
         # Also log the following stuff:
         # Rewards, advantages (?), size of code ?, rtg ? Distribution of actions selected ?
+        if self.is_world_process_zero():
+          rollout_hook.step(
+            
+          )
         self.ckpt_step += 1
     return
 
@@ -278,7 +283,7 @@ class Agent(object):
                      feature_ids         : torch.LongTensor,
                      action_policy_probs : torch.FloatTensor,
                      token_policy_probs  : torch.FloatTensor,
-                     ) -> None:
+                     ) -> typing.Tuple[float, float]:
     """
     Run a batch through PPO training.
     Inputs:
@@ -325,6 +330,9 @@ class Agent(object):
     self.token_optim.zero_grad()
 
     seq_len, feat_seq_len, batch_size = input_ids.shape[-1], feature_ids.shape[-1], input_ids.shape[0]
+
+    mean_action_loss, action_backwards = 0.0, 0
+    mean_token_loss,  token_backwards  = 0.0, 0
 
     # Prepare model inputs.
     feature_mask = feature_ids != self.feature_tokenizer.padToken
@@ -383,6 +391,9 @@ class Agent(object):
     # Compute the final loss and backward.
     action_loss = action_ppo_loss + value_loss_coeff * action_value_loss - entropy_coeff * action_entropy_loss
     action_loss.backward()
+    mean_action_loss += action_loss.item()
+    action_backwards += 1
+
     torch.nn.utils.clip_grad_norm_(self.action_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
     self.action_optim.step()
@@ -466,12 +477,15 @@ class Agent(object):
       # Compute the final loss and backward.
       token_loss = token_ppo_loss + value_loss_coeff * token_value_loss - entropy_coeff * token_entropy_loss
       token_loss.backward()
+      mean_token_loss += token_loss.item()
+      token_backwards += 1
+
       torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
       torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
       self.token_optim.step()
     # else:
     #   token_loss = 
-    return
+    return mean_action_loss / action_backwards, mean_token_loss / token_backwards
 
   def rollout(self,
               env               : env.Environment,
