@@ -17,6 +17,7 @@ from deeplearning.clgen.models import language_models
 from deeplearning.clgen.proto import reinforcement_learning_pb2
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.util import pytorch
+from deeplearning.clgen.util import distrib
 from deeplearning.clgen.util import environment
 from deeplearning.clgen.util import logging as l
 
@@ -201,6 +202,7 @@ class Agent(object):
       )
       torch.set_printoptions(profile = 'full')
       l.logger().error(rewards[:,-1])
+      l.logger().error(discounted_rewards[:,-1])
       # Compute reward-to-gos.
       action_reward_to_go = action_advantages + action_values.squeeze(-1)
       token_reward_to_go  = token_advantages  + token_values.squeeze(-1)
@@ -260,12 +262,12 @@ class Agent(object):
         # Probably here save the necessary checkpoints.
         # Also log the following stuff:
         # Rewards, advantages (?), size of code ?, rtg ? Distribution of actions selected ?
-        self.saveCheckpoint()
+        # self.saveCheckpoint()
         if self.is_world_process_zero():
           rollout_hook.step(
-            mean_action_loss  = mean_action_loss,
-            mean_token_loss   = mean_token_loss,
-            mean_final_reward = torch.mean(rewards[:,-1]),
+            mean_action_loss  = float(mean_action_loss),
+            mean_token_loss   = float(mean_token_loss),
+            mean_final_reward = float(torch.mean(rewards[:,-1])),
           )
         self.ckpt_step += 1
     return
@@ -697,7 +699,8 @@ class Agent(object):
     token_values  = token_values.squeeze(-1)
     N = rewards.shape[0]
     T = rewards.shape[1]
-    gae_step = torch.zeros((N, ))
+    action_gae_step = torch.zeros((N, ))
+    token_gae_step = torch.zeros((N, ))
     action_advantages = torch.zeros((N, T))
     token_advantages  = torch.zeros((N, T))
     for t in reversed(range(T - 1)):
@@ -708,8 +711,10 @@ class Agent(object):
       # of GAE, resetting it to zero if the episode ended, and adding this
       # step's delta
       # And store it
-      action_advantages[:, t] = action_delta + gamma * lam * episode_ends[:, t] * gae_step
-      token_advantages[:, t]  = token_delta  + gamma * lam * episode_ends[:, t] * gae_step
+      action_gae_step = action_delta + gamma * lam * episode_ends[:, t] * action_gae_step
+      token_gae_step  = token_delta + gamma * lam * episode_ends[:, t] * token_gae_step
+      action_advantages[:, t] = action_delta + gamma * lam * episode_ends[:, t] * action_gae_step
+      token_advantages[:, t]  = token_delta  + gamma * lam * episode_ends[:, t] * token_gae_step
     return action_advantages, token_advantages
 
   def saveCheckpoint(self) -> None:
@@ -748,7 +753,7 @@ class Agent(object):
       with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
         mf.write("train_step: {}\n".format(self.ckpt_step))
     self.ckpt_step += 1
-    torch.distributed.barrier()
+    distrib.barrier()
     return
   
   def loadCheckpoint(self) -> None:
