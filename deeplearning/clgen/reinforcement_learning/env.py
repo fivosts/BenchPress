@@ -183,6 +183,7 @@ class Environment(gym.Env):
       else:
         raise ValueError("Invalid action type: {}".format(act_type))
     discounted_reward = traj_disc_rewards * gamma + reward
+    traj_disc_rewards[torch.where(done == True)] = 0.0
     return state_code, reward, discounted_reward, done
 
   def reset(self, recycle: bool = True) -> interactions.State:
