@@ -181,9 +181,6 @@ class Agent(object):
         min(self.steps_per_epoch, FLAGS.monitor_frequency)
       )
 
-    action_optim = torch.optim.Adam(list(self.action_actor.parameters()) + list(self.action_critic.parameters()), lr = lr)
-    token_optim  = torch.optim.Adam(list(self.token_actor.parameters()) + list(self.token_critic.parameters()), lr = lr)
-
     for ep in range(num_epochs):
       # Run a batch of episodes.
       input_ids, masked_input_ids, feature_ids, action_values, action_predictions, action_policy_probs,\
@@ -242,8 +239,6 @@ class Agent(object):
             epsilon,
             value_loss_coeff,
             entropy_coeff,
-            action_optim,
-            token_optim,
             action_advantages   [start:end].to(pytorch.device),
             token_advantages    [start:end].to(pytorch.device),
             action_reward_to_go [start:end].to(pytorch.device),
@@ -269,8 +264,6 @@ class Agent(object):
                      epsilon             : float,
                      value_loss_coeff    : float,
                      entropy_coeff       : float,
-                     action_optim        : torch.optim.Adam,
-                     token_optim         : torch.optim.Adam,
                      action_advantages   : torch.FloatTensor,
                      token_advantages    : torch.FloatTensor,
                      action_reward_to_go : torch.FloatTensor,
@@ -328,8 +321,8 @@ class Agent(object):
     self.token_actor.train()
     self.token_critic.train()
 
-    action_optim.zero_grad()
-    token_optim.zero_grad()
+    self.action_optim.zero_grad()
+    self.token_optim.zero_grad()
 
     seq_len, feat_seq_len, batch_size = input_ids.shape[-1], feature_ids.shape[-1], input_ids.shape[0]
 
@@ -392,7 +385,7 @@ class Agent(object):
     action_loss.backward()
     torch.nn.utils.clip_grad_norm_(self.action_actor.parameters(), .5)
     torch.nn.utils.clip_grad_norm_(self.action_critic.parameters(), .5)
-    action_optim.step()
+    self.action_optim.step()
 
     if torch.any(use_lm):
       # Get the indices where use_lm is True.
@@ -475,7 +468,7 @@ class Agent(object):
       token_loss.backward()
       torch.nn.utils.clip_grad_norm_(self.token_actor.parameters(), .5)
       torch.nn.utils.clip_grad_norm_(self.token_critic.parameters(), .5)
-      token_optim.step()
+      self.token_optim.step()
     # else:
     #   token_loss = 
     return
