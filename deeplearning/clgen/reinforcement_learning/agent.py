@@ -279,7 +279,7 @@ class Agent(object):
       ## Print the full trajectory with the best reward.
       best_full_traj = torch.argmax(discounted_rewards[:,-1], dim = -1)
       l.logger().info("Best full-trajectory sample:")
-      print(self.tokenizer.tokensToString([int(x) for x in final_state[int(best_full_traj)]]))
+      print(self.tokenizer.tokensToString([int(x) for x in final_state[int(best_full_traj)]], ignore_token=self.tokenizer.padToken))
 
 
       # Split the data into batches in the num_workers dimension
