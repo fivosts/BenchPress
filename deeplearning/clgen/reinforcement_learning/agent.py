@@ -46,13 +46,17 @@ class Policy(object):
     actions = torch.zeros((action_logits.shape[0]), dtype = torch.long)
     batch_idxs, seq_idxs = actual_lengths
     for bidx, sidx, seq_logits in zip(batch_idxs, seq_idxs, action_logits):
-      ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
-          temperature = self.action_temperature if self.action_temperature is not None else 1.0,
-          logits = seq_logits[:(sidx * len(interactions.ACTION_TYPE_SPACE))],
-          validate_args = False if "1.9." in torch.__version__ else None,
-        ).sample()
-      action = torch.argmax(ct, dim = -1)
-      actions[bidx] = action
+      try:
+        ct = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical(
+            temperature = self.action_temperature if self.action_temperature is not None else 1.0,
+            logits = seq_logits[:(sidx * len(interactions.ACTION_TYPE_SPACE))],
+            validate_args = False if "1.9." in torch.__version__ else None,
+          ).sample()
+        action = torch.argmax(ct, dim = -1)
+        actions[bidx] = action
+      except Exception as e:
+        l.logger().error(seq_logits[:(sidx * len(interactions.ACTION_TYPE_SPACE))])
+        raise e
     return actions
 
   def SampleTokens(self, token_logits: torch.FloatTensor) -> int:
@@ -184,9 +188,17 @@ class Agent(object):
     #     min(self.steps_per_epoch, FLAGS.monitor_frequency)
     #   )
 
+    action_type_distrib = {
+      k: ([], []) for k in interactions.ACTION_TYPE_SPACE.keys()
+    }
+    index_type_distrib = {
+      k: ([], []) for k in range(self.qv_config.max_position_embeddings)
+    }
+
     for ep in range(num_epochs):
       # Run a batch of episodes.
-      input_ids, masked_input_ids, feature_ids, action_values, action_predictions, action_policy_probs,\
+      input_ids, final_state, masked_input_ids, feature_ids,\
+      action_values, action_predictions, action_policy_probs,\
       token_values, token_predictions, token_policy_probs,\
       use_lm, rewards, discounted_rewards, done = self.rollout(
         env, num_episodes, steps_per_episode, gamma,
@@ -234,9 +246,45 @@ class Agent(object):
       if environment.WORLD_SIZE > 1:
         raise NotImplementedError("Gather all the tensors here ?")
 
+      for k in action_type_distrib.keys():
+        action_type_distrib[k][0].append(ep)
+        action_type_distrib[k][1].append(0)
+      for k in index_type_distrib.keys():
+        index_type_distrib[k][0].append(ep)
+        index_type_distrib[k][1].append(0)
+      for act in action_predictions:
+        act_type  = int(act) % len(interactions.ACTION_TYPE_SPACE)
+        act_index = int(act) // len(interactions.ACTION_TYPE_SPACE)
+        try:
+          action_type_distrib[interactions.ACTION_TYPE_MAP[act_type]][1][ep] += 1
+          index_type_distrib[act_index][1][ep] += 1
+        except IndexError as e:
+          l.logger().error(act_type)
+          l.logger().error(act_index)
+          l.logger().info(act)
+          l.logger().warn(action_type_distrib)
+          l.logger().info(index_type_distrib)
+          raise e
+      from deeplearning.clgen.util import plotter as plt
+      plt.GrouppedBars(
+        groups = action_type_distrib,
+        plot_name = "Acts_per_rollout_step",
+        path = self.log_path,
+      )
+      plt.GrouppedBars(
+        groups = index_type_distrib,
+        plot_name = "pos_index_per_rollout_step",
+        path = self.log_path,
+      )
+      ## Print the full trajectory with the best reward.
+      best_full_traj = torch.argmax(discounted_rewards[:,-1], dim = -1)
+      l.logger().info("Best full-trajectory sample:")
+      print(self.tokenizer.tokensToString([int(x) for x in final_state[int(best_full_traj)]]))
+
+
       # Split the data into batches in the num_workers dimension
       for epoch in tqdm.tqdm(range(num_updates), total = num_updates, desc = "Epoch"):
-        for batch in tqdm.tqdm(range(num_batches), total = num_batches, desc = "Batch"):
+        for batch in tqdm.tqdm(range(num_batches), total = num_batches, desc = "Batch", leave = False):
           start = batch * batch_size
           end = (batch + 1) * batch_size
           # Step batch
@@ -267,9 +315,11 @@ class Agent(object):
           rollout_hook.step(
             mean_action_loss  = float(mean_action_loss),
             mean_token_loss   = float(mean_token_loss),
-            mean_final_reward = float(torch.mean(rewards[:,-1])),
+            mean_final_reward = float(torch.mean(discounted_rewards[:,-1])),
           )
         self.ckpt_step += 1
+
+        ## distribution of actions per 
     return
 
   def ppo_train_step(self,
@@ -529,6 +579,7 @@ class Agent(object):
     batch_input_ids        = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
     batch_input_ids[:, 0]  = torch.LongTensor(state.encoded_code)
     batch_masked_input_ids = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
+    final_state            = torch.zeros((num_episodes, seq_len), dtype = torch.long)
     # Action, token predictions and probs, critic values.
     action_predictions     = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
     action_policy_probs    = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
@@ -659,6 +710,8 @@ class Agent(object):
       ## Save data to rollout buffers.
       if step < steps_per_episode - 1:
         batch_input_ids  [:, step+1] = input_ids
+      else:
+        final_state                  = input_ids
       action_values      [:, step]   = step_action_values.detach().cpu()
       action_predictions [:, step]   = step_actions.unsqueeze(0).reshape((-1, 1)).detach().cpu()
       action_policy_probs[:, step]   = step_action_probs.unsqueeze(0).reshape((-1, 1)).detach().cpu()
@@ -669,6 +722,7 @@ class Agent(object):
       done               [:, step]   = d
     return (
       batch_input_ids,        # source code states.
+      final_state,            # The state of the trajectory after the last applied action.
       batch_masked_input_ids, # Masked source code for the language model.
       batch_feature_ids,      # Target feature vector state.
       action_values,          # Critic action logits.
