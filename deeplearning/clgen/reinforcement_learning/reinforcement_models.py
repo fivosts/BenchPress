@@ -45,6 +45,16 @@ def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforce
   pbutil.AssertFieldIsSet(config.agent, "batch_size")
   pbutil.AssertFieldIsSet(config.agent, "action_temperature_micros")
   pbutil.AssertFieldIsSet(config.agent, "token_temperature_micros")
+  pbutil.AssertFieldIsSet(config.agent, "num_epochs")
+  pbutil.AssertFieldIsSet(config.agent, "num_episodes")
+  pbutil.AssertFieldIsSet(config.agent, "steps_per_episode")
+  pbutil.AssertFieldIsSet(config.agent, "num_updates")
+  pbutil.AssertFieldIsSet(config.agent, "gamma")
+  pbutil.AssertFieldIsSet(config.agent, "lam")
+  pbutil.AssertFieldIsSet(config.agent, "epsilon")
+  pbutil.AssertFieldIsSet(config.agent, "learning_rate_micros")
+  pbutil.AssertFieldIsSet(config.agent, "value_loss_coefficient")
+  pbutil.AssertFieldIsSet(config.agent, "entropy_coefficient")
   pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_max_value_token")
   pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_singular_token_thr")
   pbutil.AssertFieldIsSet(config.agent.feature_tokenizer, "feature_token_range")
@@ -106,7 +116,6 @@ class RLModel(object):
 
     if environment.WORLD_RANK == 0:
       # Create the necessary cache directories.
-      (self.cache.path / "checkpoints").mkdir(exist_ok = True)
       (self.cache.path / "feature_sampler").mkdir(exist_ok = True)
       (self.cache.path / "samples").mkdir(exist_ok = True)
       # Create symlink to language model.
@@ -227,15 +236,15 @@ class RLModel(object):
     ## First, train the Language model backend.
 
     num_epochs        = 20
-    num_episodes      = 2
-    steps_per_episode = 64
-    num_updates       = 200
+    num_episodes      = 8
+    steps_per_episode = 32
+    num_updates       = 20
     gamma             = 0.99
     lam               = 0.95
     epsilon           = 0.1
-    lr                = 0.015
+    lr                = 10*(10**-4)
     value_loss_coeff  = 0.5
-    entropy_coeff     = 0.01
+    entropy_coeff     = 0.05
 
     self.agent.Train(
       env               = self.env,
@@ -250,24 +259,6 @@ class RLModel(object):
       value_loss_coeff  = value_loss_coeff,
       entropy_coeff     = entropy_coeff,
     )
-
-    ## Start the RL training pipeline.
-    # for ep in range(num_epochs):
-
-      # self.env.reset()
-      # is_term = False
-      # while not is_term:
-      #   state  = self.env.get_state()           # Get current state.
-      #   print(state.comment)
-      #   action = self.agent.make_action(state)  # Predict the action given the state.
-      #   print(action.comment)
-      #   _st, reward, done, info = self.env.step(action)          # Step the action into the environment and face the consequences.
-      #   print(_st.comment)
-      #   print(reward.comment)
-      #   self.memory.add(state, action, reward, done, info)  # Add to replay buffer the episode.
-      #   input()
-      # self.agent.update(self.memory.sample()) # Train the agent on a pool of memories.
-      # self.saveCheckpoint()
     return
 
   def Sample(self, sampler: samplers.Sampler) -> None:
