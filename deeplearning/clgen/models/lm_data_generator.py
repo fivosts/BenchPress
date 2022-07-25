@@ -42,6 +42,7 @@ flags.DEFINE_integer(
   4,
   "Set maximum amount of available memory used for masking sequences in Gb. [Default]: 4",
 )
+
 flags.DEFINE_boolean(
   "force_remake_dataset",
   False,
