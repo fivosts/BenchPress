@@ -246,7 +246,6 @@ class RLModel(object):
     value_loss_coeff  = self.config.agent.value_loss_coefficient
     entropy_coeff     = self.config.agent.entropy_coefficient
 
-    l.logger().warn(lr)
     self.agent.Train(
       env               = self.env,
       num_epochs        = num_epochs,
