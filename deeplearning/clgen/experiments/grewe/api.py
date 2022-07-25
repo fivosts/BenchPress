@@ -28,6 +28,8 @@ from deeplearning.clgen.experiments.grewe import preamble
 
 from absl import app, flags
 
+FLAGS = flags.FLAGS
+
 """
 1. You may insert database groups as usual to convert to csv
 2. You need to introduce a systematic way to insert the amd/nvidia/clgen csv's from clgen's artifacts.
