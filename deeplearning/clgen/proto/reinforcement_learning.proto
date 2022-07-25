@@ -21,9 +21,19 @@ message RLModel {
 
 message RLAgent {
   optional FeatureTokenizer feature_tokenizer         = 1;
-  optional int32            batch_size                = 4;
-  optional int32            action_temperature_micros = 5;
-  optional int32            token_temperature_micros  = 6;
+  optional int32            num_epochs                = 2;
+  optional int32            num_episodes              = 3;
+  optional int32            steps_per_episode         = 4;
+  optional int32            num_updates               = 5;
+  optional float            gamma                     = 6;
+  optional float            lam                       = 7;
+  optional float            epsilon                   = 8;
+  optional float            learning_rate_micros      = 9;
+  optional float            value_loss_coefficient    = 10;
+  optional float            entropy_coefficient       = 11;
+  optional int32            batch_size                = 12;
+  optional int32            action_temperature_micros = 13;
+  optional int32            token_temperature_micros  = 14;
 }
 
 message FeatureTokenizer {
