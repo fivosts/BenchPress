@@ -235,17 +235,18 @@ class RLModel(object):
     self.Create(**kwargs)
     ## First, train the Language model backend.
 
-    num_epochs        = 20
-    num_episodes      = 8
-    steps_per_episode = 32
-    num_updates       = 20
-    gamma             = 0.99
-    lam               = 0.95
-    epsilon           = 0.1
-    lr                = 10*(10**-4)
-    value_loss_coeff  = 0.5
-    entropy_coeff     = 0.05
+    num_epochs        = self.config.agent.num_epochs
+    num_episodes      = self.config.agent.num_episodes
+    steps_per_episode = self.config.agent.steps_per_episode
+    num_updates       = self.config.agent.num_updates
+    gamma             = self.config.agent.gamma
+    lam               = self.config.agent.lam
+    epsilon           = self.config.agent.epsilon
+    lr                = self.config.agent.learning_rate_micros / 10e6
+    value_loss_coeff  = self.config.agent.value_loss_coefficient
+    entropy_coeff     = self.config.agent.entropy_coefficient
 
+    l.logger().warn(lr)
     self.agent.Train(
       env               = self.env,
       num_epochs        = num_epochs,
