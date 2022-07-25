@@ -18,7 +18,7 @@ rl_model {
     gamma: 0.99
     lam: 0.95
     epsilon: 0.1
-    learning_rate_micros: 1000 # 10*(10**-4)
+    learning_rate_micros: 10000
     value_loss_coefficient: 0.5
     entropy_coefficient: 0.05
     batch_size: 1
