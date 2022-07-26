@@ -734,7 +734,7 @@ class torchBert(backends.BackendBase):
     label_ids   = None
     self.train.model.eval()
 
-    for set_name, dataloader in self.train.data_generator.eval_dataloaders():
+    for set_idx, (set_name, dataloader) in enumerate(self.train.data_generator.eval_dataloaders()):
       l.logger().info("BERT Validation on {}".format(set_name))
       if self.torch_tpu_available:
         loader = self.pytorch.torch_ploader.ParallelLoader(
@@ -742,6 +742,9 @@ class torchBert(backends.BackendBase):
                     ).per_device_loader(self.pytorch.device)
       else:
         loader = dataloader
+
+      if self.pytorch.num_nodes > 1:
+        loader.sampler.set_epoch(set_idx)
 
       if not per_epoch and self.is_world_process_zero():
         val_hook = hooks.validationSampleHook(
