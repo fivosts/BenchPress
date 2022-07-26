@@ -212,9 +212,6 @@ class Agent(object):
         gamma,
         lam
       )
-      torch.set_printoptions(profile = 'full')
-      l.logger().error(rewards[:,-1])
-      l.logger().error(discounted_rewards[:,-1])
       # Compute reward-to-gos.
       action_reward_to_go = action_advantages + action_values.squeeze(-1)
       token_reward_to_go  = token_advantages  + token_values.squeeze(-1)
@@ -699,7 +696,7 @@ class Agent(object):
         token_policy_probs    [:, step] = augmented_step_token_probs.detach().cpu()
 
       ## Step environment and compute rewards.
-      input_ids, reward, discounted_reward, d = env.new_step(
+      input_ids, reward, discounted_reward, d, step_use_lm = env.new_step(
         input_ids,
         step_actions,
         augmented_step_tokens,
