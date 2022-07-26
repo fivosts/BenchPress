@@ -147,7 +147,9 @@ class Environment(gym.Env):
 
       ## ADD
       if act_type == interactions.ACTION_TYPE_SPACE['ADD']:
-        if int(token_id) not in self.tokenizer.metaTokenValues:
+        if int(token_id) not in self.tokenizer.metaTokenValues and torch.any(code == self.tokenizer.padToken):
+          # ADD is only valid if predicted token is not a meta token.
+          # Also out-of-bounds restriction, also applied by intermediate step.
           new_code = torch.cat((code[:act_index + 1], torch.LongTensor([token_id]), code[act_index + 1:]))
           new_code = new_code[:code.shape[0]]
           state_code[idx] = new_code
@@ -162,6 +164,8 @@ class Environment(gym.Env):
       ## REPLACE
       elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
         if int(token_id) not in self.tokenizer.metaTokenValues and int(code[act_index]) not in self.tokenizer.metaTokenValues:
+          # REPLACE is valid if predicted token is not a meta token.
+          # Also if to-be-replaced token is not a meta token.
           state_code[idx][act_index] = token_id
         else:
           # Unflag current sequence as LM-ready.
