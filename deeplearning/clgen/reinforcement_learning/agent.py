@@ -572,24 +572,25 @@ class Agent(object):
     seq_len, feat_seq_len = len(state.encoded_code), len(state.encoded_features)
     ## Create state and action tensors.
     # State workload inputs.
-    batch_feature_ids      = torch.LongTensor(state.encoded_features).unsqueeze(0).unsqueeze(0).repeat(num_episodes, steps_per_episode, 1)
-    batch_input_ids        = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
-    batch_input_ids[:, 0]  = torch.LongTensor(state.encoded_code)
-    batch_masked_input_ids = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)
-    final_state            = torch.zeros((num_episodes, seq_len), dtype = torch.long)
+    batch_feature_ids      = torch.LongTensor(state.encoded_features).unsqueeze(0).unsqueeze(0).repeat(num_episodes, steps_per_episode, 1) # Input features for workload
+    batch_input_ids        = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)  # Input code for workload
+    batch_input_ids[:, 0]  = torch.LongTensor(state.encoded_code)                                         # Initialization of empty code for all episode's starting point of trajectory.
+    batch_masked_input_ids = torch.zeros((num_episodes, steps_per_episode, seq_len), dtype = torch.long)  # Initialization of masked input ids tensor for token model.
+    final_state            = torch.zeros((num_episodes, seq_len), dtype = torch.long)                     # The final state of all trajectories.
     # Action, token predictions and probs, critic values.
-    action_predictions     = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
-    action_policy_probs    = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
-    action_values          = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
-    token_predictions      = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)
-    token_policy_probs     = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
-    token_values           = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)
-    use_lm                 = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
+    action_predictions     = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)        # All action predictions per episode, per state.
+    action_policy_probs    = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)     # Probs of all actions predicted.
+    action_values          = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)     # Values from critic for actions.
+    token_predictions      = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.long)        # All token predictions per episode, per state.
+    token_policy_probs     = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)     # Probs of all tokens predicted.
+    token_values           = torch.zeros((num_episodes, steps_per_episode, 1), dtype = torch.float32)     # Values from critic for tokens.
+    use_lm                 = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)           # Indices where LM was indeed used (action was 'add' or 'replace')
     ## Reward placeholders.
-    rewards                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    discounted_rewards     = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)
-    traj_disc_rewards      = torch.zeros((num_episodes), dtype = torch.float32)
-    done                   = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)
+    rewards                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)        # Rewards per episode, per action.
+    discounted_rewards     = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)        # The aggregated-discounted rewards as the trajectories proceed.
+    traj_disc_rewards      = torch.zeros((num_episodes), dtype = torch.float32)                           # The latest aggregated discounted reward computed.
+    feature_dists          = torch.full((num_episodes), -1, dtype = torch.float32)                        # A tensor with the last updated euclidean distance from feature target.
+    done                   = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)           # Done boolean tensor.
 
     ## Run execution loop.
     for step in tqdm.tqdm(range(steps_per_episode), total = steps_per_episode, desc = "Rollout {} episodes".format(num_episodes)):
@@ -701,6 +702,7 @@ class Agent(object):
         step_actions,
         augmented_step_tokens,
         traj_disc_rewards,
+        feature_dists,
         step_use_lm,
         gamma
       )
