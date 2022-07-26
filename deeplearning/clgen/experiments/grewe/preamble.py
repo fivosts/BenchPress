@@ -763,12 +763,52 @@ def plot_speedups_extended_model(benchmarks_data, clgen_data):
   Finalize(figsize=(7, 3.7), tight=True)
   return speedup
 
-# plot_speedups_with_clgen(
-#   open("/home/fivosts/pact_grewe_csv/baseline/gpgpu_benchmarks_cc1.csv", 'r'),
-#   open("/home/fivosts/pact_grewe_csv/me/BenchPress_passive.csv", 'r')
-# )
+if __name__ == "__main__":
 
-# if __name__ == "__main__":
+  base_path = pathlib.Path("/private/home/foivos/pact_grewe_csv_edited")
+
+  baselines = [
+    base_path / "baseline" / "gpgpu_benchmarks_cc1.csv",
+    # base_path / "baseline" / "gpgpu_cc3.csv",
+    # base_path / "baseline" / "nvidia-benchmarks.csv",
+  ]
+
+  me = base_path / "me" / "BenchPress_AL.csv"
+  passive = base_path / "me" / "BenchPress_passive.csv"
+  clgen = base_path / "others" / "CLgen.csv"
+
+  github = base_path / "others" / "GitHub.csv"
+  github_extended = base_path / "others" / "GitHub-extended.csv"
+
+  for baseline in baselines:
+    # plot_speedups_with_clgen(
+    #   open(baseline, 'r'),
+    #   open(me, 'r'),
+    #   synth_bench_name = "BenchPress",
+    # )
+    # print()
+    # print()
+    # print()
+    plot_speedups_with_clgen(
+      open(baseline, 'r'),
+      open(passive, 'r'),
+      synth_bench_name = "GitHub",
+    )
+    plot_speedups_with_clgen(
+      open(baseline, 'r'),
+      open(clgen, 'r'),
+      synth_bench_name = "CLgen",
+    )
+    # print()
+    # print()
+    # print()
+    # plot_speedups_with_clgen(
+    #   open(baseline, 'r'),
+    #   open(github_extended, 'r'),
+    #   synth_bench_name = "GitHub_extended",
+    # )
+    # input()
+
 #   plot_speedups_with_clgen(
 #     open("/var/foivos/results/clgen_paper_artifacts/nvidia-benchmarks.csv", 'r'),
 #     open("/var/foivos/results/clgen_paper_artifacts/nvidia-clgen.csv", 'r')
