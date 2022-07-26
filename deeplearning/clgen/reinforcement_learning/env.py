@@ -92,12 +92,15 @@ class Environment(gym.Env):
       act_type  = int(action) % len(interactions.ACTION_TYPE_SPACE)
       act_index = int(action) // len(interactions.ACTION_TYPE_SPACE)
       if act_type == interactions.ACTION_TYPE_SPACE['ADD']:
-        new_code = torch.cat((code[:act_index + 1], torch.LongTensor([self.tokenizer.holeToken]), code[act_index + 1:]))
-        new_code = new_code[:code.shape[0]]
-        lm_input_ids[idx] = new_code
-        use_lm[idx]       = True
+        if torch.any(code == self.tokenizer.padToken):
+          # ADD is only valid if there is room for new tokens, i.e. at least one [PAD] exists.
+          new_code = torch.cat((code[:act_index + 1], torch.LongTensor([self.tokenizer.holeToken]), code[act_index + 1:]))
+          new_code = new_code[:code.shape[0]]
+          lm_input_ids[idx] = new_code
+          use_lm[idx]       = True
       elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
         if int(code[act_index]) not in self.tokenizer.metaTokenValues:
+          # REPLACE is only valid if the token it is trying to raplce is not meta token.
           new_code            = torch.clone(code)
           new_code[act_index] = self.tokenizer.holeToken
           lm_input_ids[idx]   = new_code
