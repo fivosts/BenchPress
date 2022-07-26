@@ -1,17 +1,71 @@
-workspace: "/private/home/foivos/tinyfeatured_vs_basenormal"
+workspace: "/private/home/foivos/baseopencl_vs_baseopenclfeats"
+# evaluator {
+#   human_likeness {
+#     target: "rodinia"
+#     top_k: 1
+#     feature_space: "GreweFeatures"
+#     db_group {
+#       group_name: "BenchPress_base"
+#       db_type: "ActiveFeedDatabase"
+#       database: "/checkpoint/foivos/base_opencl/AST/sampler/6237d2a012cedcd7b177350433b495a76c18097d/sample_corpus/active_feeds.db"
+#     }
+#     db_group {
+#       group_name: "BenchPress_base_feat"
+#       db_type: "ActiveFeedDatabase"
+#       database: "/checkpoint/foivos/base_opencl_features/AST/sampler/c6fcf7cb396bd193e77c1a272e359e7076580f9d/sample_corpus/active_feeds.db"
+#     }
+#     db_group {
+#       group_name: "InCoder"
+#       db_type: "ActiveFeedDatabase"
+#       database: "/checkpoint/foivos/incoder_workspace_grewe/AST/sampler/b715557452daa7a43d8dd175fd7120f1ca6f7309/sample_corpus/active_feeds.db"
+#     }
+#   }
+# }
 evaluator {
   analyze_beam_search {
     target: "rodinia"
     feature_space: "GreweFeatures"
     db_group {
-      group_name: "Tiny_feature_encoder"
+      group_name: "Feature_Head"
       db_type: "ActiveFeedDatabase"
-      database: "/checkpoint/foivos/feature_head/AST/sampler/953f8bef8ce74fa6fce1ee4907ca7f80aadfac51/sample_corpus/active_feeds.db"
+      database: "/checkpoint/foivos/base_opencl_features/AST/sampler/c6fcf7cb396bd193e77c1a272e359e7076580f9d/sample_corpus/active_feeds.db"
     }
     db_group {
       group_name: "Base"
       db_type: "ActiveFeedDatabase"
       database: "/checkpoint/foivos/base_opencl/AST/sampler/6237d2a012cedcd7b177350433b495a76c18097d/sample_corpus/active_feeds.db"
+    }
+  }
+}
+evaluator {
+  analyze_beam_search {
+    target: "rodinia"
+    feature_space: "AutophaseFeatures"
+    db_group {
+      group_name: "Feature_Head"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/base_opencl_features/AST/sampler/5d2fe68efc4dce3e44c5a7ecae2b55e32fa9f811/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "Base"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/base_opencl/AST/sampler/6e924a47d0ddfcf190d25b9eab5e0126472c057d/sample_corpus/active_feeds.db"
+    }
+  }
+}
+evaluator{
+  analyze_beam_search {
+    target: "rodinia"
+    feature_space: "InstCountFeatures"
+    db_group {
+      group_name: "Feature_Head"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/base_opencl_features/AST/sampler/701cb9458bbd8a5a4856381108115e343d4cc48a/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "Base"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/base_opencl/AST/sampler/fbfb478b1c9c130ad931f3b15635050581ae1502/sample_corpus/active_feeds.db"
     }
   }
 }
