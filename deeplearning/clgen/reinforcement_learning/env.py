@@ -97,10 +97,11 @@ class Environment(gym.Env):
         lm_input_ids[idx] = new_code
         use_lm[idx]       = True
       elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
-        new_code            = torch.clone(code)
-        new_code[act_index] = self.tokenizer.holeToken
-        lm_input_ids[idx]   = new_code
-        use_lm[idx]         = True
+        if int(code[act_index]) not in self.tokenizer.metaTokenValues:
+          new_code            = torch.clone(code)
+          new_code[act_index] = self.tokenizer.holeToken
+          lm_input_ids[idx]   = new_code
+          use_lm[idx]         = True
     return use_lm, lm_input_ids
 
   def new_step(self,
@@ -108,6 +109,7 @@ class Environment(gym.Env):
                step_actions      : torch.LongTensor,
                step_tokens       : torch.LongTensor,
                traj_disc_rewards : torch.FloatTensor,
+               feature_dists     : torch.FloatTensor,
                use_lm            : torch.BoolTensor,
                gamma             : float,
               ) -> typing.Tuple[torch.Tensor]:
@@ -142,22 +144,25 @@ class Environment(gym.Env):
 
       ## ADD
       if act_type == interactions.ACTION_TYPE_SPACE['ADD']:
-        new_code = torch.cat((code[:act_index + 1], torch.LongTensor([token_id]), code[act_index + 1:]))
-        new_code = new_code[:code.shape[0]]
-        state_code[idx] = new_code
+        if int(token_id) not in self.tokenizer.metaTokenValues:
+          new_code = torch.cat((code[:act_index + 1], torch.LongTensor([token_id]), code[act_index + 1:]))
+          new_code = new_code[:code.shape[0]]
+          state_code[idx] = new_code
+        else:
+          # Unflag current sequence as LM-ready.
+          use_lm[idx] = False
       ## REMOVE
       elif act_type == interactions.ACTION_TYPE_SPACE['REM']:
         if int(code[act_index]) not in self.tokenizer.metaTokenValues:
           new_code = torch.cat((code[:act_index], code[act_index + 1:], torch.LongTensor([self.tokenizer.padToken])))
           state_code[idx] = new_code
-        else:
-          reward[idx] = -0.5
       ## REPLACE
       elif act_type == interactions.ACTION_TYPE_SPACE['REPLACE']:
-        if int(code[act_index]) not in self.tokenizer.metaTokenValues:
+        if int(token_id) not in self.tokenizer.metaTokenValues and int(code[act_index]) not in self.tokenizer.metaTokenValues:
           state_code[idx][act_index] = token_id
         else:
-          reward[idx] = -0.5
+          # Unflag current sequence as LM-ready.
+          use_lm[idx] = False
       ## COMPILE
       elif act_type == interactions.ACTION_TYPE_SPACE['COMP']:
         src = self.tokenizer.ArrayToCode([int(x) for x in code])
@@ -173,24 +178,24 @@ class Environment(gym.Env):
             features[self.current_state.feature_space],
             self.current_state.target_features,
           )
+          if feature_dists[idx] == -1 or cur_dist < feature_dists[idx]:
+            reward[idx] = +0.5
           if cur_dist == 0:
             done[idx] = True
-            reward[idx] = 1.0
-          else:
-            reward[idx] = 1 / cur_dist
         else:
-          reward[idx] = -1.0
+          reward[idx] = -0.5
       else:
         raise ValueError("Invalid action type: {}".format(act_type))
     discounted_reward = traj_disc_rewards * gamma + reward
     traj_disc_rewards[torch.where(done == True)] = 0.0
-    return state_code, reward, discounted_reward, done
+    return state_code, reward, discounted_reward, done, use_lm
 
   def reset(self, recycle: bool = True) -> interactions.State:
     """
     Reset the state of the environment.
     """
     if recycle and self.current_state:
+      return self.current_state
       self.feature_dataset.append(
         (self.current_state.feature_space, self.current_state.target_features)
       )
