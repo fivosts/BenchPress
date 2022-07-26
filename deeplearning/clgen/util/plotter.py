@@ -109,7 +109,7 @@ def _write_figure(fig       : go.Figure,
     except ValueError:
       l.logger().warn("HTML plot failed", ddp_nodes = True)
     try:
-      fig.write_image(outf("png"), width = kwargs.get('width'), height = kwargs.get('height'))
+      fig.write_image(outf("png"), width = kwargs.get('width', 1920), height = kwargs.get('height', 1280))
     except ValueError:
       l.logger().warn("PNG plot failed", ddp_nodes = True)
   else:
