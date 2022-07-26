@@ -589,7 +589,7 @@ class Agent(object):
     rewards                = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)        # Rewards per episode, per action.
     discounted_rewards     = torch.zeros((num_episodes, steps_per_episode), dtype = torch.float32)        # The aggregated-discounted rewards as the trajectories proceed.
     traj_disc_rewards      = torch.zeros((num_episodes), dtype = torch.float32)                           # The latest aggregated discounted reward computed.
-    feature_dists          = torch.full((num_episodes), -1, dtype = torch.float32)                        # A tensor with the last updated euclidean distance from feature target.
+    feature_dists          = torch.full((num_episodes,), -1, dtype = torch.float32)                        # A tensor with the last updated euclidean distance from feature target.
     done                   = torch.zeros((num_episodes, steps_per_episode), dtype = torch.bool)           # Done boolean tensor.
 
     ## Run execution loop.
