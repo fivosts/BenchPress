@@ -156,6 +156,7 @@ class Environment(gym.Env):
         else:
           # Unflag current sequence as LM-ready.
           use_lm[idx] = False
+          reward[idx] = -0.1
       ## REMOVE
       elif act_type == interactions.ACTION_TYPE_SPACE['REM']:
         if int(code[act_index]) not in self.tokenizer.metaTokenValues:
@@ -170,6 +171,7 @@ class Environment(gym.Env):
         else:
           # Unflag current sequence as LM-ready.
           use_lm[idx] = False
+          reward[idx] = -0.1
       ## COMPILE
       elif act_type == interactions.ACTION_TYPE_SPACE['COMP']:
         src = self.tokenizer.ArrayToCode([int(x) for x in code])
