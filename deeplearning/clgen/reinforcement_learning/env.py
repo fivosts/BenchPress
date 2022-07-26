@@ -195,6 +195,7 @@ class Environment(gym.Env):
     Reset the state of the environment.
     """
     if recycle and self.current_state:
+      l.logger().warn("Remember to remove this line when you take training seriously.")
       return self.current_state
       self.feature_dataset.append(
         (self.current_state.feature_space, self.current_state.target_features)
