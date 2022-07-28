@@ -1074,7 +1074,7 @@ class torchBert(backends.BackendBase):
       try:
         if without_label_head:
           new_state_dict = OrderedDict()
-          for k, v in self.torch.load(ckpt_comp("model").items()):
+          for k, v in self.torch.load(ckpt_comp("model")).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
           estimator.model.module.load_state_dict(
@@ -1106,7 +1106,7 @@ class torchBert(backends.BackendBase):
       try:
         if without_label_head:
           new_state_dict = OrderedDict()
-          for k, v in self.torch.load(ckpt_comp("model").items()):
+          for k, v in self.torch.load(ckpt_comp("model")).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
           estimator.model.module.load_state_dict(
