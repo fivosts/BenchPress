@@ -14,6 +14,8 @@ import time
 import numpy as np
 from absl import flags
 import tqdm
+from collections import OrderedDict
+
 
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.samplers import samplers
@@ -351,7 +353,7 @@ class torchBert(backends.BackendBase):
         ))
     if with_checkpoint:
       temp_estimator = torchBert.SampleBertEstimator(m, None)
-      self.loadCheckpoint(temp_estimator)
+      self.loadCheckpoint(temp_estimator, without_label_head = without_label_head)
       return temp_estimator.model
     else:
       return m
@@ -1037,7 +1039,8 @@ class torchBert(backends.BackendBase):
                                   typing.TypeVar('torchBert.BertEstimator'),
                                   typing.TypeVar('torchBert.SampleBertEstimator')
                                 ],
-                     pre_train: bool = False
+                     pre_train          : bool = False,
+                     without_label_head : bool = False,
                      ) -> int:
     """
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
@@ -1069,9 +1072,18 @@ class torchBert(backends.BackendBase):
 
     if isinstance(estimator.model, self.torch.nn.DataParallel):
       try:
-        estimator.model.module.load_state_dict(
-          self.torch.load(ckpt_comp("model"))
-        )
+        if without_label_head:
+          new_state_dict = OrderedDict()
+          for k, v in self.torch.load(ckpt_comp("model").items()):
+            if "cls.predictions." not in k:
+              new_state_dict[k] = v
+          estimator.model.module.load_state_dict(
+            self.torch.load(new_state_dict)
+          )
+        else:
+          estimator.model.module.load_state_dict(
+            self.torch.load(ckpt_comp("model"))
+          )
       except RuntimeError:
         """
         Pytorch doesn't love loading a DataParallel checkpoint
@@ -1081,20 +1093,29 @@ class torchBert(backends.BackendBase):
         OR it might as well need the opposite. Transitioning from
         single to multiple GPUs will mean that 'module.' prefix is missing
         """
-        from collections import OrderedDict
         new_state_dict = OrderedDict()
         for k, v in self.torch.load(ckpt_comp("model")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
             name = 'module.' + k # Add 'module.'
-          new_state_dict[name] = v
+          if not without_label_head or (without_label_head and "cls.predictions." not in name):
+            new_state_dict[name] = v
         estimator.model.module.load_state_dict(new_state_dict)
     else:
       try:
-        estimator.model.load_state_dict(
-          self.torch.load(ckpt_comp("model"), map_location=self.pytorch.device)
-        )
+        if without_label_head:
+          new_state_dict = OrderedDict()
+          for k, v in self.torch.load(ckpt_comp("model").items()):
+            if "cls.predictions." not in k:
+              new_state_dict[k] = v
+          estimator.model.module.load_state_dict(
+            self.torch.load(new_state_dict)
+          )
+        else:
+          estimator.model.module.load_state_dict(
+            self.torch.load(ckpt_comp("model"))
+          )
       except RuntimeError:
         """
         Pytorch doesn't love loading a DataParallel checkpoint
@@ -1104,14 +1125,14 @@ class torchBert(backends.BackendBase):
         OR it might as well need the opposite. Transitioning from
         single to multiple GPUs will mean that 'module.' prefix is missing
         """
-        from collections import OrderedDict
         new_state_dict = OrderedDict()
         for k, v in self.torch.load(ckpt_comp("model")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
             name = 'module.' + k # Add 'module.'
-          new_state_dict[name] = v
+          if not without_label_head or (without_label_head and "cls.predictions." not in name):
+            new_state_dict[name] = v
         estimator.model.load_state_dict(new_state_dict)
     if isinstance(estimator, torchBert.BertEstimator):
       if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
