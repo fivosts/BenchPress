@@ -1077,7 +1077,7 @@ class torchBert(backends.BackendBase):
           for k, v in self.torch.load(ckpt_comp("model")).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
-          estimator.model.module.load_state_dict(new_state_dict)
+          estimator.model.module.load_state_dict(new_state_dict, strict = False)
         else:
           estimator.model.module.load_state_dict(
             self.torch.load(ckpt_comp("model"))
@@ -1099,7 +1099,7 @@ class torchBert(backends.BackendBase):
             name = 'module.' + k # Add 'module.'
           if not without_label_head or (without_label_head and "cls.predictions." not in name):
             new_state_dict[name] = v
-        estimator.model.module.load_state_dict(new_state_dict)
+        estimator.model.module.load_state_dict(new_state_dict, strict = False if without_label_head else True)
     else:
       try:
         if without_label_head:
@@ -1107,7 +1107,7 @@ class torchBert(backends.BackendBase):
           for k, v in self.torch.load(ckpt_comp("model")).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
-          estimator.model.load_state_dict(new_state_dict)
+          estimator.model.load_state_dict(new_state_dict, strict = False)
         else:
           estimator.model.load_state_dict(
             self.torch.load(ckpt_comp("model"))
@@ -1129,7 +1129,7 @@ class torchBert(backends.BackendBase):
             name = 'module.' + k # Add 'module.'
           if not without_label_head or (without_label_head and "cls.predictions." not in name):
             new_state_dict[name] = v
-        estimator.model.load_state_dict(new_state_dict)
+        estimator.model.load_state_dict(new_state_dict, strict = False if without_label_head else True)
     if isinstance(estimator, torchBert.BertEstimator):
       if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
         estimator.optimizer.load_state_dict(
