@@ -1077,9 +1077,7 @@ class torchBert(backends.BackendBase):
           for k, v in self.torch.load(ckpt_comp("model")).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
-          estimator.model.module.load_state_dict(
-            self.torch.load(new_state_dict)
-          )
+          estimator.model.module.load_state_dict(new_state_dict)
         else:
           estimator.model.module.load_state_dict(
             self.torch.load(ckpt_comp("model"))
@@ -1109,9 +1107,7 @@ class torchBert(backends.BackendBase):
           for k, v in self.torch.load(ckpt_comp("model")).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
-          estimator.model.load_state_dict(
-            self.torch.load(new_state_dict)
-          )
+          estimator.model.load_state_dict(new_state_dict)
         else:
           estimator.model.load_state_dict(
             self.torch.load(ckpt_comp("model"))
