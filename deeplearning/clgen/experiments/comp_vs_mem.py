@@ -17,9 +17,14 @@ def CompMemGrewe(**kwargs) -> None:
   plot_config    = kwargs.get('plot_config')
   feature_space  = "GreweFeatures"
 
-  groups = {}
+  groups = {
+    target.target: {
+      'data'  : [],
+      'names' : [],
+    }
+  }
   for dbg in db_groups:
-    if not isinstance(dg.db_type, samples_database.SamplesDatabase):
+    if dbg.db_type != samples_database.SamplesDatabase:
       raise ValueError("CompMemGrewe requires SamplesDatabase but received", dbg.db_type)
     groups[dbg.group_name] = {
       'data'  : [],
@@ -40,7 +45,7 @@ def CompMemGrewe(**kwargs) -> None:
 
   plotter.GroupScatterPlot(
     groups = groups,
-    plot_name = "comp_vs_mem_grewe",
+    plot_name = "comp_mem_{}".format('-'.join([str(x) for x in groups.keys()])),
     path = workspace_path,
     **plot_config if plot_config else {}
   )
