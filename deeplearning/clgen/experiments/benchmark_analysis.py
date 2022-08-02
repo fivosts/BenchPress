@@ -2,6 +2,8 @@
 Target benchmark analysis evaluator.
 """
 import tqdm
+import sklearn
+from sklearn.decomposition import PCA
 
 from deeplearning.clgen.experiments import public
 from deeplearning.clgen.experiments import clsmith
@@ -19,6 +21,121 @@ def AnalyzeTarget(**kwargs) -> None:
   tokenizer = kwargs.get('tokenizer')
   workspace_path = kwargs.get('workspace_path')
   raise NotImplementedError
+  return
+
+@public.evaluator
+def TokenSizeDistribution(**kwargs) -> None:
+  """
+  Plot token size distribution among multiple SamplesDatabases.
+  """
+  db_groups      = kwargs.get('db_groups')
+  plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path')
+
+  names = []
+  token_lens = []
+
+  for dbg in db_groups:
+    if dbg.db_type != samples_database.SamplesDatabase:
+      raise ValueError("Token size distribution requires SamplesDatabase. Received {}".format(dbg.db_type))
+
+    lens = []
+    for db in dbg.databases:
+      lens += db.get_compilable_num_tokens
+    names.append(dbg.group_name)
+    token_lens.append(lens)
+
+  plotter.RelativeDistribution(
+    x         = names,
+    y         = token_lens,
+    plot_name = "{}_token_dist".format('-'.join(names)),
+    path      = workspace_path,
+    x_name    = "Token Length",
+    **plot_config if plot_config else {},
+  )
+  return
+
+@public.evaluator
+def LLVMInstCountDistribution(**kwargs) -> None:
+  """
+  Plot LLVM Instruction count distribution among functions in SamplesDatabase dbs.
+  """
+  db_groups      = kwargs.get('db_groups')
+  plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path')
+
+  names = []
+  token_lens = []
+
+  for dbg in db_groups:
+    if dbg.db_type != samples_database.SamplesDatabase:
+      raise ValueError("Token size distribution requires SamplesDatabase. Received {}".format(dbg.db_type))
+
+    lens = []
+    for db in dbg.databases:
+      lens += [x[1]["InstCountFeatures"]["TotalInsts"] for x in db.get_samples_features if "InstCountFeatures" in x[1]]
+    names.append(dbg.group_name)
+    token_lens.append(lens)
+
+  plotter.RelativeDistribution(
+    x         = names,
+    y         = token_lens,
+    plot_name = "{}_llvm_inst".format('-'.join(names)),
+    path      = workspace_path,
+    x_name    = "LLVM IR Instructions Length (-O1)"
+    **plot_config if plot_config else {},
+  )
+  return
+
+@public.evaluator
+def PCASamplesFeatures(**kwargs) -> None:
+  """
+  Plot PCA-ed features of different SamplesDatabase samples.
+  """
+  db_groups      = kwargs.get('db_groups')
+  plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path')
+  feature_space  = kwargs.get('feature_space')
+
+  indexed_data = {}
+  full_data    = []
+
+  scaler = sklearn.preprocessing.StandardScaler()
+
+  i = 0
+  for dbg in db_groups:
+    if dbg.db_type != samples_database.SamplesDatabase:
+      raise ValueError("Token size distribution requires SamplesDatabase. Received {}".format(dbg.db_type))
+
+    ds = []
+    for db in dbg.databases:
+      ds += [x for _, x in db.get_samples_features if feature_space in x]
+
+    indexed_data[dbg.group_name] = {}
+    indexed_data[dbg.group_name]['start'] = i
+    for x in ds:
+      vals = list(x[feature_space].values())
+      if vals:
+        i += 1
+        full_data.append([float(y) for y in vals])
+    
+    indexed_data[dbg.group_name]['end'] = i
+
+  # scaled = scaler.fit_transform(full_data)
+  reduced = PCA(2).fit_transform(full_data)
+  groups = {}
+  for dbg in db_groups:
+    groups[dbg.group_name] = {
+      "names" : [],
+      "data"  : reduced[indexed_data[dbg.group_name]['start']: indexed_data[dbg.group_name]['end']],
+    }
+  plotter.GroupScatterPlot(
+    groups = groups,
+    title  = "PCA-2 {}".format(feature_space.replace("Features", " Features")),
+    plot_name = "pca2_{}_{}".format(feature_space, '-'.join([str(x) for x in groups.keys()])),
+    path = workspace_path,
+    **plot_config if plot_config else {},
+  )
   return
 
 @public.evaluator
