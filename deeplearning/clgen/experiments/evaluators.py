@@ -231,31 +231,31 @@ class TargetBenchmarks(object):
     """
     Get or set and get benchmarks with their features for a feature space.
     """
-    if not self.benchmarks[feature_space]:
-      for p, k, h in self.benchmark_cfs:
-        features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
-        if features[feature_space]:
-          if reduced_git_corpus:
-            closest_git = sorted(
-              [
-                (cf, feature_sampler.calculate_distance(fts, features[feature_space], feature_space))
-                for cf, _, fts in reduced_git_corpus
-              ], key = lambda x: x[1])[0]
-            if closest_git[1] == 0:
-              continue
-          ## Benchmark name shortener.
-          benchmark_name = self.shorten_benchmark_name(p.name)
+    self.benchmarks = []
+    for p, k, h in self.benchmark_cfs:
+      features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
+      if features[feature_space]:
+        if reduced_git_corpus:
+          closest_git = sorted(
+            [
+              (cf, feature_sampler.calculate_distance(fts, features[feature_space], feature_space))
+              for cf, _, fts in reduced_git_corpus
+            ], key = lambda x: x[1])[0]
+          if closest_git[1] == 0:
+            continue
+        ## Benchmark name shortener.
+        benchmark_name = self.shorten_benchmark_name(p.name)
 
-          self.benchmarks[feature_space].append(
-            Benchmark(
-                p,
-                benchmark_name,
-                k,
-                features[feature_space],
-              )
-          )
-      self.benchmarks[feature_space] = benchmarks.resolve_benchmark_names(self.benchmarks[feature_space])
-      l.logger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
+        self.benchmarks[feature_space].append(
+          Benchmark(
+              p,
+              benchmark_name,
+              k,
+              features[feature_space],
+            )
+        )
+    self.benchmarks[feature_space] = benchmarks.resolve_benchmark_names(self.benchmarks[feature_space])
+    l.logger().info("Extracted features for {} {} benchmarks".format(len(self.benchmarks[feature_space]), self.target))
     return self.benchmarks[feature_space]
 
 def AssertIfValid(config: evaluator_pb2.Evaluation):
