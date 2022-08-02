@@ -344,6 +344,53 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       # Specialized fields.
       for target in ev.analyze_target.targets:
         assert target in benchmarks.targets, target
+    elif ev.HasField("token_size_distribution"):
+      ### TokenSizeDistribution
+      # DB groups
+      for dbs in ev.token_size_distribution.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+    elif ev.HasField("llvm_instcount_distribution"):
+      ### LLVMInstCountDistribution
+      # DB groups
+      for dbs in ev.llvm_instcount_distribution.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+    elif ev.HasField("pca_samples_features"):
+      ### PCASamplesFeatures
+      # DB groups
+      for dbs in ev.pca_samples_features.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      # Specialized fields.
+      pbutil.AssertFieldIsSet(ev.pca_samples_features, "feature_space")
     elif ev.HasField("features_distribution"):
       ### KAverageScore
       # Generic Fields
@@ -753,22 +800,25 @@ def main(config: evaluator_pb2.Evaluation):
   Run the evaluators iteratively.
   """
   evaluation_map = {
-    evaluator_pb2.LogFile                 : log_file.LogFile,
-    evaluator_pb2.KAverageScore           : distance_score.KAverageScore,
-    evaluator_pb2.MinScore                : distance_score.MinScore,
-    evaluator_pb2.AnalyzeTarget           : benchmark_analysis.AnalyzeTarget,
-    evaluator_pb2.FeaturesDistribution    : benchmark_analysis.FeaturesDistribution,
-    evaluator_pb2.HumanLikeness           : benchmark_analysis.HumanLikeness,
-    evaluator_pb2.CompMemGrewe            : comp_vs_mem.CompMemGrewe,
-    evaluator_pb2.TopKCLDrive             : cldrive.TopKCLDrive,
-    evaluator_pb2.MutecVsBenchPress       : mutec.MutecVsBenchPress,
-    evaluator_pb2.SRCIROR_srcVsBenchPress : srciror.SRCIRORVsBenchPress,
-    evaluator_pb2.SRCIROR_IRVsBenchPress  : srciror.SRCIRORVsBenchPress,
-    evaluator_pb2.GenerateCLSmith         : clsmith.GenerateCLSmith,
-    evaluator_pb2.GreweTopKCSV            : grewe_api.GreweTopKCSV,
-    evaluator_pb2.GreweCSV                : grewe_api.GreweCSV,
-    evaluator_pb2.TrainGrewe              : grewe_api.TrainGrewe,
-    evaluator_pb2.AnalyzeBeamSearch       : distance_score.AnalyzeBeamSearch
+    evaluator_pb2.LogFile                   : log_file.LogFile,
+    evaluator_pb2.KAverageScore             : distance_score.KAverageScore,
+    evaluator_pb2.MinScore                  : distance_score.MinScore,
+    evaluator_pb2.AnalyzeTarget             : benchmark_analysis.AnalyzeTarget,
+    evaluator_pb2.TokenSizeDistribution     : benchmark_analysis.TokenSizeDistribution,
+    evaluator_pb2.LLVMInstCountDistribution : benchmark_analysis.LLVMInstCountDistribution,
+    evaluator_pb2.PCASamplesFeatures        : benchmark_analysis.PCASamplesFeatures,
+    evaluator_pb2.FeaturesDistribution      : benchmark_analysis.FeaturesDistribution,
+    evaluator_pb2.HumanLikeness             : benchmark_analysis.HumanLikeness,
+    evaluator_pb2.CompMemGrewe              : comp_vs_mem.CompMemGrewe,
+    evaluator_pb2.TopKCLDrive               : cldrive.TopKCLDrive,
+    evaluator_pb2.MutecVsBenchPress         : mutec.MutecVsBenchPress,
+    evaluator_pb2.SRCIROR_srcVsBenchPress   : srciror.SRCIRORVsBenchPress,
+    evaluator_pb2.SRCIROR_IRVsBenchPress    : srciror.SRCIRORVsBenchPress,
+    evaluator_pb2.GenerateCLSmith           : clsmith.GenerateCLSmith,
+    evaluator_pb2.GreweTopKCSV              : grewe_api.GreweTopKCSV,
+    evaluator_pb2.GreweCSV                  : grewe_api.GreweCSV,
+    evaluator_pb2.TrainGrewe                : grewe_api.TrainGrewe,
+    evaluator_pb2.AnalyzeBeamSearch         : distance_score.AnalyzeBeamSearch
   }
   db_cache       = {}
   target_cache   = {}
@@ -899,6 +949,45 @@ def main(config: evaluator_pb2.Evaluation):
         if sev.target not in target_cache:
           target_cache[sev.target] = TargetBenchmarks(sev.target)
         kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
+
+    elif ev.HasField("token_size_distribution"):
+      sev = ev.token_size_distribution
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
+
+    elif ev.HasField("llvm_instcount_distribution"):
+      sev = ev.llvm_instcount_distribution
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
+
+    elif ev.HasField("pca_samples_features"):
+      sev = ev.pca_samples_features
       for dbs in sev.db_group:
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
