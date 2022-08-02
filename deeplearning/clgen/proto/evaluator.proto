@@ -25,22 +25,25 @@ message Evaluation {
 message evaluators {
   // Define all different evauators supported.
   oneof evaluator {
-    LogFile                 log_file                  = 1;
-    KAverageScore           k_average_score           = 2;
-    MinScore                min_score                 = 3;
-    AnalyzeTarget           analyze_target            = 4;
-    FeaturesDistribution    features_distribution     = 5;
-    HumanLikeness           human_likeness            = 6;
-    CompMemGrewe            comp_mem_grewe            = 7;
-    TopKCLDrive             topk_cldrive              = 8;
-    MutecVsBenchPress       mutec_vs_benchpress       = 9;
-    SRCIROR_srcVsBenchPress srciror_src_vs_benchpress = 10;
-    SRCIROR_IRVsBenchPress  srciror_ir_vs_benchpress  = 11;
-    GenerateCLSmith         generate_clsmith          = 12;
-    GreweTopKCSV            grewe_top_k_csv           = 13;
-    GreweCSV                grewe_csv                 = 14;
-    TrainGrewe              train_grewe               = 15;
-    AnalyzeBeamSearch       analyze_beam_search       = 16;
+    LogFile                 log_file                      = 1;
+    KAverageScore           k_average_score               = 2;
+    MinScore                min_score                     = 3;
+    AnalyzeTarget           analyze_target                = 4;
+    TokenSizeDistribution     token_size_distribution     = 5;
+    LLVMInstCountDistribution llvm_instcount_distribution = 6;
+    PCASamplesFeatures        pca_samples_features        = 7;
+    FeaturesDistribution    features_distribution         = 8;
+    HumanLikeness           human_likeness                = 9;
+    CompMemGrewe            comp_mem_grewe                = 10;
+    TopKCLDrive             topk_cldrive                  = 11;
+    MutecVsBenchPress       mutec_vs_benchpress           = 12;
+    SRCIROR_srcVsBenchPress srciror_src_vs_benchpress     = 13;
+    SRCIROR_IRVsBenchPress  srciror_ir_vs_benchpress      = 14;
+    GenerateCLSmith         generate_clsmith              = 15;
+    GreweTopKCSV            grewe_top_k_csv               = 16;
+    GreweCSV                grewe_csv                     = 17;
+    TrainGrewe              train_grewe                   = 18;
+    AnalyzeBeamSearch       analyze_beam_search           = 19;
   }
 }
 
@@ -78,6 +81,28 @@ message AnalyzeTarget {
 }
 
 // 5
+// Plot token size relative distribution of given database groups.
+message TokenSizeDistribution {
+  repeated DatabasesGroups      db_group    = 1;
+  optional PlotterConfiguration plot_config = 2;
+}
+
+// 6
+// Plot LLVM-IR Instruction count distribution of given database groups.
+message LLVMInstCountDistribution {
+  repeated DatabasesGroups      db_group    = 1;
+  optional PlotterConfiguration plot_config = 2;
+}
+
+// 7
+// Map the features of database groups on a PCA-2 reduced space.
+message PCASamplesFeatures {
+  repeated DatabasesGroups      db_group      = 1;
+  optional PlotterConfiguration plot_config   = 2;
+  optional string               feature_space = 3;
+}
+
+// 8
 // Calculate and plot the average score of the top-K best samples per target from each DB group.
 message FeaturesDistribution {
   optional string               target        = 1;
@@ -87,7 +112,7 @@ message FeaturesDistribution {
   optional PlotterConfiguration plot_config   = 5;
 }
 
-// 6
+// 9
 // Per target benchmark, print the best candidates among each database group.
 message HumanLikeness {
   optional string               target        = 1;
@@ -97,7 +122,7 @@ message HumanLikeness {
   optional PlotterConfiguration plot_config   = 5;
 }
 
-// 7
+// 10
 // Map on 2-Dimensional space the number of memory vs computational instructions from Grewe's features.
 message CompMemGrewe {
   optional string               target      = 1;
@@ -105,7 +130,7 @@ message CompMemGrewe {
   optional PlotterConfiguration plot_config = 3;
 }
 
-// 8
+// 11
 // Collect CPU vs GPU labels for 
 message TopKCLDrive {
   optional string               target        = 1;
@@ -116,7 +141,7 @@ message TopKCLDrive {
   optional PlotterConfiguration plot_config   = 6;
 }
 
-// 9
+// 12
 // Calculate and plot the average score of the top-K best samples per target from each DB group.
 message MutecVsBenchPress {
   optional string               target        = 1;
@@ -130,7 +155,7 @@ message MutecVsBenchPress {
   optional DatabasesGroups      db_group      = 9; // Dummy selector, not used.
 }
 
-// 10
+// 13
 // Calculate and plot the average score of the top-K best samples per target from each DB group.
 message SRCIROR_srcVsBenchPress {
   optional string               target            = 1;
@@ -144,7 +169,7 @@ message SRCIROR_srcVsBenchPress {
   optional DatabasesGroups      db_group          = 9; // Dummy selector, not used.
 }
 
-// 11
+// 14
 // Calculate and plot the average score of the top-K best samples per target from each DB group.
 message SRCIROR_IRVsBenchPress {
   optional string               target           = 1;
@@ -158,13 +183,13 @@ message SRCIROR_IRVsBenchPress {
   optional DatabasesGroups      db_group         = 9; // Dummy selector, not used.
 }
 
-// 12
+// 15
 // Generate CLSmith samples.
 message GenerateCLSmith {
   optional string clsmith_db = 1;
 }
 
-// 13
+// 16
 // Calculate top samples to target per db group and store to csv for Grewe's predictive model.
 message GreweTopKCSV {
   optional string          target        = 1;
@@ -173,21 +198,21 @@ message GreweTopKCSV {
   repeated DatabasesGroups db_group      = 4;
 }
 
-// 14
+// 17
 // Convert databases per db group to CSV for Grewe's predictive model.
 message GreweCSV {
   optional string          cldrive_cache = 1;
   repeated DatabasesGroups db_group      = 2;
 }
 
-// 15
+// 18
 message TrainGrewe {
   optional string               grewe_baseline = 1;
   repeated GreweCSVGroup        csv            = 2;
   optional PlotterConfiguration plot_config    = 3;
 }
 
-// 16
+// 19
 message AnalyzeBeamSearch {
   optional string               target        = 1;
   optional string               feature_space = 2;
