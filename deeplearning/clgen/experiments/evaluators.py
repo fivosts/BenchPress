@@ -10,7 +10,6 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
 from deeplearning.clgen.proto import evaluator_pb2
-from deeplearning.clgen.samplers import samplers
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
