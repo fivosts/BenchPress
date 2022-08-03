@@ -1375,32 +1375,6 @@ def benchpress_vs_clgen_pca(bert_db, clgen_db):
     )
   return
 
-def benchpress_vs_clgen_fig(bert_db, clgen_db):
-  """
-  PLDI paper relative distribution plots of token length and number of LLVM-IR instructions length.
-  """
-  clgen_ntoks = clgen_db.get_compilable_num_tokens
-  clgen_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in clgen_db.get_samples_features if "InstCountFeatures" in x[1]]
-
-  data = bert_db.get_compilable_num_tokens
-  bert_num_insts = [x[1]["InstCountFeatures"]["TotalInsts"] for x in bert_db.get_samples_features if "InstCountFeatures" in x[1]]
-
-  plotter.RelativeDistribution(
-    x = ["BenchPress", "CLgen"],
-    y = [data, clgen_ntoks],
-    plot_name = "token_relative_distribution",
-    path = pathlib.Path(".").resolve(),
-    x_name = "Token Length",
-  )
-
-  plotter.RelativeDistribution(
-    x = ["BenchPress", "CLgen"],
-    y = [bert_num_insts, clgen_num_insts],
-    plot_name = "numinst_relative_distribution",
-    path = pathlib.Path(".").resolve(),
-    x_name = "LLVM IR Instructions Length (-O1)",
-  )
-
 def get_size_distribution():
   """
   Calculates distribution of code sizes per database group.
