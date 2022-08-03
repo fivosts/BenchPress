@@ -1274,57 +1274,6 @@ def eval(self, topK: int) -> None:
   # self.benchmark_stats(reduced_git_corpus)
   return
 
-  def benchmark_stats(self, reduced_git):
-    """
-    [Deprecated] Prints stats of source codes for reduced git corpus.
-    """
-    groups = {}
-    names = {}
-    final_benchmarks = []
-
-    benchmarks = []
-    kernels = benchmarks.yield_cl_kernels(self.target_path)
-    for p, k, h in kernels:
-      features = extractor.ExtractFeatures(k, header_file = h, use_aux_headers = False)
-      if features:
-        benchmarks.append(
-          BenchmarkDistance.EvaluatedBenchmark(
-              p,
-              p.name,
-              k,
-              features,
-            )
-        )
-
-    for benchmark in benchmarks:
-      rgc = workers.SortedSrcDistances(reduced_git, benchmark.features[self.feature_space], self.feature_space)
-      if rgc[1] > 0:
-        final_benchmarks.append(benchmark)
-
-    for benchmark in final_benchmarks:
-      if benchmark.name not in names:
-        names[benchmark.name] = [0, 0]
-      else:
-        names[benchmark.name][1] += 1
-
-    l.logger().info("Analyzing {} benchmarks".format(len(final_benchmarks)))
-
-    for benchmark in final_benchmarks:
-      if names[benchmark.name][1] == 0:
-        bn = benchmark.name 
-      else:
-        names[benchmark.name][0] += 1
-        bn = "{}-{}".format(benchmark.name, names[benchmark.name][0])
-      src = opencl.SanitizeKernelPrototype(opencl.NormalizeIdentifiers(benchmark.contents))
-      print("########################")
-      print(bn)
-      print("Num of tokens", len(self.tokenizer.TokenizeString(src)))
-      try:
-        print("Number of IR instructions", benchmark.features["InstCountFeatures"]["TotalInsts"])
-      except Exception:
-        print("Number of IR instructions", "-1")
-    return
-
 def get_size_distribution():
   """
   Calculates distribution of code sizes per database group.
