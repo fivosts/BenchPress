@@ -1325,56 +1325,6 @@ def eval(self, topK: int) -> None:
         print("Number of IR instructions", "-1")
     return
 
-def benchpress_vs_clgen_pca(bert_db, clgen_db):
-  """
-  PCA feature reduction for all three feature spaces for benchpress vs CLgen.
-  Used in PCA plots for PLDI paper.
-  """
-  scaler = sklearn.preprocessing.StandardScaler()
-  for fspace in ["AutophaseFeatures", "InstCountFeatures", "GreweFeatures"]:
-
-    bert_ds = [x for _, x in bert_db.get_samples_features if fspace in x]
-    clgen_ds = [x for _, x in clgen_db.get_samples_features if fspace in x]
-
-    data = []
-    for x in bert_ds + clgen_ds:
-      vals = list(x[fspace].values())
-      if vals:
-        data.append([float(y) for y in vals])
-
-    bert_scaled = scaler.fit_transform(data)
-    # bert_scaled = data
-    bert_reduced = PCA(2).fit_transform(data)
-    # clgen_scaled = scaler.fit_transform([[float(y) for y in x[1].values()] for x in clgen])
-    # git_scaled = scaler.fit_transform([[float(y) for y in x[1].values()] for x in git])
-    # reduced_git_scaled = scaler.fit_transform([[float(y) for y in x[1].values()] for x in reduced_git])
-
-    kmeans = KMeans(
-      init = "random",
-      n_clusters = 4,
-      n_init = 20,
-      max_iter = 300,
-      random_state = 42,
-    )
-    kmeans.fit(bert_reduced)
-    groups = {
-      "Benchpress": {"names": [], "data": bert_reduced[:len(bert_ds)]},
-      "CLgen": {"names": [], "data": bert_reduced[len(bert_ds):len(bert_ds) + len(clgen_ds)]},
-      # "GitHub": {"names": [], "data": bert_reduced[len(bert) + len(clgen):]},
-    }
-    plotter.GroupScatterPlot(
-      groups = groups,
-      title = "PCA-2 {}".format(fspace.replace("Features", " Features")),
-      plot_name = "pc2_{}_bpclgen".format(fspace),
-      path = pathlib.Path(".").resolve(),
-      marker_style = [
-        dict(color = 'darkslateblue', size = 10),
-        dict(size = 10),
-        # dict(color = 'goldenrod', size = 10, symbol = "circle"),
-      ],
-    )
-  return
-
 def get_size_distribution():
   """
   Calculates distribution of code sizes per database group.
