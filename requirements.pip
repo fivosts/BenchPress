@@ -1,4 +1,4 @@
-absl-py==0.7.0
+absl-py==1.2.0
 astunparse==1.6.3
 attrs==20.2.0
 Automat==20.2.0
@@ -57,7 +57,7 @@ Markdown==3.3.3
 MarkupSafe==1.1.1
 matplotlib==3.3.2
 networkx==2.2
-numpy==1.18.2
+numpy==1.23.1
 oauthlib==3.1.0
 onnx==1.8.1
 opt-einsum==3.3.0
