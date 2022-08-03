@@ -1,3 +1,5 @@
+![BenchPress](https://github.com/fivosts/clgen/docs/logo-padded.png)
+
 ## Install
 
 1. (Optional) If you think apt packages are missing from your system, install requirements.apt (works better if you have sudo access):
