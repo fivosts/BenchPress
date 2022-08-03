@@ -34,3 +34,7 @@ This will produce all libraries and binaries sandboxed in the build directory. A
 ./benchpress --help
 ```
 will list all available execution flags for the application.
+
+### Platforms
+
+⚠️ __BenchPress__ only supports Linux-based systems. While it can be installed on Windows or MacOS, it has not been attempted and tested, therefore not guaranteed.
