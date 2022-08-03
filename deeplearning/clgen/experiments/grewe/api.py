@@ -8,7 +8,6 @@ missing cldrive data.
 """
 import sys
 import pathlib
-import tempfile
 import typing
 import math
 import tqdm
