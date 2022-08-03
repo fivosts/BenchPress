@@ -231,7 +231,7 @@ class TargetBenchmarks(object):
     """
     Get or set and get benchmarks with their features for a feature space.
     """
-    self.benchmarks = []
+    self.benchmarks    = {ext: [] for ext in extractor.extractors.keys()}
     for p, k, h in self.benchmark_cfs:
       features = extractor.ExtractFeatures(k, [feature_space], header_file = h, use_aux_headers = False)
       if features[feature_space]:
