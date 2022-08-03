@@ -1405,9 +1405,9 @@ def get_size_distribution():
   """
   Calculates distribution of code sizes per database group.
   """
-  gdb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("/home/fivosts/PhD/Code/clgen/results/BERT/Grewe/merged_active_feed_database.db")))
-  adb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("/home/fivosts/PhD/Code/clgen/results/BERT/Autophase/merged_active_feed_database.db")))
-  idb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("/home/fivosts/PhD/Code/clgen/results/BERT/Instcount/merged_active_feed_database.db")))
+  gdb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("BERT/Grewe/merged_active_feed_database.db")))
+  adb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("BERT/Autophase/merged_active_feed_database.db")))
+  idb = active_feed_database.ActiveFeedDatabase("sqlite:///{}".format(str("BERT/Instcount/merged_active_feed_database.db")))
 
   gdata = [(c.num_tokens, c.generation_id) for c in gdb.get_data]
   adata = [(c.num_tokens, c.generation_id) for c in adb.get_data]
