@@ -6,7 +6,6 @@ import sys
 import pathlib
 import tqdm
 import multiprocessing
-import sklearn
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
