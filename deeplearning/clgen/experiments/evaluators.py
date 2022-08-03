@@ -182,6 +182,9 @@ class TargetBenchmarks(object):
   """
   @classmethod
   def shorten_benchmark_name(cls, benchmark_name: str) -> str:
+    """
+    Pretty-printing rules for benchmark names.
+    """
     return benchmark_name.replace(
       ".cl", ""
     ).replace(
