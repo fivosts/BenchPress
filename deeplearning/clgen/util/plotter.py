@@ -427,7 +427,7 @@ def RelativeDistribution(x         : np.array,
                          **kwargs,
                          ) -> None:
   """Plot smoothened relative distribution of data"""
-  layout = _get_generic_layout(**kwargs)
+  # layout = _get_generic_layout(**kwargs)
   fig = ff.create_distplot(
     y,
     x,
@@ -437,6 +437,6 @@ def RelativeDistribution(x         : np.array,
     bin_size = kwargs.get('bin_size', 1),
     show_hist = True
   )
-  fig.update_layout(layout)
+  # fig.update_layout(layout)
   _write_figure(fig, plot_name, path, **kwargs)
   return
