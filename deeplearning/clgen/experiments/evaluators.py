@@ -15,7 +15,6 @@ from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.util import monitors
 from deeplearning.clgen.util import pbutil
 from deeplearning.clgen.experiments import log_file
 from deeplearning.clgen.experiments import benchmark_analysis
