@@ -1206,3 +1206,13 @@ def main(config: evaluator_pb2.Evaluation):
 
     evaluation_map[type(sev)](**kw_args)
   return
+
+def initMain(*args, **kwargs):
+  l.initLogger(name = "evaluators")
+  config = ConfigFromFlags()
+  main(config)
+  return
+
+if __name__ == "__main__":
+  app.run(initMain)
+  sys.exit(0)
