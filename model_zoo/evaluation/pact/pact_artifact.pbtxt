@@ -1,0 +1,290 @@
+workspace: "pact_artifacts"
+tokenizer: "/private/home/foivos/results/full_results/backup_tokenizer.pkl"
+# Fig 2.1: Rodinia vs CLgen comp-mem plot
+evaluator {
+  comp_mem_grewe {
+    target: "rodinia"
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+  }
+}
+# Fig 9: Rodinia vs CLgen vs BenchPress comp-mem plot
+evaluator {
+  comp_mem_grewe {
+    target: "rodinia"
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+    }
+  }
+}
+# Fig. 6a: BenchPress-fixed input vs CLgen tokens
+evaluator {
+  token_size_distribution {
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+  }
+}
+# Fig 6b: BenchPress-fixed input vs CLgen LLVM -O1 instructions
+evaluator {
+  llvm_instcount_distribution {
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+  }
+}
+# Fig 7a: PCA Grewe
+evaluator {
+  pca_samples_features {
+    feature_space: "GreweFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+  }
+}
+# Fig 7b: PCA Instcount
+evaluator {
+  pca_samples_features {
+    feature_space: "InstCountFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+  }
+}
+# Fig 7c: PCA Autophase
+evaluator {
+  pca_samples_features {
+    feature_space: "AutophaseFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+  }
+}
+# Fig 8a-1: Relative distance to Rodinias for Grewe and human written code.
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "GreweFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+    }
+    db_group {
+      group_name: "GitHub-768"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+    db_group {
+      group_name: "GitHub+SRCIROR"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/Mutec/github_mutants_with_feats.db"
+    }
+  }
+}
+# Fig 8a-2: Relative distance to Rodinias for Grewe and synthesizerss.
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "GreweFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub-768-inactive"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+    db_group {
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/private/home/foivos/results/full_results/clsmith_lite.db"
+    }
+    db_group {
+      group_name: "CLSmith+SRCIROR"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/Mutec/clsmith_mutants_with_feats.db"
+    }
+  }
+}
+# Fig 8b-1: Relative distance to Rodinias for Grewe and human written code.
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "AutophaseFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+    }
+    db_group {
+      group_name: "GitHub-768"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+    db_group {
+      group_name: "GitHub+SRCIROR"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/Mutec/github_mutants_with_feats.db"
+    }
+  }
+}
+# Fig 8b-2: Relative distance to Rodinias for Grewe and synthesizerss.
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "AutophaseFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub-768-inactive"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+    db_group {
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/private/home/foivos/results/full_results/clsmith_lite.db"
+    }
+    db_group {
+      group_name: "CLSmith+SRCIROR"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/Mutec/clsmith_mutants_with_feats.db"
+    }
+  }
+}
+# Fig 8c-1: Relative distance to Rodinias for Grewe and human written code.
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "InstCountFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+    }
+    db_group {
+      group_name: "GitHub-768"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+    db_group {
+      group_name: "GitHub+SRCIROR"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/Mutec/github_mutants_with_feats.db"
+    }
+  }
+}
+# Fig 8c-2: Relative distance to Rodinias for Grewe and synthesizerss.
+evaluator {
+  min_score {
+    target: "rodinia"
+    feature_space: "InstCountFeatures"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+    }
+    db_group {
+      group_name: "GitHub-768-inactive"
+      db_type: "EncodedContentFiles"
+      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      size_limit: 768
+    }
+    db_group {
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/private/home/foivos/results/full_results/clsmith_lite.db"
+    }
+    db_group {
+      group_name: "CLSmith+SRCIROR"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/results/full_results/Mutec/clsmith_mutants_with_feats.db"
+    }
+  }
+}
