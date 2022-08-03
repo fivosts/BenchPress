@@ -1,5 +1,5 @@
-workspace: "pact_artifacts"
-tokenizer: "/private/home/foivos/results/full_results/backup_tokenizer.pkl"
+workspace: "pact_databases"
+tokenizer: "pact_databases/tokenizer.pkl"
 # Fig 2.1: Rodinia vs CLgen comp-mem plot
 evaluator {
   comp_mem_grewe {
@@ -7,7 +7,7 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
   }
 }
@@ -18,12 +18,12 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+      database: "pact_databases/benchpress_grewe.db"
     }
   }
 }
@@ -33,12 +33,12 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+      database: "benchpress_fixed_input.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
   }
 }
@@ -48,12 +48,12 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+      database: "benchpress_fixed_input.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
   }
 }
@@ -64,12 +64,12 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+      database: "benchpress_fixed_input.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
   }
 }
@@ -80,12 +80,12 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+      database: "benchpress_fixed_input.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
   }
 }
@@ -96,12 +96,12 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Fixed_input/unique_samples.db"
+      database: "benchpress_fixed_input.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
   }
 }
@@ -113,23 +113,23 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+      database: "pact_databases/benchpress_grewe.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "GitHub+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/Mutec/github_mutants_with_feats.db"
+      database: "pact_databases/github_srciror.db"
     }
   }
 }
@@ -141,28 +141,28 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+      database: "pact_databases/benchpress_grewe.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
     db_group {
       group_name: "GitHub-768-inactive"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "/private/home/foivos/results/full_results/clsmith_lite.db"
+      database: "pact_databases/clsmith.db"
     }
     db_group {
       group_name: "CLSmith+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/Mutec/clsmith_mutants_with_feats.db"
+      database: "pact_databases/clsmith_srciror.db"
     }
   }
 }
@@ -174,23 +174,23 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
+      database: "pact_databases/benchpress_autophase.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "GitHub+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/Mutec/github_mutants_with_feats.db"
+      database: "pact_databases/github_srciror.db"
     }
   }
 }
@@ -202,28 +202,28 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Autophase/unique_merged_samples.db"
+      database: "pact_databases/benchpress_autophase.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
     db_group {
       group_name: "GitHub-768-inactive"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "/private/home/foivos/results/full_results/clsmith_lite.db"
+      database: "pact_databases/clsmith.db"
     }
     db_group {
       group_name: "CLSmith+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/Mutec/clsmith_mutants_with_feats.db"
+      database: "pact_databases/clsmith_srciror.db"
     }
   }
 }
@@ -235,23 +235,23 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
+      database: "pact_databases/benchpress_instcount.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "GitHub+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/Mutec/github_mutants_with_feats.db"
+      database: "pact_databases/github_srciror.db"
     }
   }
 }
@@ -263,28 +263,28 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/BERT/Instcount/unique_merged_samples.db"
+      database: "pact_databases/benchpress_instcount.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/CLgen/unique_merged_samples.db"
+      database: "pact_databases/clgen.db"
     }
     db_group {
       group_name: "GitHub-768-inactive"
       db_type: "EncodedContentFiles"
-      database: "/private/home/foivos/results/full_results/GitHub/encoded.db"
+      database: "pact_databases/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "/private/home/foivos/results/full_results/clsmith_lite.db"
+      database: "pact_databases/clsmith.db"
     }
     db_group {
       group_name: "CLSmith+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "/private/home/foivos/results/full_results/Mutec/clsmith_mutants_with_feats.db"
+      database: "pact_databases/clsmith_srciror.db"
     }
   }
 }
