@@ -1,9 +1,7 @@
 # preamble
 import typing
 import pathlib
-import tempfile
 import re
-import sys
 from collections import Counter
 
 # code for the paper:
