@@ -1,4 +1,4 @@
-![BenchPress](https://github.com/fivosts/clgen/docs/logo-padded.png)
+![BenchPress](https://github.com/fivosts/clgen/blob/master/docs/logo-padded.png)
 
 ## Install
 
