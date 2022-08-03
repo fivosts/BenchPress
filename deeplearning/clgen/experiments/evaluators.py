@@ -6,7 +6,6 @@ import sys
 import pathlib
 import tqdm
 import multiprocessing
-from sklearn.decomposition import PCA
 
 from deeplearning.clgen.proto import evaluator_pb2
 from deeplearning.clgen.samplers import samples_database
