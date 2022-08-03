@@ -169,10 +169,7 @@ class EncodedContentFile(Base):
     ####
     encoding_time_ms = int((time.time() - start_time) * 1000)
     try:
-      if not pre_train:
-        feature_vector = extractor.ExtractRawFeatures(preprocessed_cf.text)
-      else:
-        feature_vector = ""
+      feature_vector = extractor.ExtractRawFeatures(preprocessed_cf.text)
     except Exception as e:
       raise e
     return EncodedContentFile(
@@ -221,9 +218,9 @@ class EncodedContentFiles(sqlutil.Database):
     if environment.WORLD_RANK == 0 or is_replica:
       encoded_path = pathlib.Path(url.replace("sqlite:///", "")).parent
       self.length_monitor   = monitors.CumulativeHistMonitor(encoded_path, "encoded_kernel_length")
-      if not self.is_pre_train:
-        self.token_monitor    = monitors.NormalizedFrequencyMonitor(encoded_path, "token_distribution")
-        self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
+      # if not self.is_pre_train:
+      self.token_monitor    = monitors.NormalizedFrequencyMonitor(encoded_path, "token_distribution")
+      self.feature_monitors = {ftype: monitors.CategoricalDistribMonitor(encoded_path, "{}_distribution".format(ftype)) for ftype in extractor.extractors.keys()}
       super(EncodedContentFiles, self).__init__(url, Base, must_exist=must_exist)
     if environment.WORLD_SIZE > 1 and not is_replica:
       # Conduct engine connections to replicated preprocessed chunks.
@@ -447,13 +444,13 @@ class EncodedContentFiles(sqlutil.Database):
               )
               session.add(encoded_cf)
               self.length_monitor.register(encoded_cf.tokencount)
-              if not self.is_pre_train:
-                self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
+              # if not self.is_pre_train:
+              self.token_monitor.register([tokenizer.decoder[int(x)] for x in encoded_cf.data.split('.')])
 
-                dict_features = extractor.RawToDictFeats(encoded_cf.feature_vector)
-                if dict_features:
-                  for key, value in dict_features.items():
-                    self.feature_monitors[key].register(value)
+              dict_features = extractor.RawToDictFeats(encoded_cf.feature_vector)
+              if dict_features:
+                for key, value in dict_features.items():
+                  self.feature_monitors[key].register(value)
             wall_time_start = wall_time_end
             if wall_time_end - last_commit > 1000:
               session.commit()
@@ -464,25 +461,25 @@ class EncodedContentFiles(sqlutil.Database):
         except KeyboardInterrupt as e:
           pool.terminate()
           self.length_monitor.plot()
-          if not self.is_pre_train:
-            self.token_monitor.plot()
-            for m in self.feature_monitors.values():
-              m.plot()
+          # if not self.is_pre_train:
+          self.token_monitor.plot()
+          for m in self.feature_monitors.values():
+            m.plot()
           raise e
         except Exception as e:
           l.logger().error(e, ddp_nodes = True)
           pool.terminate()
           self.length_monitor.plot()
-          if not self.is_pre_train:
-            self.token_monitor.plot()
-            for m in self.feature_monitors.values():
-              m.plot()
+          # if not self.is_pre_train:
+          self.token_monitor.plot()
+          for m in self.feature_monitors.values():
+            m.plot()
           raise e
       self.length_monitor.plot()
-      if not self.is_pre_train:
-        self.token_monitor.plot()
-        for m in self.feature_monitors.values():
-          m.plot()
+      # if not self.is_pre_train:
+      self.token_monitor.plot()
+      for m in self.feature_monitors.values():
+        m.plot()
       session.commit()
       if environment.WORLD_SIZE > 1:
         bar.finalize(idx)
