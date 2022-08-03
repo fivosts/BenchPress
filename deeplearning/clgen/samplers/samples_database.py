@@ -272,7 +272,7 @@ def run_extractors(sample: Sample) -> Sample:
                feature_vector         = extractor.ExtractRawFeatures(sample.text),
                num_tokens             = sample.num_tokens,
                compile_status         = sample.compile_status,
-               categorical_sampling   = int(sample.categorical_sampling),
+               categorical_sampling   = int(sample.categorical_sampling) if sample.categorical_sampling in {"0", "1"} else (1 if bool(sample.categorical_sampling) else False),
                date_added             = sample.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
               )
             )
@@ -291,7 +291,7 @@ def run_extractors(sample: Sample) -> Sample:
                feature_vector         = "",
                num_tokens             = sample.num_tokens,
                compile_status         = sample.compile_status,
-               categorical_sampling   = int(sample.categorical_sampling),
+               categorical_sampling   = int(sample.categorical_sampling) if sample.categorical_sampling in {"0", "1"} else (1 if bool(sample.categorical_sampling) else False),
                date_added             = sample.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
               )
             )
@@ -311,7 +311,7 @@ def get_sample(sample: Sample) -> Sample:
                feature_vector         = sample.feature_vector,
                num_tokens             = sample.num_tokens,
                compile_status         = sample.compile_status,
-               categorical_sampling   = int(sample.categorical_sampling),
+               categorical_sampling   = int(sample.categorical_sampling) if sample.categorical_sampling in {"0", "1"} else (1 if bool(sample.categorical_sampling) else False),
                date_added             = sample.date_added.strftime("%m/%d/%Y, %H:%M:%S"),
               )
             )
@@ -414,6 +414,22 @@ def to_unique_samples(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
     s.commit()
   return
 
+def extract_features(db: SamplesDatabase, out_db: SamplesDatabase) -> None:
+  inp_data = [x for x in db.get_data]
+  out_data = []
+  pool = multiprocessing.Pool()
+  for dp in tqdm.tqdm(pool.imap_unordered(run_extractors, inp_data), total = len(inp_data)):
+    out_data.append(dp)
+
+  with out_db.Session() as s:
+    idx = 0
+    for new_dp in out_data:
+      new_dp.id = idx
+      s.add(new_dp)
+      idx += 1
+    s.commit()
+  return
+
 def initMain(*args, **kwargs):
   l.initLogger("samples_database")
 
@@ -440,7 +456,8 @@ def initMain(*args, **kwargs):
   # merge_databases(dbs, out_db)
   # modernize_samples_db(dbs[0], out_db)
   # modernize_clgen_tokenizer(dbs[0], out_db, tokenizer)
-  to_unique_samples(dbs[0], out_db)
+  # to_unique_samples(dbs[0], out_db)
+  extract_features(dbs[0], out_db)
   return
 
 if __name__ == "__main__":
