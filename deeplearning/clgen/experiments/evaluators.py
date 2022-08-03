@@ -12,7 +12,6 @@ from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
-from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
