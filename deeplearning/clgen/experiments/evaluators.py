@@ -2,24 +2,12 @@
 Evaluators - result fetchers for samples across different techniques.
 """
 import typing
-import io
-import glob
-import progressbar
-import json
-import os
-import tempfile
-import subprocess
-import pickle
 import pathlib
 import tqdm
 import multiprocessing
-import functools
 import sklearn
-import math
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-import numpy as np
-import pandas as pd
 
 from deeplearning.clgen.proto import evaluator_pb2
 from deeplearning.clgen.samplers import samplers
@@ -28,8 +16,6 @@ from deeplearning.clgen.features import extractor
 from deeplearning.clgen.features import feature_sampler
 from deeplearning.clgen.features import active_feed_database
 from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.preprocessors import clang
-from deeplearning.clgen.corpuses import corpuses
 from deeplearning.clgen.corpuses import benchmarks
 from deeplearning.clgen.corpuses import tokenizers
 from deeplearning.clgen.corpuses import encoded
