@@ -288,3 +288,21 @@ evaluator {
     }
   }
 }
+# Downstream task table and figure 9: Speedup acquired by active learning.
+evaluator {
+  train_grewe {
+    grewe_baseline: "pact_databases/gpgpu_benchmarks.csv"
+    csv {
+      name: "BenchPress_Active"
+      path: "pact_databases/benchpress_active.csv"
+    }
+    csv {
+      name: "BenchPress_Passive"
+      path: "pact_databases/benchpress_passive.csv"
+    }
+    csv {
+      name: "CLgen"
+      path: "pact_databases/clgen.csv"
+    }
+  }
+}
