@@ -255,7 +255,7 @@ evaluator {
     }
   }
 }
-# Fig 8c-2: Relative distance to Rodinias for Grewe and synthesizerss.
+# Fig 8c-2: Relative distance to Rodinias for Grewe and synthesizers.
 evaluator {
   min_score {
     target: "rodinia"
