@@ -1,4 +1,5 @@
 # preamble
+import warnings
 import typing
 import pathlib
 import re
@@ -320,22 +321,22 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   s_mask = R["training"] == "Only {}".format(synth_bench_name)
   bs_mask = R["training"] == "w. {}".format(synth_bench_name)
 
-  b_gpu = (len(R[b_mask][R[b_mask]["oracle"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "GPU"][R[b_mask]["p"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "GPU"][R[b_mask]["p"] == "CPU"]))
-  b_cpu = (len(R[b_mask][R[b_mask]["oracle"] == "CPU"]), len(R[b_mask][R[b_mask]["oracle"] == "CPU"][R[b_mask]["p"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "CPU"][R[b_mask]["p"] == "CPU"]))
+  # b_gpu = (len(R[b_mask][R[b_mask]["oracle"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "GPU"][R[b_mask]["p"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "GPU"][R[b_mask]["p"] == "CPU"]))
+  # b_cpu = (len(R[b_mask][R[b_mask]["oracle"] == "CPU"]), len(R[b_mask][R[b_mask]["oracle"] == "CPU"][R[b_mask]["p"] == "GPU"]), len(R[b_mask][R[b_mask]["oracle"] == "CPU"][R[b_mask]["p"] == "CPU"]))
 
-  s_gpu = (len(R[s_mask][R[s_mask]["oracle"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "GPU"][R[s_mask]["p"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "GPU"][R[s_mask]["p"] == "CPU"]))
-  s_cpu = (len(R[s_mask][R[s_mask]["oracle"] == "CPU"]), len(R[s_mask][R[s_mask]["oracle"] == "CPU"][R[s_mask]["p"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "CPU"][R[s_mask]["p"] == "CPU"]))
+  # s_gpu = (len(R[s_mask][R[s_mask]["oracle"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "GPU"][R[s_mask]["p"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "GPU"][R[s_mask]["p"] == "CPU"]))
+  # s_cpu = (len(R[s_mask][R[s_mask]["oracle"] == "CPU"]), len(R[s_mask][R[s_mask]["oracle"] == "CPU"][R[s_mask]["p"] == "GPU"]), len(R[s_mask][R[s_mask]["oracle"] == "CPU"][R[s_mask]["p"] == "CPU"]))
 
-  bs_gpu = (len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"][R[bs_mask]["p"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"][R[bs_mask]["p"] == "CPU"]))
-  bs_cpu = (len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"][R[bs_mask]["p"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"][R[bs_mask]["p"] == "CPU"]))
+  # bs_gpu = (len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"][R[bs_mask]["p"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "GPU"][R[bs_mask]["p"] == "CPU"]))
+  # bs_cpu = (len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"][R[bs_mask]["p"] == "GPU"]), len(R[bs_mask][R[bs_mask]["oracle"] == "CPU"][R[bs_mask]["p"] == "CPU"]))
 
-  print("{} GPU Oracle Grewe: {} GPU / {} CPU".format(b_gpu[0], b_gpu[1], b_gpu[2]))
-  print("{} GPU Oracle Only {}: {} GPU / {} CPU".format(s_gpu[0], synth_bench_name, s_gpu[1], s_gpu[2]))
-  print("{} GPU Oracle Grewe + {}: {} GPU / {} CPU".format(bs_gpu[0], synth_bench_name, bs_gpu[1], bs_gpu[2]))
-  print()
-  print("{} CPU Oracle Grewe: {} GPU / {} CPU".format(b_cpu[0], b_cpu[1], b_cpu[2]))
-  print("{} CPU Oracle Only {}: {} GPU / {} CPU".format(s_cpu[0], synth_bench_name, s_cpu[1], s_cpu[2]))
-  print("{} CPU Oracle Grewe + {}: {} GPU / {} CPU".format(bs_cpu[0], synth_bench_name, bs_cpu[1], bs_cpu[2]))
+  # print("{} GPU Oracle Grewe: {} GPU / {} CPU".format(b_gpu[0], b_gpu[1], b_gpu[2]))
+  # print("{} GPU Oracle Only {}: {} GPU / {} CPU".format(s_gpu[0], synth_bench_name, s_gpu[1], s_gpu[2]))
+  # print("{} GPU Oracle Grewe + {}: {} GPU / {} CPU".format(bs_gpu[0], synth_bench_name, bs_gpu[1], bs_gpu[2]))
+  # print()
+  # print("{} CPU Oracle Grewe: {} GPU / {} CPU".format(b_cpu[0], b_cpu[1], b_cpu[2]))
+  # print("{} CPU Oracle Only {}: {} GPU / {} CPU".format(s_cpu[0], synth_bench_name, s_cpu[1], s_cpu[2]))
+  # print("{} CPU Oracle Grewe + {}: {} GPU / {} CPU".format(bs_cpu[0], synth_bench_name, bs_cpu[1], bs_cpu[2]))
 
   B_speedup = mean(R[b_mask].groupby(["group"])["p_speedup"].mean())
   S_speedup = mean(R[s_mask].groupby(["group"])["p_speedup"].mean())
@@ -354,25 +355,6 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   bench_times = 0.0
   benchsynth_times = 0.0
   synth_times = 0.0
-
-  R.to_csv("./investigate.csv")
-  # for x in R[b_mask]:
-  #   print(x)
-  #   bench_times += x["runtime_" + x["p"].lower()]
-
-  # for x in R[bs_mask]:
-  #   benchsynth_times += x["runtime_" + x["p"].lower()]
-
-  # for x in R[s_mask]:
-  #   synth_times += x["runtime_" + x["p"].lower()]
-
-  # print(bench_times)
-  # print(benchsynth_times)
-  # print(synth_times)
-
-  print("Only bench: {}".format(B_runtimes))
-  print("Only ML: {}".format(S_runtimes))
-  print("Bench + ML: {}".format(BS_runtimes))
 
   for x in R[b_mask]["p_speedup"]:
     x = int(x)
@@ -414,9 +396,6 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   s_distr.plot()
   bs_distr.plot()
 
-  print(s_distr - b_distr > 0)
-  print(bs_distr - b_distr > 0)
-
   (s_distr - b_distr).plot()
   (bs_distr - b_distr).plot()
 
@@ -438,17 +417,6 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   # bft = [x.p_speedup for idx, x in R[b_mask].iterrows() if x.group == "FT.B"]
   # sft = [x.p_speedup for idx, x in R[s_mask].iterrows() if x.group == "FT.B"]
   # bsft = [x.p_speedup for idx, x in R[bs_mask].iterrows() if x.group == "FT.B"]
-
-  print()
-  print()
-  print()
-
-  # print("FT.B Grewe: {}".format(sum(bft) / len(bft)))
-  # print("FT.B w {}: {}".format(synth_bench_name, sum(bsft) / len(bsft)))
-  # print("FT.B Only {}: {}".format(synth_bench_name, sum(sft) / len(sft)))
-
-  print("Total execution times:")
-  print()
 
   R = R.append({  # average bars
     "group": "Average",
@@ -498,7 +466,8 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   plt.setp(ax.get_xticklabels(), rotation=90)
 
   Finalize(output = "plot.png", figsize=figsize, tight=True)
-  return B_speedup, BS_speedup
+  ## Return predictive model's speedup when A) trained on gpgpu and B) gpgpu+synthetics
+  return model.geomean([x for x in R[b_mask]["p_speedup"]]), model.geomean([x for x in R[bs_mask]["p_speedup"]])
 
 
 def _compare_clfs(clf1, get_features1, clf2, get_features2, D1, D2, benchmark):
@@ -574,7 +543,6 @@ def plot_speedups_extended_model_2platform(platform_a, platform_b):
   # perform cross-validation
   B_out = []
   for i, benchmark in enumerate(benchmark_names):
-    print("\ranalyzing", i + 1, benchmark, end="")
     cgo13_clf, our_clf = model.model(), get_our_model()
     cgo13_features, our_features = get_cgo13_features, get_our_features
 
@@ -592,7 +560,6 @@ def plot_speedups_extended_model_2platform(platform_a, platform_b):
                         bBS, bBS, benchmark)
     for d in tmp: d["platform"] = "NVIDIA GTX 970"
     B_out += tmp
-  print()
 
   # create results frame
   R_out = []
@@ -696,7 +663,6 @@ def plot_speedups_extended_model(benchmarks_data, clgen_data):
   # perform cross-validation
   B_out = []
   for i, benchmark in enumerate(benchmark_names):
-    print("\ranalyzing", i + 1, benchmark, end="")
     cgo13_clf, our_clf = model.model(), get_our_model()
     cgo13_features, our_features = get_cgo13_features, get_our_features
 
@@ -704,7 +670,6 @@ def plot_speedups_extended_model(benchmarks_data, clgen_data):
     tmp = _compare_clfs(cgo13_clf, cgo13_features, our_clf, our_features,
                         BS, BS, benchmark)
     B_out += tmp
-  print()
 
   # create results frame
   R_out = []
@@ -779,32 +744,40 @@ if __name__ == "__main__":
   github_extended = base_path / "others" / "GitHub-extended.csv"
 
   for baseline in baselines:
-    # plot_speedups_with_clgen(
-    #   open(baseline, 'r'),
-    #   open(me, 'r'),
-    #   synth_bench_name = "BenchPress",
-    # )
-    # print()
-    # print()
-    # print()
+    plot_speedups_with_clgen(
+      open(baseline, 'r'),
+      open(me, 'r'),
+      synth_bench_name = "BenchPress",
+    )
     plot_speedups_with_clgen(
       open(baseline, 'r'),
       open(passive, 'r'),
+      synth_bench_name = "BenchPress_passive",
+    )
+    print()
+    print()
+    # print()
+    plot_speedups_with_clgen(
+      open(baseline, 'r'),
+      open(github, 'r'),
       synth_bench_name = "GitHub",
     )
+    print()
+    print()
+    print()
     plot_speedups_with_clgen(
       open(baseline, 'r'),
       open(clgen, 'r'),
       synth_bench_name = "CLgen",
     )
-    # print()
-    # print()
-    # print()
-    # plot_speedups_with_clgen(
-    #   open(baseline, 'r'),
-    #   open(github_extended, 'r'),
-    #   synth_bench_name = "GitHub_extended",
-    # )
+    print()
+    print()
+    print()
+    plot_speedups_with_clgen(
+      open(baseline, 'r'),
+      open(github_extended, 'r'),
+      synth_bench_name = "GitHub_extended",
+    )
     # input()
 
 #   plot_speedups_with_clgen(
