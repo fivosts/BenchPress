@@ -298,13 +298,21 @@ def TrainGrewe(**kwargs) -> None:
   except Exception:
     tdir = None
 
-  csv_contents = open(grewe_baseline, 'r').readlines()
+  speedups = {}
   for group in csv_groups:
-    preamble.plot_speedups_with_clgen(
+    base, enhanced = preamble.plot_speedups_with_clgen(
       open(grewe_baseline, 'r'),
       open(group['path'], 'r'),
       synth_bench_name = group['name'],
     )
+    if "GPGPU" not in speedups:
+      speedups["GPGPU"] = base
+    speedups["GPGPU+{}".format(group['name'])] = enhanced
+  l.logger().info(
+    "Predictive model speedup vs GPU static mapping for different datasets:\n{}".format(
+      '\n'.join(["{}: {}".format(k, v) for k, v in speedups.items()])
+    )
+  )
   return
 
 def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathlib.Path, out_path: pathlib.Path) -> None:
