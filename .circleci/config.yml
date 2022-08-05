@@ -61,7 +61,7 @@ workflows:
                 - master
     # python_versions:
     jobs:
-      - build_clgen:
+      - build_benchpress:
           matrix:
             parameters:
               python_version: ["python3.6", "python3.7", "python3.8", "from_source"]
