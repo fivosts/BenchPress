@@ -29,7 +29,7 @@ FLAGS = flags.FLAGS
 
 
 class TrainingLogger(object):
-  """A TrainingLogger produces telemetry data of a CLgen model as it is trained.
+  """A TrainingLogger produces telemetry data of a BenchPress model as it is trained.
 
   Telemetry data is gathered after every epoch of training. It includes a
   timestamp, the model's loss, and the time spent training the epoch.

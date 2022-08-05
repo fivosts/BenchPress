@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
-"""CLgen models using a Keras backend."""
+"""BenchPress models using a Keras backend."""
 import copy
 import os
 import pathlib

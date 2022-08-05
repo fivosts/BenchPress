@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This file builds Keras models from CLgen Model config protos."""
+"""This file builds Keras models from BenchPress Model config protos."""
 
 from deeplearning.benchpress.proto import model_pb2
 from absl import flags

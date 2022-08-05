@@ -23,7 +23,7 @@ Base = declarative.declarative_base()
 
 class LMInstance(Base, sqlutil.ProtoBackedMixin):
   """
-    A database entry representing a CLgen validation trace.
+    A database entry representing a BenchPress validation trace.
   """
   __tablename__ = "masked_lm_instances"
   id                    : int = sql.Column(sql.Integer,    primary_key = True, index = True)
@@ -49,7 +49,7 @@ class LMInstance(Base, sqlutil.ProtoBackedMixin):
     }
 
 class LMDatabase(sqlutil.Database):
-  """A database of CLgen samples."""
+  """A database of BenchPress samples."""
 
   def __init__(self, url: str, must_exist: bool = False):
     super(LMDatabase, self).__init__(url, Base, must_exist = must_exist)
