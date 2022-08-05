@@ -86,7 +86,7 @@ rl_model {
         datapoint_time: "online"
         use_start_end : true
         truncate_large_kernels: true
-        steps_per_epoch: 20000
+        steps_per_epoch: 100
         validation_split: 0
         hole {
           relative_length: 1.0
@@ -114,7 +114,7 @@ rl_model {
 sampler {
   start_text: "[START]kernel void [HOLE]}[END]"
   batch_size: 16
-  sequence_length: 1024
+  sequence_length: 256
   temperature_micros: 700000  # = 0.8 real value
   termination_criteria {
     maxlen {
