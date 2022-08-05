@@ -305,7 +305,8 @@ class torchBert(backends.BackendBase):
     return FLAGS.categorical_sampling
 
   def GetEncoderModule(self,
-                       with_checkpoint : bool = False,
+                       with_checkpoint    : bool = False,
+                       without_label_head : bool = True,
                        **kwargs,
                        ) -> 'torch.nn.Module':
     """Initialize BERT as decoder."""
@@ -328,7 +329,7 @@ class torchBert(backends.BackendBase):
           generic_config,
           tokenizer  = self.tokenizer,
           target_lm  = "hole" if self.config.training.data_generator.HasField("hole") else "mask",
-          without_label_head = True,
+          without_label_head = without_label_head,
         )
     if with_checkpoint:
       temp_estimator = torchBert.SampleBertEstimator(m, None)
