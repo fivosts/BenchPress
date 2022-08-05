@@ -470,7 +470,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
 
       # Generic Fields
       pbutil.AssertFieldIsSet(config, "workspace")
-      pbutil.AssertFieldIsSet(config, "tokenizer")
       if not pathlib.Path(config.tokenizer).resolve().exists():
         raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
       # DB groups
