@@ -78,9 +78,8 @@ class CommitteeConfig(Base, sqlutil.ProtoBackedMixin):
     )
 
 class CommitteeSample(Base, sqlutil.ProtoBackedMixin):
-  """A database row representing a CLgen sample.
+  """A database row representing a AL committee sample.
 
-  This is the clgen.Sample protocol buffer in SQL format.
   """
   __tablename__    = "qbc_samples"
   # entry id
