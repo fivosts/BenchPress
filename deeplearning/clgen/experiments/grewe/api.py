@@ -34,6 +34,8 @@ from deeplearning.clgen.preprocessors import opencl
 from deeplearning.clgen.samplers import samples_database
 from deeplearning.clgen.util import crypto
 from deeplearning.clgen.util import logging as l
+from deeplearning.clgen.util import plotter
+
 from deeplearning.clgen.experiments.grewe import preamble
 
 from absl import app, flags
@@ -292,6 +294,7 @@ def TrainGrewe(**kwargs) -> None:
   grewe_baseline = kwargs.get('grewe_baseline')
   csv_groups     = kwargs.get('csv_groups')
   plot_config    = kwargs.get('plot_config')
+  workspace      = kwargs.get('workspace_path')
 
   try:
     tdir = FLAGS.local_filesystem
@@ -299,19 +302,37 @@ def TrainGrewe(**kwargs) -> None:
     tdir = None
 
   speedups = {}
+  accuracies = {}
   for group in csv_groups:
-    base, enhanced = preamble.plot_speedups_with_clgen(
+    base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr = preamble.plot_speedups_with_clgen(
       open(grewe_baseline, 'r'),
       open(group['path'], 'r'),
       synth_bench_name = group['name'],
     )
     if "GPGPU" not in speedups:
       speedups["GPGPU"] = base
+      accuracies["GPGPU"] = {
+        'precision': base_precision,
+        'recall'   : base_recall,
+        'tnr'      : base_tnr,
+      }
     speedups["GPGPU+{}".format(group['name'])] = enhanced
-  l.logger().info(
-    "Predictive model speedup vs GPU static mapping for different datasets:\n{}".format(
-      '\n'.join(["{}: {}".format(k, v) for k, v in speedups.items()])
-    )
+    accuracies["GPGPU+{}".format(group['name'])] = {
+      'precision': enhanced_precision,
+      'recall'   : enhanced_recall,
+      'tnr'      : enhanced_tnr,
+    }
+  l.logger().info("Predictive model speedup vs GPU static mapping for different datasets:")
+  for k, v in speedups.items():
+    l.logger().info("{}:  {}x speedup".format(k, round(v, 2)))
+
+  plotter.MultiScatterLine(
+    x = [[x for x in range(10)], [x for x in range(10)]],
+    y = [preamble.bp_al, preamble.bp_pl],
+    names = ["BenchPress_Active", "BenchPress_Passive"],
+    plot_name = "Active_vs_Passive_speedup",
+    path = workspace,
+    **plot_config if plot_config else {}
   )
   return
 
