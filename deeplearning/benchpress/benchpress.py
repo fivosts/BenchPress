@@ -1,8 +1,22 @@
-"""CLgen: a deep learning program generator.
+# coding=utf-8
+# Copyright 2022 Foivos Tsimpourlas and Chris Cummins.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""BenchPress: A directed compiler benchmark generator powered by active learning.
 
-The core operations of CLgen are:
+The core operations of BenchPress are:
 
-  1. Preprocess and encode a corpus of handwritten example programs.
+  1. Preprocess and encode a corpus of human-written programs.
   2. Define and train a machine learning model on the corpus.
   3. Sample the trained model to generate new programs.
 
