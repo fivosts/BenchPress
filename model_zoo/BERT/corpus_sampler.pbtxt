@@ -4,7 +4,7 @@ model {
     local_tar_archive: "$PWD/../corpus/corpus_1000.tar.bz2"
     tokenizer {
       token_type: "ast"
-      token_list: "deeplearning/clgen/corpuses/token_lists.json"
+      token_list: "deeplearning/benchpress/corpuses/token_lists.json"
       mask_tokens: true
       wordpiece_tokenization: false
     }
@@ -82,7 +82,7 @@ sampler {
       local_tar_archive: "$PWD/../corpus/corpus_1000.tar.bz2"
       tokenizer {
         token_type: "ast"
-        token_list: "deeplearning/clgen/corpuses/token_lists.json"
+        token_list: "deeplearning/benchpress/corpuses/token_lists.json"
         mask_tokens: true
         wordpiece_tokenization: false
       }

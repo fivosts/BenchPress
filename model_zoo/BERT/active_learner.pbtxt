@@ -13,7 +13,7 @@ language_model {
     local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
     tokenizer {
       token_type: "ast"
-      token_list: "deeplearning/clgen/corpuses/token_lists.json"
+      token_list: "deeplearning/benchpress/corpuses/token_lists.json"
       mask_tokens: true
       wordpiece_tokenization: false
     }
