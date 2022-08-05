@@ -12,9 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "deeplearning/clgen/corpuses/lexer/lexer.h"
+#include "deeplearning/benchpress/corpuses/lexer/lexer.h"
 
-#include "deeplearning/clgen/proto/internal.pb.h"
+#include "deeplearning/benchpress/proto/internal.pb.h"
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -22,7 +22,7 @@
 #include "labm8/cpp/string.h"
 #include "labm8/cpp/test.h"
 
-namespace clgen {
+namespace benchpress {
 namespace {
 
 TEST(HasPrefix, EmptyVocabDoesNotMatchString) {
@@ -263,6 +263,6 @@ TEST(ProcessLexerJob, SimpleStringInput) {
 }
 
 }  // namespace
-}  // namespace clgen
+}  // namespace benchpress
 
 TEST_MAIN();

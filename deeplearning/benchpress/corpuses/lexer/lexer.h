@@ -16,14 +16,14 @@
 
 #include <vector>
 
-#include "deeplearning/clgen/proto/internal.pb.h"
+#include "deeplearning/benchpress/proto/internal.pb.h"
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 
 #include "labm8/cpp/string.h"
 
-namespace clgen {
+namespace benchpress {
 
 // Determine if any of a set of strings starts with prefix.
 // This assumes that strings set and prefix are not empty.
@@ -51,4 +51,4 @@ void ProcessLexerJob(LexerJob* input,
 // Process a LexerBatchJob. Any errors will lead to fatal program crash.
 void ProcessLexerBatchJobOrDie(LexerBatchJob* proto);
 
-}  // namespace clgen
+}  // namespace benchpress

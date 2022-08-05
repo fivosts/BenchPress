@@ -12,9 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "deeplearning/clgen/corpuses/lexer/lexer.h"
+#include "deeplearning/benchpress /corpuses/lexer/lexer.h"
 
-namespace clgen {
+namespace benchpress {
 
 bool HasPrefix(const absl::flat_hash_set<string>& strings,
                const std::string& prefix) {
@@ -136,4 +136,4 @@ void ProcessLexerBatchJobOrDie(LexerBatchJob* proto) {
   }
 }
 
-}  // namespace clgen
+}  // namespace benchpress
