@@ -15,7 +15,7 @@
 """
 RL Environment for the task of targeted benchmark generation.
 """
-import gym
+# import gym
 import typing
 import pathlib
 import pickle
@@ -39,7 +39,7 @@ torch = pytorch.torch
 
 from absl import flags
 
-class Environment(gym.Env):
+class Environment(object):
   """
   Environment representation for RL Agents.
   """
@@ -133,7 +133,6 @@ class Environment(gym.Env):
     """
     Step the environment, compute the reward.
     """
-    super().reset()
     num_episodes      = step_actions.shape[0]
     reward            = torch.zeros((num_episodes), dtype = torch.float32)
     discounted_reward = torch.zeros((num_episodes), dtype = torch.float32)
