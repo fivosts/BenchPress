@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This file defines the decorator for marking a CLgen preprocessor function."""
+"""This file defines the decorator for marking a BenchPress preprocessor function."""
 import typing
 
 
@@ -25,9 +25,9 @@ PreprocessorFunction = typing.Callable[[str], str]
 
 
 def benchpress_preprocessor(func: PreprocessorFunction) -> PreprocessorFunction:
-  """A decorator which marks a function as a CLgen preprocessor.
+  """A decorator which marks a function as a BenchPress preprocessor.
 
-  A CLgen preprocessor is accessible using GetPreprocessFunction(), and is a
+  A BenchPress preprocessor is accessible using GetPreprocessFunction(), and is a
   function which accepts a single parameter 'text', and returns a string.
   Type hinting is used to ensure that any function wrapped with this decorator
   has the appropriate argument and return type. If the function does not, an
