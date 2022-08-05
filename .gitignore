@@ -1,5 +1,5 @@
 # Binary symbolic links
-/clgen
+/benchpress
 
 # Build folders
 *__pycache__*
