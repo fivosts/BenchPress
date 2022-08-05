@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A module for databases of CLgen samples."""
+"""A module for databases of BenchPress samples."""
 import datetime
 import typing
 
@@ -37,7 +37,7 @@ class ValResults(Base):
 
 class BERTValFile(Base, sqlutil.ProtoBackedMixin):
   """
-    A database entry representing a CLgen validation trace.
+    A database entry representing a BenchPress validation trace.
   """
   __tablename__    = "validation_traces"
   id                            : int = sql.Column(sql.Integer,    primary_key = True)
@@ -114,7 +114,7 @@ class BERTValFile(Base, sqlutil.ProtoBackedMixin):
     }
 
 class ValidationDatabase(sqlutil.Database):
-  """A database of CLgen samples."""
+  """A database of BenchPress samples."""
 
   def __init__(self, url: str, must_exist: bool = False):
     super(ValidationDatabase, self).__init__(url, Base, must_exist = must_exist)

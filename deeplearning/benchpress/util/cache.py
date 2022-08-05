@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This file contains the logic for managing CLgen filesystem caches."""
+"""This file contains the logic for managing BenchPress filesystem caches."""
 import os
 import pathlib
 import six

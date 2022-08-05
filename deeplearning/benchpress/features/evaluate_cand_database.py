@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A module for databases of CLgen samples."""
+"""A module for databases of BenchPress samples."""
 import contextlib
 import math
 import pathlib
@@ -41,7 +41,7 @@ flags.DEFINE_string(
 )
 
 class SearchCandidate(Base, sqlutil.ProtoBackedMixin):
-  """A database row representing a CLgen sample.
+  """A database row representing a BenchPress sample.
 
   This is the clgen.Sample protocol buffer in SQL format.
   """

@@ -49,7 +49,7 @@ CLSMITH_INCLUDE = environment.CLSMITH_INCLUDE
 Base = declarative.declarative_base()
 
 class CLSmithSample(Base, sqlutil.ProtoBackedMixin):
-  """A database row representing a CLgen sample.
+  """A database row representing a BenchPress sample.
 
   This is the clgen.CLSmithSample protocol buffer in SQL format.
   """
@@ -100,7 +100,7 @@ class CLSmithSample(Base, sqlutil.ProtoBackedMixin):
     })
 
 class CLSmithDatabase(sqlutil.Database):
-  """A database of CLgen samples."""
+  """A database of BenchPress samples."""
 
   def __init__(self, url: str, must_exist: bool = False):
     super(CLSmithDatabase, self).__init__(url, Base, must_exist = must_exist)

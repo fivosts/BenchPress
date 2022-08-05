@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Samplers for CLgen language models.
+"""Samplers for BenchPress language models.
 
 A Sampler is an object which, when passed to a mode's Sample() method,
 determines the shape of the generated samples.
@@ -371,7 +371,7 @@ def GetTerminationCriteria(
   return terminators
 
 class Sampler(object):
-  """CLgen sampler for models.
+  """BenchPress sampler for models.
 
   Please note sampler instances should be treated as immutable. Upon
   instantiation, a sampler's properties are used to determine its hash. If you

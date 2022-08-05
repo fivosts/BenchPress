@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A module for databases of CLgen samples."""
+"""A module for databases of BenchPress samples."""
 import contextlib
 import pathlib
 import datetime
@@ -63,7 +63,7 @@ class bqData(Base):
 
 class bqFile():
   """
-    A database entry representing a CLgen validation trace.
+    A database entry representing a BenchPress validation trace.
   """
   id             : int = sql.Column(sql.String(64),    primary_key = True)
   repo_name      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
@@ -120,7 +120,7 @@ class bqOtherFile(Base, bqFile):
 
 class bqRepo(Base):
   """
-    A database entry representing a CLgen validation trace.
+    A database entry representing a BenchPress validation trace.
   """
   __tablename__  = "repositories"
   id             : int = sql.Column(sql.Integer, primary_key = True)

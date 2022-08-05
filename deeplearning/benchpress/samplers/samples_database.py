@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A module for databases of CLgen samples."""
+"""A module for databases of BenchPress samples."""
 import contextlib
 import datetime
 import typing
@@ -68,7 +68,7 @@ class SampleResults(Base):
   results : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
 class Sample(Base, sqlutil.ProtoBackedMixin):
-  """A database row representing a CLgen sample.
+  """A database row representing a BenchPress sample.
 
   This is the clgen.Sample protocol buffer in SQL format.
   """
@@ -149,7 +149,7 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
     })
 
 class SamplesDatabase(sqlutil.Database):
-  """A database of CLgen samples."""
+  """A database of BenchPress samples."""
 
   def __init__(self, url: str, must_exist: bool = False, is_replica: bool = False):
     self.base_url = url

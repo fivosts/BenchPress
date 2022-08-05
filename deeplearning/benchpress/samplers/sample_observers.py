@@ -230,7 +230,7 @@ class SamplesDatabaseObserver(SampleObserver):
 class LegacySampleCacheObserver(SampleObserver):
   """Backwards compatability implementation of the old sample caching behavior.
 
-  In previous versions of CLgen, model sampling would silently (and always)
+  In previous versions of BenchPress, model sampling would silently (and always)
   create sample protobufs in the sampler cache, located at:
 
     BENCHPRESS_CACHE/models/MODEL/samples/SAMPLER
