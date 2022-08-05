@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(CLGEN, 
-        VERSION 0.0.1
-        DESCRIPTION "Programming language model using machine learning")
+project(BENCHPRESS, 
+        VERSION 2.0.0
+        DESCRIPTION "Directed machine learning program generator for compiler benchmarks")
 # TODO check
 # https://cmake.org/cmake/help/v3.0/module/FindPythonInterp.html
 cmake_policy(SET CMP0076 NEW)
