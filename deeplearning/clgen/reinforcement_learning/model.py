@@ -169,19 +169,18 @@ class ActionLanguageModelQV(torch.nn.Module):
     ## Decoder for token prediction, given features memory and source code.
     if is_critic:
       output_dim = 1
-      # self.language_model = language_model.backend.GetDecoderModule(
-      #   with_checkpoint = True,
-      #   without_label_head = True,
-      # )
+      self.language_model = language_model.backend.GetDecoderModule(
+        with_checkpoint = True,
+        without_label_head = True,
+      )
+      self.decoder = TokenHead(config, output_dim)
     else:
       output_dim = config.vocab_size
-    self.language_model = language_model.backend.GetDecoderModule(
-      with_checkpoint = True,
-      without_label_head = True,
-    )
-    self.decoder = TokenHead(config, output_dim)
-    self.softmax = torch.nn.Softmax(dim = -1)
-    self.critic  = is_critic
+      self.language_model = language_model.backend.GetDecoderModule(
+        with_checkpoint = True,
+      )
+    self.softmax   = torch.nn.Softmax(dim = -1)
+    self.is_critic = is_critic
     return
 
   def forward(self,
@@ -206,8 +205,11 @@ class ActionLanguageModelQV(torch.nn.Module):
       position_ids          = decoder_position_ids,
       encoder_hidden_states = encoder_memory,
     )
-    decoded_source = decoder_out['hidden_states']
-    token_logits = self.decoder(decoded_source)
+    if self.is_critic:
+      decoded_source = decoder_out['hidden_states']
+      token_logits = self.decoder(decoded_source)
+    else:
+      token_logits = decoder_out['prediction_logits']
     token_probs  = self.softmax(token_logits)
     return {
       'token_logits' : token_logits,
