@@ -578,7 +578,7 @@ def Launch(host: str = "0.0.0.0",
   l.logger().debug("deeplearning.clgen.dashboard.Launch()")
   """Launch dashboard in a separate thread."""
   port = FLAGS.clgen_dashboard_port or portpicker.pick_unused_port()
-  l.logger().info("Launching CLgen dashboard on http://{}:{}".format(host, port))
+  l.logger().info("Launching BenchPress dashboard on http://{}:{}".format(host, port))
   kwargs = {
     "port": port,
     # Debugging must be disabled when run in a separate thread.
