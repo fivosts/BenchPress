@@ -364,7 +364,7 @@ class torchBert(backends.BackendBase):
         ))
     if with_checkpoint:
       temp_estimator = torchBert.SampleBertEstimator(m, None)
-      self.loadCheckpoint(temp_estimator, without_label_head = without_label_head)
+      self.loadCheckpoint(temp_estimator, without_label_head = without_label_head, is_decoder = True)
       return temp_estimator.model
     else:
       return m
@@ -1052,6 +1052,7 @@ class torchBert(backends.BackendBase):
                                 ],
                      pre_train          : bool = False,
                      without_label_head : bool = False,
+                     is_decoder         : bool = False,
                      ) -> int:
     """
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
@@ -1091,7 +1092,8 @@ class torchBert(backends.BackendBase):
           estimator.model.module.load_state_dict(new_state_dict, strict = False)
         else:
           estimator.model.module.load_state_dict(
-            self.torch.load(ckpt_comp("model"))
+            self.torch.load(ckpt_comp("model")),
+            strict = False if is_decoder else True,
           )
       except RuntimeError:
         """
@@ -1110,7 +1112,7 @@ class torchBert(backends.BackendBase):
             name = 'module.' + k # Add 'module.'
           if not without_label_head or (without_label_head and "cls.predictions." not in name):
             new_state_dict[name] = v
-        estimator.model.module.load_state_dict(new_state_dict, strict = False if without_label_head else True)
+        estimator.model.module.load_state_dict(new_state_dict, strict = False if is_decoder or without_label_head else True)
     else:
       try:
         if without_label_head:
@@ -1121,7 +1123,8 @@ class torchBert(backends.BackendBase):
           estimator.model.load_state_dict(new_state_dict, strict = False)
         else:
           estimator.model.load_state_dict(
-            self.torch.load(ckpt_comp("model"))
+            self.torch.load(ckpt_comp("model")),
+            strict = False if is_decoder else True,
           )
       except RuntimeError:
         """
@@ -1140,7 +1143,7 @@ class torchBert(backends.BackendBase):
             name = 'module.' + k # Add 'module.'
           if not without_label_head or (without_label_head and "cls.predictions." not in name):
             new_state_dict[name] = v
-        estimator.model.load_state_dict(new_state_dict, strict = False if without_label_head else True)
+        estimator.model.load_state_dict(new_state_dict, strict = False if without_label_head or is_decoder else True)
     if isinstance(estimator, torchBert.BertEstimator):
       if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
         estimator.optimizer.load_state_dict(
