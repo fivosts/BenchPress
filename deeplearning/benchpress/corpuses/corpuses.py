@@ -52,13 +52,13 @@ from deeplearning.benchpress.util import logging as l
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-  "clgen_local_path_prefix",
+  "benchpress_local_path_prefix",
   None,
   "An optional prefix to use when resolving the path to a local directory "
   "or archive. For example, given a corpus which is configured for a "
-  'local_directory with value "foo/bar" and a --clgen_local_path_prefix of '
+  'local_directory with value "foo/bar" and a --benchpress_local_path_prefix of '
   '"/tmp/", the absolute path of the corpus will resolve to "/tmp/foo/bar". '
-  "If the --clgen_local_path_prefix is a directory, the trailing slash must "
+  "If the --benchpress_local_path_prefix is a directory, the trailing slash must "
   "not be omitted.",
 )
 
@@ -95,7 +95,7 @@ def AssertConfigIsValid(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTr
       if config.tokenizer.token_type == "word":
         pbutil.AssertFieldConstraint(config.tokenizer,
                                     "token_list",
-                                    lambda x: os.path.isfile(str(ExpandConfigPath(x, path_prefix=FLAGS.clgen_local_path_prefix))),
+                                    lambda x: os.path.isfile(str(ExpandConfigPath(x, path_prefix=FLAGS.benchpress_local_path_prefix))),
                                     "Invalid token_list file"
                                     )
     else:
@@ -176,22 +176,22 @@ class Corpus(object):
       if not symlink.is_symlink():
         if config.HasField("local_directory"):
           os.symlink(
-            str(ExpandConfigPath(config.local_directory,   path_prefix=FLAGS.clgen_local_path_prefix)),
+            str(ExpandConfigPath(config.local_directory,   path_prefix=FLAGS.benchpress_local_path_prefix)),
             symlink,
           )
         elif config.HasField("local_tar_archive"):
           os.symlink(
-            str(ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)),
+            str(ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.benchpress_local_path_prefix)),
             symlink,
           )
         elif config.HasField("bq_database"):
           os.symlink(
-            str(ExpandConfigPath(config.bq_database, path_prefix=FLAGS.clgen_local_path_prefix)),
+            str(ExpandConfigPath(config.bq_database, path_prefix=FLAGS.benchpress_local_path_prefix)),
             symlink,
           )  
         # elif config.HasField("fetch_github"):
         #   os.symlink(
-        #     str(ExpandConfigPath(config.fetch_github, path_prefix=FLAGS.clgen_local_path_prefix)),
+        #     str(ExpandConfigPath(config.fetch_github, path_prefix=FLAGS.benchpress_local_path_prefix)),
         #     symlink,
         #   )
     distrib.barrier()
@@ -478,7 +478,7 @@ def ExpandConfigPath(path: str, path_prefix: str = None) -> pathlib.Path:
   """Resolve an absolute path from a config proto string field.
 
   This performs shell-style expansion of $VARS, and prefixes the
-  --clgen_local_path_prefix flag value, if it is set.
+  --benchpress_local_path_prefix flag value, if it is set.
 
   Args:
     path: The string value as it appears in the proto.
@@ -522,7 +522,7 @@ def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrain
   start_time = time.time()
   if config.HasField("local_directory"):
     local_directory = ExpandConfigPath(
-      config.local_directory, path_prefix=FLAGS.clgen_local_path_prefix
+      config.local_directory, path_prefix=FLAGS.benchpress_local_path_prefix
     )
 
     # After the first time we compute the hash of a directory, we write it into
@@ -554,14 +554,14 @@ def ResolveContentId(config: typing.Union[corpus_pb2.Corpus, corpus_pb2.PreTrain
     # to maintain a cache which maps the mtime of tarballs to their content ID,
     # similart to how local_directory is implemented.
     content_id = GetHashOfArchiveContents(
-      ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.clgen_local_path_prefix)
+      ExpandConfigPath(config.local_tar_archive, path_prefix=FLAGS.benchpress_local_path_prefix)
     )
   elif config.HasField("bq_database"):
     content_id = crypto.sha256_str(str(config.bq_database))
   # elif config.HasField("fetch_github"):
 
   #   gitfile_path = ExpandConfigPath(
-  #     config.fetch_github, path_prefix=FLAGS.clgen_local_path_prefix
+  #     config.fetch_github, path_prefix=FLAGS.benchpress_local_path_prefix
   #   )
   #   gitfile_path.mkdir(exist_ok=True, parents=True)
   #   github_fetcher = github.GithubFetcher(gitfile_path)
