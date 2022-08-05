@@ -1,5 +1,5 @@
-workspace: "pact_databases"
-tokenizer: "pact_databases/tokenizer.pkl"
+workspace: "pact_data"
+tokenizer: "pact_data/tokenizer.pkl"
 # Fig 2.1: Rodinia vs CLgen comp-mem plot
 evaluator {
   comp_mem_grewe {
@@ -7,7 +7,7 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
   }
 }
@@ -18,12 +18,12 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "pact_databases/benchpress_grewe.db"
+      database: "pact_data/benchpress_grewe.db"
     }
   }
 }
@@ -38,7 +38,7 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
   }
 }
@@ -53,7 +53,7 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
   }
 }
@@ -69,7 +69,7 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
   }
 }
@@ -85,7 +85,7 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
   }
 }
@@ -101,7 +101,7 @@ evaluator {
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
   }
 }
@@ -113,23 +113,23 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "pact_databases/benchpress_grewe.db"
+      database: "pact_data/benchpress_grewe.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "GitHub+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "pact_databases/github_srciror.db"
+      database: "pact_data/github_srciror.db"
     }
   }
 }
@@ -141,28 +141,28 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "pact_databases/benchpress_grewe.db"
+      database: "pact_data/benchpress_grewe.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
     db_group {
       group_name: "GitHub-768-inactive"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "pact_databases/clsmith.db"
+      database: "pact_data/clsmith.db"
     }
     db_group {
       group_name: "CLSmith+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clsmith_srciror.db"
+      database: "pact_data/clsmith_srciror.db"
     }
   }
 }
@@ -174,23 +174,23 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "pact_databases/benchpress_autophase.db"
+      database: "pact_data/benchpress_autophase.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "GitHub+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "pact_databases/github_srciror.db"
+      database: "pact_data/github_srciror.db"
     }
   }
 }
@@ -202,28 +202,28 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "pact_databases/benchpress_autophase.db"
+      database: "pact_data/benchpress_autophase.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
     db_group {
       group_name: "GitHub-768-inactive"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "pact_databases/clsmith.db"
+      database: "pact_data/clsmith.db"
     }
     db_group {
       group_name: "CLSmith+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clsmith_srciror.db"
+      database: "pact_data/clsmith_srciror.db"
     }
   }
 }
@@ -235,23 +235,23 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "pact_databases/benchpress_instcount.db"
+      database: "pact_data/benchpress_instcount.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
     }
     db_group {
       group_name: "GitHub-768"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "GitHub+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "pact_databases/github_srciror.db"
+      database: "pact_data/github_srciror.db"
     }
   }
 }
@@ -263,50 +263,50 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "pact_databases/benchpress_instcount.db"
+      database: "pact_data/benchpress_instcount.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clgen.db"
+      database: "pact_data/clgen.db"
     }
     db_group {
       group_name: "GitHub-768-inactive"
       db_type: "EncodedContentFiles"
-      database: "pact_databases/github.db"
+      database: "pact_data/github.db"
       size_limit: 768
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "pact_databases/clsmith.db"
+      database: "pact_data/clsmith.db"
     }
     db_group {
       group_name: "CLSmith+SRCIROR"
       db_type: "SamplesDatabase"
-      database: "pact_databases/clsmith_srciror.db"
+      database: "pact_data/clsmith_srciror.db"
     }
   }
 }
 # Downstream task table and figure 9: Speedup acquired by active learning.
 evaluator {
   train_grewe {
-    grewe_baseline: "pact_databases/gpgpu_benchmarks.csv"
+    grewe_baseline: "pact_data/gpgpu_benchmarks.csv"
     csv {
       name: "BenchPress_Active"
-      path: "pact_databases/benchpress_active.csv"
+      path: "pact_data/benchpress_active.csv"
     }
     csv {
       name: "BenchPress_Passive"
-      path: "pact_databases/benchpress_passive.csv"
+      path: "pact_data/benchpress_passive.csv"
     }
     csv {
       name: "CLgen"
-      path: "pact_databases/clgen.csv"
+      path: "pact_data/clgen.csv"
     }
     csv {
       name: "GitHub"
-      path: "pact_databases/github.csv"
+      path: "pact_data/github.csv"
     }
   }
 }
