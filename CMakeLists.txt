@@ -9,7 +9,7 @@ cmake_policy(SET CMP0076 NEW)
 
 ###### Important app paths
 # Python application relative base path
-set(APP_PATH    deeplearning/clgen)
+set(APP_PATH    deeplearning/benchpress)
 # Base path of third_party deps
 set(THIRD_PARTY ${CMAKE_BINARY_DIR}/third_party)
 # Local bin folder for application binaries and libraries
@@ -402,9 +402,9 @@ function(setup_python)
   set(PYTHON ${PYTHON_ENV} PARENT_SCOPE)
 endfunction()
 
-function(clgen)
+function(benchpress)
 
-  ### Auto-generates clgen binary that initializes app environment and deploys app.
+  ### Auto-generates benchpress binary that initializes app environment and deploys app.
 
   get_target_property(CLANG_REWRITER      clang_rewriter      path)
   get_target_property(SEQ_CLANG_REWRITER  seq_clang_rewriter  path)
@@ -416,27 +416,27 @@ function(clgen)
   get_target_property(INSTCOUNT           InstCount           path)
   get_target_property(AUTOPHASE           Autophase           path)
 
-  string(CONCAT CLGEN
+  string(CONCAT BENCHPRESS
     "#######################################\n"
     "#      Auto generated bash binary     #\n"
-    "# -------------  CLGEN -------------- #\n"
+    "# -----------  BENCHPRESS ----------- #\n"
     "#           Not to be edited          #\n"
     "# if you want to explicitly execute a #\n"
     "# specific python script instead of   #\n"
     "# the main booting point of the app,  #\n"
     "# then export path of desired script  #\n"
-    "# in CLGEN_BINARY var as a relative   #\n"
-    "# path from root, e.g.                #\n"
-    "# deeplearning/clgen/models/models.py #\n"
+    "# in BENCHPRESS_BINARY var as a       #\n"
+    "# relative path from root, e.g.       #\n"
+    "# path/to/my_script.py                #\n"
     "#######################################\n"
     "#!$(which bash)\n"
     "PYTHON_BINARY="                         ${PYTHON}  "\n"
-    "if [[ -z \"$CLGEN_BINARY\" ]]\; then\n"
-    "  CLGEN_BINARY="                        ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/clgen.py\n"
-    "elif [[ \"$CLGEN_BINARY\" == \"cmd\" ]]\; then\n"
-    "  CLGEN_BINARY=\"\"\n"
+    "if [[ -z \"$BENCHPRESS_BINARY\" ]]\; then\n"
+    "  BENCHPRESS_BINARY="                   ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/benchpress.py\n"
+    "elif [[ \"$BENCHPRESS_BINARY\" == \"cmd\" ]]\; then\n"
+    "  BENCHPRESS_BINARY=\"\"\n"
     "else\n"
-    "  CLGEN_BINARY="                        ${CMAKE_CURRENT_SOURCE_DIR}/ "$CLGEN_BINARY" "\n"
+    "  BENCHPRESS_BINARY="                   ${CMAKE_CURRENT_SOURCE_DIR}/ "$BENCHPRESS_BINARY" "\n"
     "fi\n"
     "export LLVM="                           ${LLVM} "\n"
     "export LLVM_VERSION="                   ${LLVM_VERSION} "\n"
@@ -466,7 +466,7 @@ function(clgen)
     "export GREWE="                          ${GREWE} "\n"
     "export INSTCOUNT="                      ${INSTCOUNT} "\n"
     "export AUTOPHASE="                      ${AUTOPHASE} "\n"
-    "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $CLGEN_BINARY \"$@\"\n"
+    "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $BENCHPRESS_BINARY \"$@\"\n"
     "unset LLVM\n"
     "unset LLVM_VERSION\n"
     "unset LLVM_LIB\n"
@@ -495,11 +495,11 @@ function(clgen)
     "unset AUTOPHASE\n"
   )
   file(
-    WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CLGEN}
+    WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/benchpress ${BENCHPRESS}
   )
-  add_custom_target(clgen ALL
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/clgen ${CMAKE_CURRENT_SOURCE_DIR}/clgen
-    COMMAND chmod 551 ${CMAKE_CURRENT_SOURCE_DIR}/clgen
+  add_custom_target(benchpress ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/benchpress ${CMAKE_CURRENT_SOURCE_DIR}/benchpress
+    COMMAND chmod 551 ${CMAKE_CURRENT_SOURCE_DIR}/benchpress
   )
 endfunction()
 
@@ -511,4 +511,4 @@ add_subdirectory(${APP_PATH}/data)
 add_subdirectory(${APP_PATH}/features)
 add_subdirectory(${APP_PATH}/preprocessors)
 add_subdirectory(${APP_PATH}/proto)
-clgen()
+benchpress()
