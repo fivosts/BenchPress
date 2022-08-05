@@ -40,7 +40,7 @@ def _MinimumLineCount(text: str, min_line_count: int) -> str:
     raise ValueError
   return text
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def MinimumLineCount3(text: str) -> str:
   """Check that file contains a minimum number of lines.
 
@@ -56,7 +56,7 @@ def MinimumLineCount3(text: str) -> str:
   return _MinimumLineCount(text, 3)
 
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def StripDuplicateEmptyLines(text: str) -> str:
   """A preprocessor pass which removes duplicate empty lines.
 
@@ -75,7 +75,7 @@ def StripDuplicateEmptyLines(text: str) -> str:
   return "\n".join(lines)
 
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def StripTrailingWhitespace(text: str) -> str:
   """A preprocessor pass which strips trailing whitespace from all lines.
 
@@ -90,7 +90,7 @@ def StripTrailingWhitespace(text: str) -> str:
   """
   return "\n".join(l.rstrip() for l in text.split("\n")).rstrip()
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def StripMultipleWhitespaces(text: str) -> str:
   """
   Preprocessor replaces sequences of whitespaces with a single whitespace.

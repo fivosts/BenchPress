@@ -168,13 +168,13 @@ def CompileLlvmBytecode(src: str,
     tdir = FLAGS.local_filesystem
   except Exception:
     tdir = None
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="benchpress_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
     f.write(src)
     f.flush()
 
     extra_args = []
     if header_file:
-      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = tdir)
+      htf = tempfile.NamedTemporaryFile('w', prefix = "benchpress_preprocessors_clang_header_", suffix = ".h", dir = tdir)
       htf.write(header_file)
       htf.flush()
       extra_args = ['-include{}'.format(htf.name)]
@@ -228,7 +228,7 @@ def CompileStdin(src: str,
 
   extra_args = []
   if header_file:
-    htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = tdir)
+    htf = tempfile.NamedTemporaryFile('w', prefix = "benchpress_preprocessors_clang_header_", suffix = ".h", dir = tdir)
     htf.write(header_file)
     htf.flush()
     extra_args = ['-include{}'.format(htf.name)]
@@ -330,7 +330,7 @@ def CompileOptimizer(src: str,
   except Exception:
     tdir = None
 
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll', dir = tdir) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="benchpress_preprocessors_clang_", suffix='.ll', dir = tdir) as f:
     f.write(bc)
     f.flush()
 
@@ -479,7 +479,7 @@ def CompileOptimizerIR(bytecode: str,
   except Exception:
     tdir = None
 
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix='.ll', dir = tdir) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="benchpress_preprocessors_clang_", suffix='.ll', dir = tdir) as f:
     f.write(bc)
     f.flush()
 
@@ -526,13 +526,13 @@ def Compile(src: str,
     tdir = FLAGS.local_filesystem
   except Exception:
     tdir = None
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="benchpress_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
     f.write(src)
     f.flush()
 
     extra_args = []
     if header_file:
-      htf = tempfile.NamedTemporaryFile('w', prefix = "clgen_preprocessors_clang_header_", suffix = ".h", dir = tdir)
+      htf = tempfile.NamedTemporaryFile('w', prefix = "benchpress_preprocessors_clang_header_", suffix = ".h", dir = tdir)
       htf.write(header_file)
       htf.flush()
       extra_args = ['-include{}'.format(htf.name)]
@@ -579,7 +579,7 @@ def Parse(src: str,
     tdir = FLAGS.local_filesystem
   except Exception:
     tdir = None
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="benchpress_preprocessors_clang_", suffix=suffix, dir = tdir) as f:
 
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])
@@ -664,7 +664,7 @@ def ExtractFunctions(src: str,
   except Exception:
     tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
+    "w", prefix="benchpress_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
@@ -739,7 +739,7 @@ def ExtractStructs(src: str,
   except Exception:
     tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
+    "w", prefix="benchpress_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     try:
       unit = clang.cindex.TranslationUnit.from_source(f.name, args = cflags, unsaved_files = [(f.name, src)])#, args = args + builtin_cflags)
@@ -878,7 +878,7 @@ def DeriveSourceVocab(src: str,
   except Exception:
     tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
+    "w", prefix="benchpress_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     f.write(src)
     f.flush()
@@ -928,7 +928,7 @@ def AtomizeSource(src: str,
   except Exception:
     tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
+    "w", prefix="benchpress_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     f.write(src)
     f.flush()
@@ -971,7 +971,7 @@ def GreweFeatureExtraction(src: str,
   except Exception:
     tdir = None
   with tempfile.NamedTemporaryFile(
-    "w", prefix="clgen_preprocessors_clang_", suffix=suffix, dir = tdir
+    "w", prefix="benchpress_preprocessors_clang_", suffix=suffix, dir = tdir
   ) as f:
     f.write(src)
     f.flush()

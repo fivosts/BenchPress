@@ -24,7 +24,7 @@ FLAGS = flags.FLAGS
 PreprocessorFunction = typing.Callable[[str], str]
 
 
-def clgen_preprocessor(func: PreprocessorFunction) -> PreprocessorFunction:
+def benchpress_preprocessor(func: PreprocessorFunction) -> PreprocessorFunction:
   """A decorator which marks a function as a CLgen preprocessor.
 
   A CLgen preprocessor is accessible using GetPreprocessFunction(), and is a
@@ -52,5 +52,5 @@ def clgen_preprocessor(func: PreprocessorFunction) -> PreprocessorFunction:
       f"or"
       f'"def {func.__name__}(text: str) -> typing.List[str]".'
     )
-  func.__dict__["is_clgen_preprocessor"] = True
+  func.__dict__["is_benchpress_preprocessor"] = True
   return func

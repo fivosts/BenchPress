@@ -58,9 +58,9 @@ def _ImportPreprocessorFromModule(module_name: str, function_name: str):
       f"Function {function_name} not found in module {module_name}"
     )
   function_ = getattr(module, function_name)
-  if not function_.__dict__.get("is_clgen_preprocessor"):
+  if not function_.__dict__.get("is_benchpress_preprocessor"):
     raise AttributeError(
-      f"Preprocessor {function_name} not decorated with @clgen_preprocessor"
+      f"Preprocessor {function_name} not decorated with @benchpress_preprocessor"
     )
   return function_
 
@@ -85,7 +85,7 @@ def GetPreprocessorFunction(name: str) -> public.PreprocessorFunction:
 
   Raises:
     UserError: If the requested name cannot be found or is not a
-      @clgen_preprocessor decorated function.
+      @benchpress_preprocessor decorated function.
   """
   components = name.split(":")
   if len(components) != 2:
@@ -115,7 +115,7 @@ def Preprocess(text: str, preprocessors: typing.List[str]) -> str:
   """
   preprocessor_functions = [GetPreprocessorFunction(p) for p in preprocessors]
 
-  def PreprocessSingle(text, preprocessors: typing.List[public.clgen_preprocessor]):
+  def PreprocessSingle(text, preprocessors: typing.List[public.benchpress_preprocessor]):
     """
       This recursive generator is an elegant way to manage preprocessors that decide to split one text into many,
       without destroying the whole preprocessing pipeline. The generator creates a stream of pre-processed files,
@@ -180,7 +180,7 @@ def PreprocessFile(
   return preprocessed
 
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def RejectSecrets(text: str) -> str:
   """Test for secrets such as private keys in a text.
 

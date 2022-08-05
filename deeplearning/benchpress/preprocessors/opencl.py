@@ -472,7 +472,7 @@ def CLDriveLabel(src: str,
 
   return CollectCLDriveLabel(df, stdout, stderr)
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ClangPreprocess(text: str, extra_args = []) -> str:
   """Preprocessor OpenCL source.
 
@@ -485,7 +485,7 @@ def ClangPreprocess(text: str, extra_args = []) -> str:
   return _ClangPreprocess(text, False, True, extra_args = extra_args)
 
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ClangPreprocessWithShim(text: str, extra_args = []) -> str:
   """Preprocessor OpenCL source with OpenCL shim header injection.
 
@@ -603,7 +603,7 @@ def CompileOptimizerIR(bytecode: str,
     optimization = optimization,
   )
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def Compile(text: str, header_file = None, use_aux_headers = True, extra_args = [], return_diagnostics = False) -> str:
   """Check that the OpenCL source compiles.
 
@@ -625,7 +625,7 @@ def Compile(text: str, header_file = None, use_aux_headers = True, extra_args = 
     return_diagnostics = return_diagnostics,
   )
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ClangFormat(text: str) -> str:
   """Run clang-format on a source to enforce code style.
 
@@ -641,7 +641,7 @@ def ClangFormat(text: str) -> str:
   """
   return clang.ClangFormat(text, ".cl")
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ExtractStructTypedefs(text: str) -> str:
   """
   Preprocessor extracts all struct type definitions.
@@ -654,7 +654,7 @@ def ExtractStructTypedefs(text: str) -> str:
   """
   return _ExtractTypedefs(text, 'struct')
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ExtractUnionTypedefs(text: str) -> str:
   """
   Preprocessor extracts all union type definitions.
@@ -667,7 +667,7 @@ def ExtractUnionTypedefs(text: str) -> str:
   """
   return _ExtractTypedefs(text, 'union')
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def RemoveTypedefs(text: str) -> str:
   """
   Preprocessor removes all type aliases with typedefs, except typedef structs.
@@ -684,7 +684,7 @@ def RemoveTypedefs(text: str) -> str:
       text[i] = ""
   return '\n'.join(text)
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def InvertKernelSpecifier(text: str) -> str:
   """
   Inverts 'void kernel' specifier to 'kernel void'.
@@ -697,7 +697,7 @@ def InvertKernelSpecifier(text: str) -> str:
   """
   return text.replace("void kernel ", "kernel void ")
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ExtractSingleKernels(text: str) -> typing.List[str]:
   """
   A preprocessor that splits a single source file to discrete kernels
@@ -753,7 +753,7 @@ def ExtractSingleKernels(text: str) -> typing.List[str]:
 
   return actual_kernels
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ExtractSingleKernelsHeaders(text: str) -> typing.List[typing.Tuple[str, str]]:
   """
   A preprocessor that splits a single source file
@@ -809,7 +809,7 @@ def ExtractSingleKernelsHeaders(text: str) -> typing.List[typing.Tuple[str, str]
 
   return actual_kernels
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ExtractOnlySingleKernels(text: str) -> typing.List[str]:
   """
   A preprocessor that splits a single source file to discrete kernels
@@ -860,7 +860,7 @@ def ExtractOnlySingleKernels(text: str) -> typing.List[str]:
         actual_kernels.append(kernel_specifier + chunk[:chunk_idx])
   return actual_kernels
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def StringKernelsToSource(text: str) -> str:
   """
   Preprocessor converts inlined C++ string kernels to OpenCL programs.
@@ -876,7 +876,7 @@ def StringKernelsToSource(text: str) -> str:
   else:
     return text
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def NormalizeIdentifiers(text: str, extra_args = []) -> str:
   """Normalize identifiers in OpenCL source code.
 
@@ -894,7 +894,7 @@ def NormalizeIdentifiers(text: str, extra_args = []) -> str:
     text, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True, extra_args = extra_args)
   )
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def SequentialNormalizeIdentifiers(text: str, extra_args = []) -> str:
   """Normalize identifiers sequentially in OpenCL source code.
 
@@ -912,7 +912,7 @@ def SequentialNormalizeIdentifiers(text: str, extra_args = []) -> str:
     text, ".cl", GetClangArgs(use_shim = False, use_aux_headers = True, extra_args = extra_args), sequential_rewrite = True
   )
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def MinimumStatement1(text: str) -> str:
   """Check that file contains at least one statement.
 
@@ -929,7 +929,7 @@ def MinimumStatement1(text: str) -> str:
     raise ValueError
   return text
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def SanitizeKernelPrototype(text: str) -> str:
   """Sanitize OpenCL prototype.
 
@@ -956,7 +956,7 @@ def SanitizeKernelPrototype(text: str) -> str:
     return text
 
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def StripDoubleUnderscorePrefixes(text: str) -> str:
   """Remove the optional __ qualifiers on OpenCL keywords.
 

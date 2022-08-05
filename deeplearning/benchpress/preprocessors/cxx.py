@@ -103,7 +103,7 @@ def Preprocess(src: str,
     raise RuntimeError("{}: {}".format(process.stderr, process.returncode))
   return process.stdout
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ClangPreprocess(text: str) -> str:
   try:
     return clang.StripPreprocessorLines(Preprocess(text, CLANG_ARGS))
@@ -134,7 +134,7 @@ def CompileOptimizer(text: str,
   """
   return clang.CompileOptimizer(text, ".cpp", CLANG_ARGS, optimization)
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def Compile(text: str) -> str:
   """A preprocessor which attempts to compile the given code.
 
@@ -146,7 +146,7 @@ def Compile(text: str) -> str:
   """
   return clang.Compile(text, ".cpp", CLANG_ARGS)
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ClangFormat(text: str) -> str:
   """Run clang-format on a source to enforce code style.
 
@@ -163,7 +163,7 @@ def ClangFormat(text: str) -> str:
   return clang.ClangFormat(text, ".cpp")
 
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def NormalizeIdentifiers(text: str) -> str:
   """Normalize identifiers in C++ source code.
 
@@ -180,7 +180,7 @@ def NormalizeIdentifiers(text: str) -> str:
   return normalizer.NormalizeIdentifiers(text, ".cpp", CLANG_ARGS)
 
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def StripComments(text: str) -> str:
   """Strip C/C++ style comments.
 

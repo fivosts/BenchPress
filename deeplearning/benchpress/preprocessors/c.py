@@ -105,7 +105,7 @@ def Preprocess(src: str,
     raise ValueError("{}: {}".format(process.stderr, process.returncode))
   return process.stdout
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ClangPreprocess(text: str) -> str:
   try:
     return clang.StripPreprocessorLines(Preprocess(text))
@@ -163,7 +163,7 @@ def CompileOptimizer(text: str,
   """
   return clang.CompileOptimizer(text, ".c", CLANG_ARGS, optimization)
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def Compile(text: str) -> str:
   """A preprocessor which attempts to compile the given code.
 
@@ -175,7 +175,7 @@ def Compile(text: str) -> str:
   """
   return clang.Compile(text, ".c", CLANG_ARGS)
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ClangFormat(text: str) -> str:
   """Run clang-format on a source to enforce code style.
 
@@ -191,7 +191,7 @@ def ClangFormat(text: str) -> str:
   """
   return clang.ClangFormat(text, ".c")
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def Parse(text: str) -> str:
   """A preprocessor which attempts to parse the given code.
 
@@ -204,7 +204,7 @@ def Parse(text: str) -> str:
   clang.Parse(text, ".c", [])
   return text
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def NormalizeIdentifiers(text: str) -> str:
   """Normalize identifiers in C++ source code.
 
@@ -220,7 +220,7 @@ def NormalizeIdentifiers(text: str) -> str:
   """
   return normalizer.NormalizeIdentifiers(text, ".c", [])
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def SequentialNormalizeIdentifiers(text: str) -> str:
   """Normalize identifiers sequentially in OpenCL source code.
 
@@ -238,7 +238,7 @@ def SequentialNormalizeIdentifiers(text: str) -> str:
     text, ".c", [], sequential_rewrite = True
   )
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def ExtractFunctions(text: str) -> str:
   """Splits translation unit into separate functions using tokenizer.
   WARNING! Functions might need formatting after this preprocessor,
@@ -266,7 +266,7 @@ def ExtractStructs(text: str) -> typing.List[typing.Dict[str, typing.List]]:
   """
   return clang.ExtractStructs(text, ".c", CLANG_ARGS)
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def MinimumStatement1(text: str) -> str:
   """Check that file contains at least one statement.
 
@@ -283,7 +283,7 @@ def MinimumStatement1(text: str) -> str:
     raise ValueError
   return text
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def StripIncludes(text: str) -> str:
   """Removes include statements from sourcecode.
 
@@ -299,7 +299,7 @@ def StripIncludes(text: str) -> str:
       lines.append(line)
   return '\n'.join(lines)
 
-@public.clgen_preprocessor
+@public.benchpress_preprocessor
 def StripComments(text: str) -> str:
   """Strip C/C++ style comments.
 
