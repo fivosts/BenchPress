@@ -107,6 +107,7 @@ class Agent(object):
 
     self.config            = config
     self.language_model    = language_model
+
     self.tokenizer         = tokenizer
     self.feature_tokenizer = feature_tokenizer
     self.qv_config = QValuesConfig.from_config(
@@ -188,6 +189,32 @@ class Agent(object):
     """
     self._ConfigModelParams(learning_rate = lr)
     self.ckpt_step = max(0, self.loadCheckpoint())
+
+
+    ########### DOES LM WORK ALONE ?
+    code = "[START]kernel void[HOLE][END]"
+    encoded = list(self.tokenizer.TokenizeString(code))
+    encoded = encoded + [self.tokenizer.padToken] * (self.language_model.backend.config.architecture.max_position_embeddings - len(encoded))
+
+    inputs = {
+      'input_ids'    : torch.LongTensor(encoded).unsqueeze(0).to(pytorch.device),
+      'input_mask'   : (torch.LongTensor(encoded) != self.tokenizer.padToken).unsqueeze(0).to(pytorch.device),
+      'position_ids' : torch.arange(self.language_model.backend.config.architecture.max_position_embeddings).unsqueeze(0).to(pytorch.device),
+      'mask_labels'  : None,
+      'input_features': None,
+    }
+
+    out = self.language_model.backend.model_step(
+      self.language_model.backend.GetEncoderModule(with_checkpoint = True, without_label_head = False).to(pytorch.device),
+      inputs,
+    )
+
+    preds = torch.argmax(out['prediction_logits'], dim = -1)
+    l.logger().info(self.tokenizer.tokensToString([int(x) for x in preds.squeeze(0).cpu()]))
+
+    ########### DOES LM WORK ALONE ?
+
+
 
     if self.is_world_process_zero():
       rollout_hook = hooks.tensorMonitorHook(
