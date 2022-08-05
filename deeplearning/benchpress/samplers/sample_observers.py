@@ -233,7 +233,7 @@ class LegacySampleCacheObserver(SampleObserver):
   In previous versions of CLgen, model sampling would silently (and always)
   create sample protobufs in the sampler cache, located at:
 
-    CLGEN_CACHE/models/MODEL/samples/SAMPLER
+    BENCHPRESS_CACHE/models/MODEL/samples/SAMPLER
 
   This sample observer provides equivalent behavior.
   """

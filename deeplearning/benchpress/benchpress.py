@@ -195,13 +195,13 @@ class Instance(object):
 
   @contextlib.contextmanager
   def Session(self) -> "Instance":
-    """Scoped $CLGEN_CACHE value."""
-    old_working_dir = os.environ.get("CLGEN_CACHE", "")
+    """Scoped $BENCHPRESS_CACHE value."""
+    old_working_dir = os.environ.get("BENCHPRESS_CACHE", "")
     if self.working_dir:
-      os.environ["CLGEN_CACHE"] = str(self.working_dir)
+      os.environ["BENCHPRESS_CACHE"] = str(self.working_dir)
     yield self
     if self.working_dir:
-      os.environ["CLGEN_CACHE"] = old_working_dir
+      os.environ["BENCHPRESS_CACHE"] = old_working_dir
 
   def Create(self) -> None:
     with self.Session():

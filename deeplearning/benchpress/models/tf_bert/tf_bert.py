@@ -122,7 +122,7 @@ class tfBert(backends.BackendBase):
       if not (ckpt_current / "model.ckpt-{}.index".format(FLAGS.select_checkpoint_step)).exists():
         raise FileNotFoundError(ckpt_current / "model.ckpt-{}.index".format(FLAGS.select_checkpoint_step))
 
-      workspace_rel_path = self.cache.path.relative_to(pathlib.Path(os.environ.get("CLGEN_CACHE")).parent)
+      workspace_rel_path = self.cache.path.relative_to(pathlib.Path(os.environ.get("BENCHPRESS_CACHE")).parent)
       ckpt_path = pathlib.Path("/tmp" / workspace_rel_path / "checkpoints")
       ckpt_path.mkdir(exist_ok = True, parents = True)
 

@@ -391,7 +391,7 @@ def cachepath(*relative_path_components: str) -> pathlib.Path:
   Returns:
     Absolute path of file system cache.
   """
-  cache_root = pathlib.Path(os.environ.get("CLGEN_CACHE", "~/.cache/clgen/"))
+  cache_root = pathlib.Path(os.environ.get("BENCHPRESS_CACHE", "~/.cache/clgen/"))
   cache_root.expanduser().mkdir(parents=True, exist_ok=True)
   return pathlib.Path(fs.path(cache_root, *relative_path_components))
 
