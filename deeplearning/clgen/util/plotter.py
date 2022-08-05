@@ -32,33 +32,33 @@ def _get_generic_figure(**kwargs) -> go.Layout:
   y_name = kwargs.get('y_name', "")
 
   # Font sizes
-  titlefont   = kwargs.get('titlefont', 38)
-  axisfont    = kwargs.get('axisfont', 38)
-  tickfont    = kwargs.get('tickfont', 32)
+  titlefont   = kwargs.get('titlefont', None)
+  axisfont    = kwargs.get('axisfont', None)
+  tickfont    = kwargs.get('tickfont', None)
 
   # Plot line and axis options
-  showline    = kwargs.get('showline',  True)
-  linecolor   = kwargs.get('linecolor', 'black')
-  gridcolor   = kwargs.get('gridcolor', "#eee")
-  mirror      = kwargs.get('mirror',    False)
-  showgrid    = kwargs.get('showgrid',  True)
-  linewidth   = kwargs.get('linewidth', 2)
-  gridwidth   = kwargs.get('gridwidth', 1)
+  showline    = kwargs.get('showline',  None)
+  linecolor   = kwargs.get('linecolor', None)
+  gridcolor   = kwargs.get('gridcolor', None)
+  mirror      = kwargs.get('mirror',    None)
+  showgrid    = kwargs.get('showgrid',  None)
+  linewidth   = kwargs.get('linewidth', None)
+  gridwidth   = kwargs.get('gridwidth', None)
   margin      = kwargs.get('margin', {'l': 40, 'r': 45, 't': 75, 'b': 0})
   x_tickangle = kwargs.get('x_tickangle', None)
 
   # Legend
   legend_x   = kwargs.get('legend_x', 1.02)
   legend_y   = kwargs.get('legend_y', 1.0)
-  traceorder = kwargs.get('traceorder', "normal")
-  legendfont = kwargs.get('legendfont', 24)
+  traceorder = kwargs.get('traceorder', None)
+  legendfont = kwargs.get('legendfont', None)
 
   # Background
-  plot_bgcolor = kwargs.get('plot_bgcolor', "#fff")
+  plot_bgcolor = kwargs.get('plot_bgcolor', None)
 
   # Violin options
-  violingap  = kwargs.get('violingap', 0)
-  violinmode = kwargs.get('violinmode', 'overlay')
+  violingap  = kwargs.get('violingap', None)
+  violinmode = kwargs.get('violinmode', None)
 
   title = dict(text = title, font = dict(size = titlefont))
   yaxis = dict(
@@ -109,7 +109,7 @@ def _write_figure(fig       : go.Figure,
     except ValueError:
       l.logger().warn("HTML plot failed", ddp_nodes = True)
     try:
-      fig.write_image(outf("png"), width = kwargs.get('width', 1920), height = kwargs.get('height', 1280))
+      fig.write_image(outf("png"), width = kwargs.get('width', 1024), height = kwargs.get('height', 768))
     except ValueError:
       l.logger().warn("PNG plot failed", ddp_nodes = True)
   else:
