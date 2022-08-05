@@ -108,7 +108,7 @@ flags.DEFINE_string(
 flags.DEFINE_string(
   "stop_after",
   None,
-  'Stop CLgen early. Valid options are: "corpus", or "train".',
+  'Stop BenchPress early. Valid options are: "corpus", or "train".',
 )
 flags.DEFINE_boolean(
   "only_sample",
@@ -124,13 +124,13 @@ flags.DEFINE_string(
 flags.DEFINE_boolean(
   "debug",
   False,
-  "Enable a debugging mode of CLgen python runtime. When enabled, errors "
+  "Enable a debugging mode of BenchPress python runtime. When enabled, errors "
   "which may otherwise be caught lead to program crashes and stack traces.",
 )
 flags.DEFINE_boolean(
   "profiling",
   False,
-  "Enable CLgen self profiling. Profiling results be logged.",
+  "Enable BenchPress self profiling. Profiling results be logged.",
 )
 flags.DEFINE_boolean(
   "monitor_mem_usage",
@@ -142,7 +142,7 @@ flags.DEFINE_boolean(
 )
 
 class Instance(object):
-  """A CLgen instance encapsulates a github_miner, model, sampler, and working directory."""
+  """A BenchPress instance encapsulates a github_miner, model, sampler, and working directory."""
 
   def __init__(self, config: benchpress_pb2.Instance):
     """Instantiate an instance.
@@ -275,7 +275,7 @@ def ConfigFromFlags() -> benchpress_pb2.Instance:
 
   config_path = pathlib.Path(FLAGS.config)
   if not config_path.is_file():
-    raise FileNotFoundError (f"CLgen --config file not found: '{config_path}'")
+    raise FileNotFoundError (f"BenchPress --config file not found: '{config_path}'")
   config = pbutil.FromFile(config_path, benchpress_pb2.Instance())
   os.environ["PWD"] = str(config_path.parent)
   return config
@@ -335,7 +335,7 @@ def DoFlagsAction(
     --export_model=<path>: Train the model and export it to the requested path.
 
   Args:
-    instance: The CLgen instance to act on.
+    instance: The BenchPress instance to act on.
     sample_observer: A list of sample observers. Unused if no sampling occurs.
   """
 
