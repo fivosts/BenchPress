@@ -1,115 +1,49 @@
-workspace: "/home/foivos/pact"
-tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
-evaluator {
-  min_score {
-    target: "rodinia"
-    feature_space: "AutophaseFeatures"
-    plot_config {
-      title: ""
-      x_name: ""
-      y_name: "Relative distance"
-      showline: True
-      showgrid: False
-      legend_x: 0.9
-      legend_y: 0.9
-      height: 102
-      width: 1024
-    }
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Autophase/merged_samples.db"
-    }
-    db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
-    }
-    db_group {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
-    }
-    db_group {
-      group_name: "GitHub-768"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
-      size_limit: 768
-    }
-  }
-}
-evaluator {
-  min_score {
-    target: "rodinia"
-    feature_space: "InstCountFeatures"
-    plot_config {
-      title: ""
-      x_name: ""
-      y_name: "Relative distance"
-      showline: True
-      showgrid: False
-      legend_x: 0.9
-      legend_y: 0.9
-      height: 102
-      width: 1024
-    }
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/InstCount/merged_samples.db"
-    }
-    db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
-    }
-    db_group {
-      group_name: "GitHub"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
-    }
-    db_group {
-      group_name: "GitHub-768"
-      db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
-      size_limit: 768
-    }
-  }
-}
+workspace: "/private/home/foivos/rodinia_targets"
+tokenizer: "/private/home/foivos/full_results/backup_tokenizer.pkl"
 evaluator {
   min_score {
     target: "rodinia"
     feature_space: "GreweFeatures"
-    plot_config {
-      title: ""
-      x_name: ""
-      y_name: "Relative distance"
-      showline: True
-      showgrid: False
-      legend_x: 0.9
-      legend_y: 0.9
-      height: 102
-      width: 1024
+    # plot_config {
+    #   title: ""
+    #   x_name: ""
+    #   y_name: "Relative distance"
+    #   showline: True
+    #   showgrid: False
+    #   legend_x: 0.9
+    #   legend_y: 0.9
+    #   height: 102
+    #   width: 1024
+    # }
+    db_group {
+      group_name: "BenchPress_tiny"
+      db_type: "SamplesDatabase"
+      database: "/private/home/foivos/full_results/BERT/Grewe/unique_merged_samples.db"
     }
     db_group {
-      group_name: "BenchPress"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/BERT/Grewe/merged_samples.db"
+      group_name: "BenchPress_base"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/base_opencl/AST/sampler/6237d2a012cedcd7b177350433b495a76c18097d/sample_corpus/active_feeds.db"
     }
     db_group {
-      group_name: "CLgen"
-      db_type: "SamplesDatabase"
-      database: "/var/foivos/results/full_results/CLgen/updated_clgen_samples.db"
+      group_name: "BenchPress_base_feat"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/base_opencl_features/AST/sampler/c6fcf7cb396bd193e77c1a272e359e7076580f9d/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "InCoder"
+      db_type: "ActiveFeedDatabase"
+      database: "/checkpoint/foivos/incoder_workspace_grewe/AST/sampler/b715557452daa7a43d8dd175fd7120f1ca6f7309/sample_corpus/active_feeds.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
+      database: "/private/home/foivos/full_results/GitHub/encoded.db"
     }
     db_group {
-      group_name: "GitHub-768"
+      group_name: "GitHub-768-inactive"
       db_type: "EncodedContentFiles"
-      database: "/var/foivos/results/full_results/GitHub/encoded.db"
+      database: "/private/home/foivos/full_results/GitHub/encoded.db"
       size_limit: 768
     }
   }

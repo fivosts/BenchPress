@@ -10,19 +10,19 @@ model {
       wordpiece_tokenization: false
     }
     contentfile_separator: "\n\n"
-    preprocessor: "deeplearning.clgen.preprocessors.c:StripIncludes"
-    preprocessor: "deeplearning.clgen.preprocessors.c:ClangPreprocess"
-    preprocessor: "deeplearning.clgen.preprocessors.c:ExtractFunctions"
-    preprocessor: "deeplearning.clgen.preprocessors.c:Parse"
-    # preprocessor: "deeplearning.clgen.preprocessors.opencl:Compile"
-    preprocessor: "deeplearning.clgen.preprocessors.c:NormalizeIdentifiers"
-    preprocessor: "deeplearning.clgen.preprocessors.opencl:StripDoubleUnderscorePrefixes"
-    # preprocessor: "deeplearning.clgen.preprocessors.common:StripDuplicateEmptyLines"
-    # preprocessor: "deeplearning.clgen.preprocessors.common:StripMultipleWhitespaces"
-    # preprocessor: "deeplearning.clgen.preprocessors.opencl:SanitizeKernelPrototype"
-    # preprocessor: "deeplearning.clgen.preprocessors.common:StripTrailingWhitespace"
-    preprocessor: "deeplearning.clgen.preprocessors.c:ClangFormat"
-    preprocessor: "deeplearning.clgen.preprocessors.common:MinimumLineCount3"
+    preprocessor: "deeplearning.benchpress.preprocessors.c:StripIncludes"
+    preprocessor: "deeplearning.benchpress.preprocessors.c:ClangPreprocess"
+    preprocessor: "deeplearning.benchpress.preprocessors.c:ExtractFunctions"
+    preprocessor: "deeplearning.benchpress.preprocessors.c:Parse"
+    # preprocessor: "deeplearning.benchpress.preprocessors.opencl:Compile"
+    preprocessor: "deeplearning.benchpress.preprocessors.c:NormalizeIdentifiers"
+    preprocessor: "deeplearning.benchpress.preprocessors.opencl:StripDoubleUnderscorePrefixes"
+    # preprocessor: "deeplearning.benchpress.preprocessors.common:StripDuplicateEmptyLines"
+    # preprocessor: "deeplearning.benchpress.preprocessors.common:StripMultipleWhitespaces"
+    # preprocessor: "deeplearning.benchpress.preprocessors.opencl:SanitizeKernelPrototype"
+    # preprocessor: "deeplearning.benchpress.preprocessors.common:StripTrailingWhitespace"
+    preprocessor: "deeplearning.benchpress.preprocessors.c:ClangFormat"
+    preprocessor: "deeplearning.benchpress.preprocessors.common:MinimumLineCount3"
   }
   architecture {
     backend: TORCH_BERT
