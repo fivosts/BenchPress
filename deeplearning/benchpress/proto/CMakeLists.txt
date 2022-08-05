@@ -12,7 +12,7 @@ if (PROTOC_FROM_SOURCE)
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/evaluator.proto              --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/telemetry.proto              --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     DEPENDS protobuf
-    COMMENT "Compiling clgen protobuf files"
+    COMMENT "Compiling benchpress protobuf files"
   )
 else ()
   add_custom_target(protobufs ALL
@@ -27,6 +27,6 @@ else ()
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/github.proto                 --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/evaluator.proto              --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
     COMMAND ${PROTOC} ${CMAKE_CURRENT_LIST_DIR}/telemetry.proto              --proto_path=${PROJECT_SOURCE_DIR} --python_out=${PROJECT_SOURCE_DIR}
-    COMMENT "Compiling clgen protobuf files"
+    COMMENT "Compiling benchpress protobuf files"
   )
 endif ()

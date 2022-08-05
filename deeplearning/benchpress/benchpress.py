@@ -48,7 +48,7 @@ from deeplearning.benchpress.util import logging as l
 from deeplearning.benchpress.dashboard import dashboard
 from deeplearning.benchpress.models import language_models
 from deeplearning.benchpress.reinforcement_learning import reinforcement_models
-from deeplearning.benchpress.proto import clgen_pb2
+from deeplearning.benchpress.proto import benchpress_pb2
 from deeplearning.benchpress.proto import model_pb2
 from deeplearning.benchpress.proto import sampler_pb2
 from deeplearning.benchpress.github import miner
@@ -144,7 +144,7 @@ flags.DEFINE_boolean(
 class Instance(object):
   """A CLgen instance encapsulates a github_miner, model, sampler, and working directory."""
 
-  def __init__(self, config: clgen_pb2.Instance):
+  def __init__(self, config: benchpress_pb2.Instance):
     """Instantiate an instance.
 
     Args:
@@ -256,9 +256,9 @@ class Instance(object):
     with self.Session():
       self.model.Sample(self.sampler, *args, **kwargs)
 
-  def ToProto(self) -> clgen_pb2.Instance:
+  def ToProto(self) -> benchpress_pb2.Instance:
     """Get the proto config for the instance."""
-    config = clgen_pb2.Instance()
+    config = benchpress_pb2.Instance()
     config.working_dir = str(self.working_dir)
     if config.HasField("language_model"):
       config.language_model.CopyFrom(self.model.config)
@@ -269,14 +269,14 @@ class Instance(object):
 
   @classmethod
   def FromFile(cls, path: pathlib.Path) -> "Instance":
-    return cls(pbutil.FromFile(path, clgen_pb2.Instance()))
+    return cls(pbutil.FromFile(path, benchpress_pb2.Instance()))
 
-def ConfigFromFlags() -> clgen_pb2.Instance:
+def ConfigFromFlags() -> benchpress_pb2.Instance:
 
   config_path = pathlib.Path(FLAGS.config)
   if not config_path.is_file():
     raise FileNotFoundError (f"CLgen --config file not found: '{config_path}'")
-  config = pbutil.FromFile(config_path, clgen_pb2.Instance())
+  config = pbutil.FromFile(config_path, benchpress_pb2.Instance())
   os.environ["PWD"] = str(config_path.parent)
   return config
 
