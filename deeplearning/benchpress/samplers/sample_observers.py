@@ -104,7 +104,7 @@ class PrintSampleObserver(SampleObserver):
 
   def OnSample(self, sample: model_pb2.Sample) -> bool:
     """Sample receive callback. Returns True if sampling should continue."""
-    print(f"=== CLGEN SAMPLE ===\n\n{sample.text}\n")
+    print(f"=== BENCHPRESS SAMPLE ===\n\n{sample.text}\n")
     return True
 
 class InMemorySampleSaver(SampleObserver):
