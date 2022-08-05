@@ -33,7 +33,7 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "benchpress_fixed_input.db"
+      database: "pact_data/benchpress_fixed_input.db"
     }
     db_group {
       group_name: "CLgen"
