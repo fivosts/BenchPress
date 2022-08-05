@@ -79,11 +79,11 @@ flags.DEFINE_boolean(
 )
 
 flags.DEFINE_string(
-  "config", "/clgen/config.pbtxt", "Path to a clgen.Instance proto file."
+  "config", "/benchpress/config.pbtxt", "Path to a benchpress.Instance proto file."
 )
 flags.DEFINE_string(
   "workspace_dir",
-  "/tmp/clgen",
+  "/tmp/benchpress",
   "Root path of the working space directory. Corpus, dataset, model and all meta files"
   "will be stored here. Default value is /tmp folder.",
 )
@@ -417,7 +417,7 @@ def initMain(*args, **kwargs):
   mail = None
   if FLAGS.notify_me:
     mail = client.initClient(FLAGS.notify_me)
-  l.initLogger(name = "clgen", mail = mail, rank = environment.WORLD_RANK)
+  l.initLogger(name = "benchpress", mail = mail, rank = environment.WORLD_RANK)
   if FLAGS.local_filesystem:
     pathlib.Path(FLAGS.local_filesystem).resolve().mkdir(exist_ok = True, parents = True)
   if FLAGS.monitor_mem_usage:
@@ -444,7 +444,7 @@ def initMain(*args, **kwargs):
         job = pathlib.Path(FLAGS.config)
       else:
         job = ""
-      mail.send_message("clgen:{}".format(str(job.stem)), e)
+      mail.send_message("benchpress:{}".format(str(job.stem)), e)
     raise
 
   if mail:
@@ -452,7 +452,7 @@ def initMain(*args, **kwargs):
       job = pathlib.Path(FLAGS.config)
     else:
       job = ""
-    mail.send_message("clgen: {}".format(str(job.stem)), "Program terminated successfully at {}.".format(datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")))
+    mail.send_message("benchpress: {}".format(str(job.stem)), "Program terminated successfully at {}.".format(datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S")))
   return
 
 if __name__ == "__main__":
