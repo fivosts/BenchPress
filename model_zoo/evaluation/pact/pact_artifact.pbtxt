@@ -304,5 +304,9 @@ evaluator {
       name: "CLgen"
       path: "pact_databases/clgen.csv"
     }
+    csv {
+      name: "GitHub"
+      path: "pact_databases/github.csv"
+    }
   }
 }
