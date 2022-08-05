@@ -1,0 +1,54 @@
+// coding=utf-8
+// Copyright 2022 Foivos Tsimpourlas and Chris Cummins.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto2";
+
+package benchpress;
+
+option go_package = "benchpresspb";
+option java_multiple_files = true;
+option java_outer_classname = "benchpressProto";
+option java_package = "com.benchpress";
+
+import "deeplearning/benchpress/proto/model.proto";
+import "deeplearning/benchpress/proto/reinforcement_learning.proto";
+import "deeplearning/benchpress/proto/sampler.proto";
+import "deeplearning/benchpress/proto/github.proto";
+
+// A BenchPress instance encapsulates all of the settings for training and sampling
+// a language model.
+message Instance {
+  // The path to the benchpress working directory. This directory stores persistent
+  // caches files, including the corpus, model checkpoints, and sampler outputs.
+  // If not provided, the default value of $HOME/.cache/benchpress is used.
+  optional string working_dir = 1;
+  // Optionally, a github miner to scrape files with a requested specification.
+  optional github.GithubMiner github_miner = 2;
+  // The language model specification. Either the full description of a model,
+  // or the path to a pretrained_model, as created by --export_tf_model option
+  // of benchpress.
+  oneof model_specification {
+    Model   language_model   = 3;
+    RLModel rl_model         = 4;
+    string  pretrained_model = 5;
+  }
+  // The sampler specification.
+  optional Sampler sampler = 6;
+}
+
+// A collection of instances.
+message Instances {
+  repeated Instance instance = 1;
+}
