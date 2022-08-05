@@ -8,18 +8,18 @@ import typing
 import tqdm
 import numpy as np
 
-from deeplearning.clgen.reinforcement_learning import interactions
-from deeplearning.clgen.reinforcement_learning import model
-from deeplearning.clgen.reinforcement_learning import env
-from deeplearning.clgen.reinforcement_learning import hooks
-from deeplearning.clgen.reinforcement_learning.config import QValuesConfig
-from deeplearning.clgen.models import language_models
-from deeplearning.clgen.proto import reinforcement_learning_pb2
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.reinforcement_learning import interactions
+from deeplearning.benchpress.reinforcement_learning import model
+from deeplearning.benchpress.reinforcement_learning import env
+from deeplearning.benchpress.reinforcement_learning import hooks
+from deeplearning.benchpress.reinforcement_learning.config import QValuesConfig
+from deeplearning.benchpress.models import language_models
+from deeplearning.benchpress.proto import reinforcement_learning_pb2
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import logging as l
 
 from absl import flags
 
@@ -262,7 +262,7 @@ class Agent(object):
           l.logger().warn(action_type_distrib)
           l.logger().info(index_type_distrib)
           raise e
-      from deeplearning.clgen.util import plotter as plt
+      from deeplearning.benchpress.util import plotter as plt
       plt.GrouppedBars(
         groups = action_type_distrib,
         plot_name = "Acts_per_rollout_step",

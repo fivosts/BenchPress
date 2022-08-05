@@ -3,9 +3,9 @@ import typing
 import pathlib
 import numpy as np
 
-from deeplearning.clgen.active_models import downstream_tasks
-from deeplearning.clgen.proto import active_learning_pb2
-from deeplearning.clgen.util import cache
+from deeplearning.benchpress.active_models import downstream_tasks
+from deeplearning.benchpress.proto import active_learning_pb2
+from deeplearning.benchpress.util import cache
 
 class BackendBase(object):
   """

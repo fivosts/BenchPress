@@ -8,11 +8,11 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import flags
 
-from deeplearning.clgen.samplers import sample_observers
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import sqlutil
+from deeplearning.benchpress.samplers import sample_observers
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import sqlutil
 
 FLAGS = flags.FLAGS
 

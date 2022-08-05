@@ -21,14 +21,14 @@ import typing
 
 import numpy as np
 
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util.pytorch import torch
-from deeplearning.clgen.models.torch_bert import activations
-from deeplearning.clgen.models.torch_bert import config
-from deeplearning.clgen.models.torch_bert import modeling_utils
-from deeplearning.clgen.models.torch_bert import compiler
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
+from deeplearning.benchpress.models.torch_bert import activations
+from deeplearning.benchpress.models.torch_bert import config
+from deeplearning.benchpress.models.torch_bert import modeling_utils
+from deeplearning.benchpress.models.torch_bert import compiler
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 # import tensorrt as trt
 # import pycuda.autoinit

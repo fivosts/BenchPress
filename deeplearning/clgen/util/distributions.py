@@ -5,8 +5,8 @@ import typing
 import math
 import numpy as np
 
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.util import plotter
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.util import plotter
 
 class Distribution():
   def __init__(self, 

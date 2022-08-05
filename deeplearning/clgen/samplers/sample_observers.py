@@ -15,16 +15,16 @@
 """This file contains the SampleObserver interface and concrete subclasses."""
 import pathlib
 
-from deeplearning.clgen.proto import model_pb2
+from deeplearning.benchpress.proto import model_pb2
 from absl import flags
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import monitors
-from deeplearning.clgen.util import fs
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.features import extractor
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import monitors
+from deeplearning.benchpress.util import fs
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.features import extractor
 
 FLAGS = flags.FLAGS
 

@@ -33,7 +33,7 @@ from sqlalchemy import orm
 from sqlalchemy.dialects import mysql
 from sqlalchemy.ext import declarative
 
-from deeplearning.clgen.util import pbutil
+from deeplearning.benchpress.util import pbutil
 
 FLAGS = absl_flags.FLAGS
 

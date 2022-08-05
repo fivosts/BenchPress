@@ -3,14 +3,14 @@ import typing
 import pathlib
 import concurrent.futures
 
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util.pytorch import torch
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
 from absl import flags
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

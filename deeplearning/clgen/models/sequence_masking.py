@@ -7,9 +7,9 @@ import pickle
 import numpy as np
 import progressbar
 
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util.tf import tf
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import distributions
+from deeplearning.benchpress.util.tf import tf
+from deeplearning.benchpress.util import logging as l
 
 class tfSequence(typing.NamedTuple):
   """

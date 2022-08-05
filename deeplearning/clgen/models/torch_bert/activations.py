@@ -1,5 +1,5 @@
 import math
-from deeplearning.clgen.util.pytorch import torch
+from deeplearning.benchpress.util.pytorch import torch
 
 def swish(x):
   return x * torch.sigmoid(x)

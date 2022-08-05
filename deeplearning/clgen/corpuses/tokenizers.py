@@ -28,9 +28,9 @@ import functools
 import numpy as np
 from collections import Counter
 from absl import flags
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
-from deeplearning.clgen.preprocessors import opencl
+from deeplearning.benchpress.preprocessors import opencl
 
 FLAGS = flags.FLAGS
 

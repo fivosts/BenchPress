@@ -4,11 +4,11 @@ Helper module the provides range of worker functions for experiments.
 import typing
 import pathlib
 
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import feature_sampler
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.features import feature_sampler
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import logging as l
 
 def ContentHash(db_feat: typing.Tuple[str, str]) -> typing.Tuple[str, typing.Dict[str, float]]:
   """

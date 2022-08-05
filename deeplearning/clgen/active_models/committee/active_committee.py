@@ -15,16 +15,16 @@ import math
 import copy
 import numpy as np
 
-from deeplearning.clgen.models.torch_bert import optimizer
-from deeplearning.clgen.models.torch_bert import hooks
-from deeplearning.clgen.active_models import backends
-from deeplearning.clgen.active_models import data_generator
-from deeplearning.clgen.active_models.committee import models
-from deeplearning.clgen.active_models.committee import config
-from deeplearning.clgen.active_models.committee import committee_database
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.models.torch_bert import optimizer
+from deeplearning.benchpress.models.torch_bert import hooks
+from deeplearning.benchpress.active_models import backends
+from deeplearning.benchpress.active_models import data_generator
+from deeplearning.benchpress.active_models.committee import models
+from deeplearning.benchpress.active_models.committee import config
+from deeplearning.benchpress.active_models.committee import committee_database
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import logging as l
 
 from absl import flags
 
@@ -71,7 +71,7 @@ class QueryByCommittee(backends.BackendBase):
 
     super(QueryByCommittee, self).__init__(*args, **kwargs)
     
-    from deeplearning.clgen.util import pytorch
+    from deeplearning.benchpress.util import pytorch
     if not pytorch.initialized:
       pytorch.initPytorch()
 

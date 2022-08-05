@@ -3,8 +3,8 @@ from absl import flags
 import os
 import datetime
 
-from deeplearning.clgen.util import gpu
-from deeplearning.clgen.util import environment
+from deeplearning.benchpress.util import gpu
+from deeplearning.benchpress.util import environment
 
 FLAGS = flags.FLAGS
 

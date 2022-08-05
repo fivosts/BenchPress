@@ -8,8 +8,8 @@ import google
 from google.cloud import bigquery
 from absl import flags
 
-from deeplearning.clgen.github import bigQuery_database
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.github import bigQuery_database
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

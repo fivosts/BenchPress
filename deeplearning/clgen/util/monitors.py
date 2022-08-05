@@ -5,9 +5,9 @@ import typing
 import numpy as np
 import sklearn.manifold
 
-from deeplearning.clgen.util import plotter
+from deeplearning.benchpress.util import plotter
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 class Monitor():
   def __init__(self,

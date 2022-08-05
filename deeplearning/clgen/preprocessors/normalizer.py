@@ -4,9 +4,9 @@ import subprocess
 import tempfile
 import typing
 
-from deeplearning.clgen.util import environment
+from deeplearning.benchpress.util import environment
 from absl import flags
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

@@ -2,12 +2,12 @@
 import typing
 import numpy as np
 
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.util import cache
-from deeplearning.clgen.util import pytorch
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.samplers import samplers
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.util import cache
+from deeplearning.benchpress.util import pytorch
 
 torch = pytorch.torch
 

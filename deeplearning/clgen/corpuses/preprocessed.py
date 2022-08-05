@@ -33,16 +33,16 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from sqlalchemy.sql import func
 
-from deeplearning.clgen.preprocessors import preprocessors
-from deeplearning.clgen.proto import corpus_pb2
-from deeplearning.clgen.proto import internal_pb2
-from deeplearning.clgen.github import bigQuery_database as bqdb
-from deeplearning.clgen.util import fs
-from deeplearning.clgen.util import sqlutil
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
+from deeplearning.benchpress.preprocessors import preprocessors
+from deeplearning.benchpress.proto import corpus_pb2
+from deeplearning.benchpress.proto import internal_pb2
+from deeplearning.benchpress.github import bigQuery_database as bqdb
+from deeplearning.benchpress.util import fs
+from deeplearning.benchpress.util import sqlutil
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 from eupy.hermes import client
 
 from absl import app, flags

@@ -11,7 +11,7 @@ from plotly import graph_objs as go
 import plotly.figure_factory as ff
 import plotly.express as px
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 example_formats = """
   margin = {'l': 0, 'r': 0, 't': 0, 'b': 0}   # Eliminates excess background around the plot (Can hide the title)

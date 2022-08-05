@@ -15,19 +15,19 @@ import pathlib
 import pickle
 import numpy as np
 
-from deeplearning.clgen.util import cache
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util import monitors
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.models import sequence_masking
-from deeplearning.clgen.models import lm_database
+from deeplearning.benchpress.util import cache
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import distributions
+from deeplearning.benchpress.util import monitors
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.models import sequence_masking
+from deeplearning.benchpress.models import lm_database
 from absl import flags
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

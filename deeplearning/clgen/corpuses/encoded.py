@@ -17,20 +17,20 @@ from sqlalchemy.ext import declarative
 from sqlalchemy.sql import func
 
 
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import preprocessed
-from deeplearning.clgen.proto import internal_pb2
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.util import monitors
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.features import extractor
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import preprocessed
+from deeplearning.benchpress.proto import internal_pb2
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.util import monitors
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.features import extractor
 from absl import app, flags
 import humanize
-from deeplearning.clgen.util import sqlutil
+from deeplearning.benchpress.util import sqlutil
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

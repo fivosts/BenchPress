@@ -28,23 +28,23 @@ import checksumdir
 import numpy as np
 from sqlalchemy.sql.expression import func
 
-from deeplearning.clgen.util import cache
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import commit
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.corpuses import preprocessed
-from deeplearning.clgen.preprocessors import preprocessors
-from deeplearning.clgen.proto import corpus_pb2
+from deeplearning.benchpress.util import cache
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import commit
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.corpuses import preprocessed
+from deeplearning.benchpress.preprocessors import preprocessors
+from deeplearning.benchpress.proto import corpus_pb2
 
 from absl import flags
 
-from deeplearning.clgen.util import sqlutil
+from deeplearning.benchpress.util import sqlutil
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

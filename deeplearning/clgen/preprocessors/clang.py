@@ -29,7 +29,7 @@ import typing
 import string
 import clang.cindex
 from absl import flags
-from deeplearning.clgen.util import environment
+from deeplearning.benchpress.util import environment
 from eupy.native import  logger as l
 from absl import flags
 

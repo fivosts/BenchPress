@@ -22,8 +22,8 @@ import pathlib
 import re
 import typing
 
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import fs
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import fs
 
 class Cache(object):
   """

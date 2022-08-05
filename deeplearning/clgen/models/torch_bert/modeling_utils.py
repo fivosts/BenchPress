@@ -19,11 +19,11 @@ import os
 import re
 import typing
 
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util.pytorch import torch
-from deeplearning.clgen.models.torch_bert import generation_utils
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
+from deeplearning.benchpress.models.torch_bert import generation_utils
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 def find_pruneable_heads_and_indices(
   heads: typing.List[int], n_heads: int, head_size: int, already_pruned_heads: typing.Set[int]

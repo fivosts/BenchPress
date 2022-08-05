@@ -26,23 +26,23 @@ import pickle
 from absl import flags
 from sqlalchemy.ext import declarative
 
-from deeplearning.clgen.util import cache
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import commit
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import benchmarks
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.proto import sampler_pb2
-from deeplearning.clgen.proto import internal_pb2
-from deeplearning.clgen.models import lm_data_generator
-from deeplearning.clgen.active_models import active_models
+from deeplearning.benchpress.util import cache
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import commit
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import benchmarks
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.proto import sampler_pb2
+from deeplearning.benchpress.proto import internal_pb2
+from deeplearning.benchpress.models import lm_data_generator
+from deeplearning.benchpress.active_models import active_models
 
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.util import sqlutil
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.util import sqlutil
 
 FLAGS = flags.FLAGS
 

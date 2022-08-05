@@ -5,9 +5,9 @@ import typing
 import pathlib
 import numpy as np
 
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util.pytorch import torch
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
+from deeplearning.benchpress.util import logging as l
 
 class ListTrainDataloader(torch.utils.data.Dataset):
   """

@@ -15,16 +15,16 @@ import multiprocessing
 
 from absl import flags
 
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.util import plotter
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.experiments import workers
-from deeplearning.clgen.experiments import public
-from deeplearning.clgen.experiments import clsmith
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.experiments import workers
+from deeplearning.benchpress.experiments import public
+from deeplearning.benchpress.experiments import clsmith
 
 FLAGS = flags.FLAGS
 

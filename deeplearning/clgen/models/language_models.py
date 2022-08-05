@@ -23,28 +23,28 @@ import humanize
 
 import numpy as np
 
-from deeplearning.clgen.samplers import sample_observers as sample_observers_lib
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import cache
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import commit
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.models import builders
-from deeplearning.clgen.models.keras_sequential import keras_sequential
-from deeplearning.clgen.models.tf_sequential import tf_sequential
-from deeplearning.clgen.models.tf_bert import tf_bert
-from deeplearning.clgen.models.torch_bert import torch_bert
-from deeplearning.clgen.models.incoder import incoder
-from deeplearning.clgen.proto import internal_pb2
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.preprocessors import opencl
+from deeplearning.benchpress.samplers import sample_observers as sample_observers_lib
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import cache
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import commit
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.models import builders
+from deeplearning.benchpress.models.keras_sequential import keras_sequential
+from deeplearning.benchpress.models.tf_sequential import tf_sequential
+from deeplearning.benchpress.models.tf_bert import tf_bert
+from deeplearning.benchpress.models.torch_bert import torch_bert
+from deeplearning.benchpress.models.incoder import incoder
+from deeplearning.benchpress.proto import internal_pb2
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.preprocessors import opencl
 from absl import flags
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

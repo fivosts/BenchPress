@@ -11,12 +11,12 @@ import collections
 import glob
 import numpy as np
 
-from deeplearning.clgen.util.tf import tf
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.models import lm_data_generator
-from deeplearning.clgen.models import sequence_masking
+from deeplearning.benchpress.util.tf import tf
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.models import lm_data_generator
+from deeplearning.benchpress.models import sequence_masking
 from absl import flags
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

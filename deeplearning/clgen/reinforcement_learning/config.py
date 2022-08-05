@@ -1,7 +1,7 @@
 """Modeling configuration for Deep_Q Network"""
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.models import language_models
-from deeplearning.clgen.proto import reinforcement_learning_pb2
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.models import language_models
+from deeplearning.benchpress.proto import reinforcement_learning_pb2
 
 class QValuesConfig(object):
   @classmethod

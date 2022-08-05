@@ -8,12 +8,12 @@ import numpy as np
 from sklearn import cluster as sklearn_cluster
 from sklearn import neighbors as sklearn_neighbors
 
-from deeplearning.clgen.active_models.committee import config
-from deeplearning.clgen.models.torch_bert import activations
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util.pytorch import torch
+from deeplearning.benchpress.active_models.committee import config
+from deeplearning.benchpress.models.torch_bert import activations
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))

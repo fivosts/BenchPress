@@ -3,12 +3,12 @@ import subprocess
 import time
 import typing
 import os
-from deeplearning.clgen.preprocessors import opencl, clang
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.features import autophase
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.util import distributions
+from deeplearning.benchpress.preprocessors import opencl, clang
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.features import autophase
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.util import distributions
 
 from absl import app
 

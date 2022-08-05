@@ -18,14 +18,14 @@ from absl import flags
 from base64 import b64decode
 from google.cloud import bigquery
 
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.proto import github_pb2
-from deeplearning.clgen.github import datasets
-from deeplearning.clgen.github import storage
-from deeplearning.clgen.github import bigQuery_database
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.proto import github_pb2
+from deeplearning.benchpress.github import datasets
+from deeplearning.benchpress.github import storage
+from deeplearning.benchpress.github import bigQuery_database
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

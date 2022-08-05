@@ -5,12 +5,12 @@ import tqdm
 import sklearn
 from sklearn.decomposition import PCA
 
-from deeplearning.clgen.experiments import public
-from deeplearning.clgen.experiments import clsmith
-from deeplearning.clgen.experiments import workers
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.util import plotter
+from deeplearning.benchpress.experiments import public
+from deeplearning.benchpress.experiments import clsmith
+from deeplearning.benchpress.experiments import workers
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.util import plotter
 
 @public.evaluator
 def AnalyzeTarget(**kwargs) -> None:

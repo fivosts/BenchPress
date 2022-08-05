@@ -18,10 +18,10 @@ import sys
 import typing
 import subprocess
 
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.preprocessors import clang
-from deeplearning.clgen.preprocessors import normalizer
-from deeplearning.clgen.preprocessors import public
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.preprocessors import clang
+from deeplearning.benchpress.preprocessors import normalizer
+from deeplearning.benchpress.preprocessors import public
 
 from absl import flags
 

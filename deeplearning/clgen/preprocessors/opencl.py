@@ -22,13 +22,13 @@ import tempfile
 import math
 import pandas as pd
 
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.preprocessors import clang
-from deeplearning.clgen.preprocessors import normalizer
-from deeplearning.clgen.preprocessors import public
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.preprocessors import clang
+from deeplearning.benchpress.preprocessors import normalizer
+from deeplearning.benchpress.preprocessors import public
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 from absl import flags
 

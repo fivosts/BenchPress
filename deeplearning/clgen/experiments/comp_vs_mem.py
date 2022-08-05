@@ -1,9 +1,9 @@
 """
 Evaluation script for mem vs comp Grewe features against multiple database groups.
 """
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.util import plotter
-from deeplearning.clgen.experiments import public
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.experiments import public
 
 @public.evaluator
 def CompMemGrewe(**kwargs) -> None:

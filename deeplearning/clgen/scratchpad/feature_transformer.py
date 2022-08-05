@@ -13,14 +13,14 @@ import pickle
 
 from absl import app
 
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.models.torch_bert import optimizer
-from deeplearning.clgen.models.torch_bert import hooks
-from deeplearning.clgen.experiments import workers
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.util import distributions
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.models.torch_bert import optimizer
+from deeplearning.benchpress.models.torch_bert import hooks
+from deeplearning.benchpress.experiments import workers
 
 torch = pytorch.torch
 

@@ -13,15 +13,15 @@ import numpy as np
 import pathlib
 import glob
 
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util.pytorch import torch
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util import monitors
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.models import sequence_masking
-from deeplearning.clgen.models import lm_data_generator
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
+from deeplearning.benchpress.util import distributions
+from deeplearning.benchpress.util import monitors
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.models import sequence_masking
+from deeplearning.benchpress.models import lm_data_generator
 from absl import flags
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

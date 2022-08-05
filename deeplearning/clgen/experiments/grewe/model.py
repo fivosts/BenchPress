@@ -23,7 +23,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-from deeplearning.clgen.util import fs
+from deeplearning.benchpress.util import fs
 
 def flatten(lists):
   """

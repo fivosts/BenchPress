@@ -4,12 +4,12 @@ Memory replay buffer for reinforcement learning training.
 import typing
 import numpy as np
 
-from deeplearning.clgen.reinforcement_learning import interactions
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.proto import reinforcement_learning_pb2
-from deeplearning.clgen.util import pytorch
+from deeplearning.benchpress.reinforcement_learning import interactions
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.proto import reinforcement_learning_pb2
+from deeplearning.benchpress.util import pytorch
 
 torch = pytorch.torch
 

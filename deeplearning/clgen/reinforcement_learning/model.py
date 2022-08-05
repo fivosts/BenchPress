@@ -5,15 +5,15 @@ import pathlib
 import typing
 import math
 
-from deeplearning.clgen.reinforcement_learning import interactions
-from deeplearning.clgen.reinforcement_learning import data_generator
-from deeplearning.clgen.reinforcement_learning import config
-from deeplearning.clgen.models.torch_bert import model
-from deeplearning.clgen.models import language_models
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.reinforcement_learning import interactions
+from deeplearning.benchpress.reinforcement_learning import data_generator
+from deeplearning.benchpress.reinforcement_learning import config
+from deeplearning.benchpress.models.torch_bert import model
+from deeplearning.benchpress.models import language_models
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util import logging as l
 
 torch = pytorch.torch
 

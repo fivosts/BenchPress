@@ -13,8 +13,8 @@ import humanize
 
 import numpy as np
 
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.util import logging as l
 
 class DataBatch(typing.NamedTuple):
   """An <X,y> data tuple used for training one batch."""

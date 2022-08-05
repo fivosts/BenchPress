@@ -6,10 +6,10 @@ import glob
 import pathlib
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from deeplearning.clgen.util.tf import tf
-from deeplearning.clgen.util import plotter
-from deeplearning.clgen.samplers import validation_database
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util.tf import tf
+from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.samplers import validation_database
+from deeplearning.benchpress.util import logging as l
 
 """
 All hooks deployed for this implementation of BERT.

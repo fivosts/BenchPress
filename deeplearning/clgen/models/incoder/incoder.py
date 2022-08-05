@@ -6,17 +6,17 @@ import transformers
 import numpy as np
 from absl import flags
 
-from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.util import plotter
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import telemetry
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.models.incoder import example_api
-from deeplearning.clgen.models.incoder.data_generator import IncoderDataGenerator
+from deeplearning.benchpress.samplers import samplers
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.models import backends
+from deeplearning.benchpress.models import telemetry
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.models.incoder import example_api
+from deeplearning.benchpress.models.incoder.data_generator import IncoderDataGenerator
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 transformers.set_seed(np.random.RandomState().randint(0, 2**32-1) % (1 + environment.WORLD_RANK))
 
@@ -47,7 +47,7 @@ class Incoder(backends.BackendBase):
   def __init__(self, *args, **kwargs):
     super(Incoder, self).__init__(*args, **kwargs)
 
-    from deeplearning.clgen.util import pytorch
+    from deeplearning.benchpress.util import pytorch
     if not pytorch.initialized:
       pytorch.initPytorch()
 

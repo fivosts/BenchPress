@@ -9,12 +9,12 @@ import time
 import numpy as np
 from numpy.random import default_rng
 
-from deeplearning.clgen.features import normalizers
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.corpuses import benchmarks
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import environment
+from deeplearning.benchpress.features import normalizers
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.corpuses import benchmarks
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import environment
 
 from absl import flags
 

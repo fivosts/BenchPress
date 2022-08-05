@@ -14,10 +14,10 @@
 # along with clgen.  If not, see <https://www.gnu.org/licenses/>.
 """This file builds Keras models from CLgen Model config protos."""
 
-from deeplearning.clgen.proto import model_pb2
+from deeplearning.benchpress.proto import model_pb2
 from absl import flags
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.models import lm_data_generator
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.models import lm_data_generator
 
 FLAGS = flags.FLAGS
 

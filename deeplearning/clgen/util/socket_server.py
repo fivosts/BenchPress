@@ -4,7 +4,7 @@ import time
 
 from absl import flags
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

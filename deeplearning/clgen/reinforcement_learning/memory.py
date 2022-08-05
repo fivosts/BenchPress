@@ -5,10 +5,10 @@ import pathlib
 import typing
 import pickle
 
-from deeplearning.clgen.reinforcement_learning import interactions
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import pytorch
+from deeplearning.benchpress.reinforcement_learning import interactions
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import pytorch
 
 torch = pytorch.torch
 

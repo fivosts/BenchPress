@@ -11,9 +11,9 @@ import humanize
 import functools
 from google.cloud import bigquery
 
-from deeplearning.clgen.proto import github_pb2
-from deeplearning.clgen.github import bigQuery_database as bqdb
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.proto import github_pb2
+from deeplearning.benchpress.github import bigQuery_database as bqdb
+from deeplearning.benchpress.util import logging as l
 
 class Storage(object):
 

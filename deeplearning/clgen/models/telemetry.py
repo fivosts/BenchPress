@@ -7,9 +7,9 @@ import datetime
 import glob
 from absl import flags
 
-from deeplearning.clgen.proto import telemetry_pb2
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.proto import telemetry_pb2
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

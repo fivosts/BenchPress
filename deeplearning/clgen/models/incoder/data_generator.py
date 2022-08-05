@@ -10,17 +10,17 @@ import numpy as np
 import math
 import pathlib
 
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util.pytorch import torch
-from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import active_feed_database
-from deeplearning.clgen.models.torch_bert import data_generator as torch_data_generator
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
+from deeplearning.benchpress.samplers import samplers
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.features import active_feed_database
+from deeplearning.benchpress.models.torch_bert import data_generator as torch_data_generator
 from absl import flags
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

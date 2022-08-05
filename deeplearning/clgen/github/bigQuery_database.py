@@ -10,11 +10,11 @@ from google.cloud import bigquery
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
-from deeplearning.clgen.util import sqlutil
+from deeplearning.benchpress.util import sqlutil
 
 from absl import app, flags
-from deeplearning.clgen.util import monitors
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import monitors
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

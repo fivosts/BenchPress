@@ -5,9 +5,9 @@ import sqlalchemy as sql
 from sqlalchemy.dialects import mysql
 
 from absl import flags
-from deeplearning.clgen.util import sqlutil
+from deeplearning.benchpress.util import sqlutil
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 Base = sqlutil.Base()

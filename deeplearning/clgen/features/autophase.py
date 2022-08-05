@@ -3,8 +3,8 @@ Feature Extraction module for Autophase paper features.
 """
 import typing
 
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.util import environment
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.util import environment
 
 AUTOPHASE = ["-load", environment.AUTOPHASE, "-autophase"]
 

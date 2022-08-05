@@ -3,10 +3,10 @@ Feature extraction tools for active learning.
 """
 import typing
 
-from deeplearning.clgen.features import grewe
-from deeplearning.clgen.features import instcount
-from deeplearning.clgen.features import autophase
-from deeplearning.clgen.util import crypto
+from deeplearning.benchpress.features import grewe
+from deeplearning.benchpress.features import instcount
+from deeplearning.benchpress.features import autophase
+from deeplearning.benchpress.util import crypto
 
 from eupy.hermes import client
 

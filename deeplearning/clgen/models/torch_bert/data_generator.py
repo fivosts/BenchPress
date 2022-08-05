@@ -21,26 +21,26 @@ import math
 import tqdm
 import threading
 
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util.pytorch import torch
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util import monitors
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import feature_sampler
-from deeplearning.clgen.features import active_feed_database
-from deeplearning.clgen.features import evaluate_cand_database
-from deeplearning.clgen.models import lm_data_generator
-from deeplearning.clgen.models import sequence_masking
-from deeplearning.clgen.models.torch_bert import datasets
-from deeplearning.clgen.samplers import sample_observers
-from deeplearning.clgen.preprocessors import opencl
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
+from deeplearning.benchpress.util import distributions
+from deeplearning.benchpress.util import monitors
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.features import feature_sampler
+from deeplearning.benchpress.features import active_feed_database
+from deeplearning.benchpress.features import evaluate_cand_database
+from deeplearning.benchpress.models import lm_data_generator
+from deeplearning.benchpress.models import sequence_masking
+from deeplearning.benchpress.models.torch_bert import datasets
+from deeplearning.benchpress.samplers import sample_observers
+from deeplearning.benchpress.preprocessors import opencl
 from absl import flags
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

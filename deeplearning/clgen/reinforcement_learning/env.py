@@ -7,19 +7,19 @@ import pathlib
 import pickle
 import numpy as np
 
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import feature_sampler
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.reinforcement_learning import interactions
-from deeplearning.clgen.reinforcement_learning import memory
-from deeplearning.clgen.reinforcement_learning import data_generator
-from deeplearning.clgen.proto import reinforcement_learning_pb2
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import pytorch
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.features import feature_sampler
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.reinforcement_learning import interactions
+from deeplearning.benchpress.reinforcement_learning import memory
+from deeplearning.benchpress.reinforcement_learning import data_generator
+from deeplearning.benchpress.proto import reinforcement_learning_pb2
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util import logging as l
 
 torch = pytorch.torch
 

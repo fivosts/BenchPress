@@ -13,10 +13,10 @@ import pickle
 
 from absl import app
 
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.experiments import workers
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.util import distributions
+from deeplearning.benchpress.experiments import workers
 
 ENCODED_DB_PATH = "/home/foivos/unique_encoded.db"
 TOKENIZER_PATH = "/home/foivos/backup_tokenizer.pkl"

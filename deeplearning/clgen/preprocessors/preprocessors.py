@@ -6,9 +6,9 @@ from importlib import util as importlib_util
 from detect_secrets import main as secrets_main
 from detect_secrets.plugins.common import initialize as secrets_init
 
-from deeplearning.clgen.preprocessors import public
+from deeplearning.benchpress.preprocessors import public
 from absl import flags
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

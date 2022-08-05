@@ -13,9 +13,9 @@ import seaborn as sns
 from numpy.random import RandomState
 from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
 
-from deeplearning.clgen.experiments.grewe import model
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util import plotter
+from deeplearning.benchpress.experiments.grewe import model
+from deeplearning.benchpress.util import distributions
+from deeplearning.benchpress.util import plotter
 
 def Finalize(
   output: typing.Optional[typing.Union[str, pathlib.Path]] = None,

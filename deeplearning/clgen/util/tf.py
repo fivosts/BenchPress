@@ -3,7 +3,7 @@ from absl import flags
 import os
 import re
 
-from deeplearning.clgen.util import gpu
+from deeplearning.benchpress.util import gpu
 
 FLAGS = flags.FLAGS
 
@@ -43,7 +43,7 @@ import tensorflow
 tf = tensorflow
 
 def initTensorflow():
-  from deeplearning.clgen.util import logging as l
+  from deeplearning.benchpress.util import logging as l
 
   tensorflow.python.util.deprecation._PRINT_DEPRECATION_WARNINGS = FLAGS.tf_print_deprecation
   os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(FLAGS.tf_logging_level).lower()

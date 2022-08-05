@@ -18,27 +18,27 @@ import pathlib
 import tqdm
 import multiprocessing
 
-from deeplearning.clgen.proto import evaluator_pb2
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import feature_sampler
-from deeplearning.clgen.features import active_feed_database
-from deeplearning.clgen.corpuses import benchmarks
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.experiments import log_file
-from deeplearning.clgen.experiments import benchmark_analysis
-from deeplearning.clgen.experiments import distance_score
-from deeplearning.clgen.experiments import comp_vs_mem
-from deeplearning.clgen.experiments import cldrive
-from deeplearning.clgen.experiments import clsmith
-from deeplearning.clgen.experiments import mutec
-from deeplearning.clgen.experiments import srciror
-from deeplearning.clgen.experiments import workers
-from deeplearning.clgen.experiments.grewe import api as grewe_api
+from deeplearning.benchpress.proto import evaluator_pb2
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.features import feature_sampler
+from deeplearning.benchpress.features import active_feed_database
+from deeplearning.benchpress.corpuses import benchmarks
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.experiments import log_file
+from deeplearning.benchpress.experiments import benchmark_analysis
+from deeplearning.benchpress.experiments import distance_score
+from deeplearning.benchpress.experiments import comp_vs_mem
+from deeplearning.benchpress.experiments import cldrive
+from deeplearning.benchpress.experiments import clsmith
+from deeplearning.benchpress.experiments import mutec
+from deeplearning.benchpress.experiments import srciror
+from deeplearning.benchpress.experiments import workers
+from deeplearning.benchpress.experiments.grewe import api as grewe_api
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 from absl import app, flags
 

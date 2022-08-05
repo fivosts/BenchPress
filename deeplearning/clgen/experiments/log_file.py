@@ -1,7 +1,7 @@
 """
 Log file evaluation.
 """
-from deeplearning.clgen.experiments import public
+from deeplearning.benchpress.experiments import public
 
 @public.evaluator
 def LogFile(**kwargs) -> None:

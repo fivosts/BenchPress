@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import typing
-from deeplearning.clgen.util.pytorch import torch
+from deeplearning.benchpress.util.pytorch import torch
 
 class GenerationMixin:
   """

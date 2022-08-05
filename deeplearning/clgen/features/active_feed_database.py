@@ -13,13 +13,13 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import app, flags
 
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import sqlutil
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import sqlutil
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
 
 FLAGS = flags.FLAGS
 

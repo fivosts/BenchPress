@@ -6,30 +6,30 @@ import os
 import time
 import typing
 
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import corpuses
-from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import language_models
-from deeplearning.clgen.proto import reinforcement_learning_pb2
-from deeplearning.clgen.proto import internal_pb2
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import commit
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import cache
-from deeplearning.clgen.reinforcement_learning import env
-from deeplearning.clgen.reinforcement_learning import agent
-from deeplearning.clgen.reinforcement_learning import memory
-from deeplearning.clgen.models.torch_bert import model as bert_model
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import corpuses
+from deeplearning.benchpress.samplers import samplers
+from deeplearning.benchpress.models import backends
+from deeplearning.benchpress.models import language_models
+from deeplearning.benchpress.proto import reinforcement_learning_pb2
+from deeplearning.benchpress.proto import internal_pb2
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import commit
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import cache
+from deeplearning.benchpress.reinforcement_learning import env
+from deeplearning.benchpress.reinforcement_learning import agent
+from deeplearning.benchpress.reinforcement_learning import memory
+from deeplearning.benchpress.models.torch_bert import model as bert_model
 
 from absl import flags
 
 FLAGS = flags.FLAGS
 
-from deeplearning.clgen.util import cache
+from deeplearning.benchpress.util import cache
 
 def AssertConfigIsValid(config: reinforcement_learning_pb2.RLModel) -> reinforcement_learning_pb2.RLModel:
   """

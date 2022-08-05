@@ -10,11 +10,11 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import app, flags
 
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import sqlutil
-from deeplearning.clgen.util import plotter as plt
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import sqlutil
+from deeplearning.benchpress.util import plotter as plt
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 

@@ -1,6 +1,6 @@
 import typing
 
-from deeplearning.clgen.util import pytorch
+from deeplearning.benchpress.util import pytorch
 torch  = pytorch.torch
 
 # signals the start of a document

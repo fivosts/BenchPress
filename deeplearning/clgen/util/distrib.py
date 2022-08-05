@@ -9,9 +9,9 @@ import typing
 import functools
 import tqdm
 
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.util import pytorch
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.util import pytorch
 
 torch = pytorch.torch
 

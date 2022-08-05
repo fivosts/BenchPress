@@ -28,25 +28,25 @@ import tensorflow_probability as tfp
 import numpy as np
 from absl import flags
 
-from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.samplers import sample_observers
-from deeplearning.clgen.samplers import validation_database
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import process
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.proto import sampler_pb2
-from deeplearning.clgen.proto import internal_pb2
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import telemetry
-from deeplearning.clgen.models import bert_flags
-from deeplearning.clgen.models.tf_bert import model
-from deeplearning.clgen.models.tf_bert import optimizer
-from deeplearning.clgen.models.tf_bert import hooks
-from deeplearning.clgen.models.tf_bert.data_generator import tfLMDataGenerator
+from deeplearning.benchpress.samplers import samplers
+from deeplearning.benchpress.samplers import sample_observers
+from deeplearning.benchpress.samplers import validation_database
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import process
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.proto import sampler_pb2
+from deeplearning.benchpress.proto import internal_pb2
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.models import backends
+from deeplearning.benchpress.models import telemetry
+from deeplearning.benchpress.models import bert_flags
+from deeplearning.benchpress.models.tf_bert import model
+from deeplearning.benchpress.models.tf_bert import optimizer
+from deeplearning.benchpress.models.tf_bert import hooks
+from deeplearning.benchpress.models.tf_bert.data_generator import tfLMDataGenerator
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -88,7 +88,7 @@ class tfBert(backends.BackendBase):
 
     super(tfBert, self).__init__(*args, **kwargs)
 
-    from deeplearning.clgen.util import tf
+    from deeplearning.benchpress.util import tf
     tf.initTensorflow()
 
     self.tf                              = tf.tf

@@ -20,19 +20,19 @@ import time
 import typing
 import humanize
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 import numpy as np
 import progressbar
 
 import tensorflow_addons as tfa
 
-from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.models import telemetry
-from deeplearning.clgen.models import backends
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.util import tf as local_tf
-from deeplearning.clgen.models.tf_sequential.data_generator import TensorflowBatchGenerator
+from deeplearning.benchpress.samplers import samplers
+from deeplearning.benchpress.models import telemetry
+from deeplearning.benchpress.models import backends
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.util import tf as local_tf
+from deeplearning.benchpress.models.tf_sequential.data_generator import TensorflowBatchGenerator
 from absl import flags
 
 FLAGS = flags.FLAGS
@@ -131,7 +131,7 @@ class tfSequential(backends.BackendBase):
 
     # Deferred importing of TensorFlow.
     tf.compat.v1.disable_eager_execution()
-    from deeplearning.clgen.models.tf_sequential import helper
+    from deeplearning.benchpress.models.tf_sequential import helper
 
     cell_type = {
       model_pb2.NetworkArchitecture.LSTM: tf.compat.v1.nn.rnn_cell.LSTMCell,

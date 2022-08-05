@@ -5,12 +5,12 @@ import pathlib
 import typing
 import clang.cindex
 
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.preprocessors import structs
-from deeplearning.clgen.util import plotter as plt
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.preprocessors import structs
+from deeplearning.benchpress.util import plotter as plt
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 clang.cindex.Config.set_library_path(environment.LLVM_LIB)
 if environment.LLVM_VERSION != 6:

@@ -11,12 +11,12 @@ import tqdm
 import subprocess
 # import multiprocessing
 
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import feature_sampler
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.preprocessors import c
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.util import environment
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.features import feature_sampler
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.preprocessors import c
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.util import environment
 
 from absl import flags
 

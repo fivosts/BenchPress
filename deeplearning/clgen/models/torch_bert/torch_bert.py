@@ -28,26 +28,26 @@ import tqdm
 from collections import OrderedDict
 
 
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.samplers import sample_observers
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import plotter
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.proto import sampler_pb2
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import telemetry
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.models.torch_bert import model
-from deeplearning.clgen.models.torch_bert import config
-from deeplearning.clgen.models.torch_bert import optimizer
-from deeplearning.clgen.models.torch_bert import hooks
-from deeplearning.clgen.models.torch_bert.data_generator import torchLMDataGenerator
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.samplers import samplers
+from deeplearning.benchpress.samplers import sample_observers
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.proto import sampler_pb2
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.models import backends
+from deeplearning.benchpress.models import telemetry
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.models.torch_bert import model
+from deeplearning.benchpress.models.torch_bert import config
+from deeplearning.benchpress.models.torch_bert import optimizer
+from deeplearning.benchpress.models.torch_bert import hooks
+from deeplearning.benchpress.models.torch_bert.data_generator import torchLMDataGenerator
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 from eupy.hermes import client
 
 FLAGS = flags.FLAGS
@@ -103,7 +103,7 @@ class torchBert(backends.BackendBase):
 
     super(torchBert, self).__init__(*args, **kwargs)
     
-    from deeplearning.clgen.util import pytorch
+    from deeplearning.benchpress.util import pytorch
     if not pytorch.initialized:
       pytorch.initPytorch()
 

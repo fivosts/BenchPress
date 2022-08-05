@@ -8,10 +8,10 @@ import statistics
 import numpy as np
 import scipy.stats as st
 
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.util import plotter as plt
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.util import plotter as plt
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 src1 ="""
 kernel void A(global float *a, global float* n, global float* j, global float* h, const unsigned int r) {

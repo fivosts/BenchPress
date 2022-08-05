@@ -14,21 +14,21 @@ import multiprocessing
 import time
 import numpy as np
 
-from deeplearning.clgen.active_models import data_generator
-from deeplearning.clgen.active_models import downstream_data
-from deeplearning.clgen.experiments import cldrive
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.features import grewe
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.util import distributions
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import distrib
-from deeplearning.clgen.util import http_server
-from deeplearning.clgen.util import socket_server
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.models.torch_bert.data_generator import JSON_to_ActiveSample
-from deeplearning.clgen.models.torch_bert.data_generator import ActiveSample_to_JSON
+from deeplearning.benchpress.active_models import data_generator
+from deeplearning.benchpress.active_models import downstream_data
+from deeplearning.benchpress.experiments import cldrive
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.features import grewe
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.util import distributions
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import http_server
+from deeplearning.benchpress.util import socket_server
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.models.torch_bert.data_generator import JSON_to_ActiveSample
+from deeplearning.benchpress.models.torch_bert.data_generator import ActiveSample_to_JSON
 
 from absl import app, flags
 

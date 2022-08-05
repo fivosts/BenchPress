@@ -13,17 +13,17 @@ import pandas as pd
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.util import plotter
-from deeplearning.clgen.util import sqlutil
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import distributions
-# from deeplearning.clgen.util import cldrive_server
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.experiments import workers
-from deeplearning.clgen.experiments import public
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.util import sqlutil
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import distributions
+# from deeplearning.benchpress.util import cldrive_server
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.experiments import workers
+from deeplearning.benchpress.experiments import public
 
 from absl import flags
 

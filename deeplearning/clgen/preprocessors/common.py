@@ -17,10 +17,10 @@ import typing
 # import pathlib
 # from absl import flags
 
-from deeplearning.clgen.preprocessors import public
-# from deeplearning.clgen.util import crypto
+from deeplearning.benchpress.preprocessors import public
+# from deeplearning.benchpress.util import crypto
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 # FLAGS = flags.FLAGS
 

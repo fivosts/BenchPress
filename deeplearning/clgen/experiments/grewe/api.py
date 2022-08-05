@@ -24,19 +24,19 @@ import math
 import tqdm
 import pandas as pd
 
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.corpuses import benchmarks
-from deeplearning.clgen.experiments import public
-from deeplearning.clgen.experiments import workers
-from deeplearning.clgen.experiments import cldrive
-from deeplearning.clgen.experiments import clsmith
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.util import plotter
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.corpuses import benchmarks
+from deeplearning.benchpress.experiments import public
+from deeplearning.benchpress.experiments import workers
+from deeplearning.benchpress.experiments import cldrive
+from deeplearning.benchpress.experiments import clsmith
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.util import plotter
 
-from deeplearning.clgen.experiments.grewe import preamble
+from deeplearning.benchpress.experiments.grewe import preamble
 
 from absl import app, flags
 

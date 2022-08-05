@@ -19,7 +19,7 @@ import numpy as np
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 
-from deeplearning.clgen.util import sqlutil
+from deeplearning.benchpress.util import sqlutil
 
 from absl import app, flags
 

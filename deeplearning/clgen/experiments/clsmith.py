@@ -18,15 +18,15 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 from absl import flags
 
-from deeplearning.clgen.features import extractor
-from deeplearning.clgen.preprocessors import opencl
-from deeplearning.clgen.preprocessors import c
-from deeplearning.clgen.util import plotter
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import sqlutil
-from deeplearning.clgen.util import logging as l
-from deeplearning.clgen.experiments import public
+from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.preprocessors import c
+from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import sqlutil
+from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.experiments import public
 
 FLAGS = flags.FLAGS
 CLSMITH         = environment.CLSMITH

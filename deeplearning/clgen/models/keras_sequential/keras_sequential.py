@@ -19,14 +19,14 @@ import typing
 
 import numpy as np
 
-from deeplearning.clgen.samplers import samplers
-from deeplearning.clgen.models import telemetry
-from deeplearning.clgen.models import backends
-from deeplearning.clgen.models import builders
-from deeplearning.clgen.models.keras_sequential.data_generator import KerasBatchGenerator
+from deeplearning.benchpress.samplers import samplers
+from deeplearning.benchpress.models import telemetry
+from deeplearning.benchpress.models import backends
+from deeplearning.benchpress.models import builders
+from deeplearning.benchpress.models.keras_sequential.data_generator import KerasBatchGenerator
 from absl import flags
 import humanize
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 FLAGS = flags.FLAGS
 
 

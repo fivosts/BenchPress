@@ -6,8 +6,8 @@ import threading
 import time
 import typing
 
-from deeplearning.clgen.util import gpu
-from deeplearning.clgen.util import monitors
+from deeplearning.benchpress.util import gpu
+from deeplearning.benchpress.util import monitors
 
 def monRamUsage(path: pathlib.Path) -> None:
   ram_monitor = monitors.HistoryMonitor(

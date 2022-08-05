@@ -2,9 +2,9 @@ import json
 import numpy as np
 import pathlib
 
-from deeplearning.clgen.util import plotter
-from deeplearning.clgen.samplers import validation_database
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.samplers import validation_database
+from deeplearning.benchpress.util import logging as l
 
 class tensorMonitorHook(object):
   def __init__(self, 

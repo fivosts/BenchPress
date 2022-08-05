@@ -11,20 +11,20 @@ import portpicker
 import shutil
 import sqlalchemy as sql
 
-from deeplearning.clgen.util import pbutil
-from deeplearning.clgen.util import crypto
-from deeplearning.clgen.util import environment
-from deeplearning.clgen.samplers import validation_database
-from deeplearning.clgen.samplers import samples_database
-from deeplearning.clgen.corpuses import tokenizers
-from deeplearning.clgen.corpuses import encoded
-from deeplearning.clgen.dashboard import dashboard_db
-from deeplearning.clgen.proto import model_pb2
-from deeplearning.clgen.proto import internal_pb2
+from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.samplers import validation_database
+from deeplearning.benchpress.samplers import samples_database
+from deeplearning.benchpress.corpuses import tokenizers
+from deeplearning.benchpress.corpuses import encoded
+from deeplearning.benchpress.dashboard import dashboard_db
+from deeplearning.benchpress.proto import model_pb2
+from deeplearning.benchpress.proto import internal_pb2
 from absl import flags
 import humanize
 
-from deeplearning.clgen.util import logging as l
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 
