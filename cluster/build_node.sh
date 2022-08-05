@@ -5,8 +5,8 @@
 # before executing it.
 ###########################################
 
-mkdir -p /disk/scratch/s1879742/clgen_build
-cd /disk/scratch/s1879742/clgen_build
+mkdir -p /disk/scratch/s1879742/benchpress_build
+cd /disk/scratch/s1879742/benchpress_build
 
 cmake ~/clgen
 
