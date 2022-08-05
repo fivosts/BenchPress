@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block header %}
+<title>Model Datasets</title>
+{% endblock %}
+
+{% block body %}
+
+<div class="container">
+<div class="row">
+<div class="col">
+
+  <p class="config"><a href="/{{data.workspace}}/model/{{data.model_sha}}/model_specs" style="color:pink">[Model Specs]</a></p><br>
+
+  <h3>Model: {{data.summary}}, {{data.model_sha}}<br></h3>
+  <h3>Model Datasets Info<br><br><br></h3>
+
+  {% for dataset in data.datasets %}
+  	<ul>
+  		<p class="config"><b>{{dataset.name}}</b></p>
+    <img src="{{dataset.plot}}" width = "500">
+    <span class="config"><br><br><br><br><br></span>
+  	</ul>
+  {% endfor %}
+
+</div>
+</div>
+</div>
+{% endblock %}

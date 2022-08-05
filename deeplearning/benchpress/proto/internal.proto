@@ -1,0 +1,127 @@
+// The file defines protos used internally with CLgen components.
+//
+// Copyright (c) 2016-2020 Chris Cummins.
+//
+// clgen is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// clgen is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with clgen.  If not, see <https://www.gnu.org/licenses/>.
+
+syntax = "proto2";
+
+package clgen;
+
+option go_package = "clgenpb";
+option java_multiple_files = true;
+option java_outer_classname = "InternalProto";
+option java_package = "com.clgen";
+
+import "deeplearning/clgen/proto/corpus.proto";
+import "deeplearning/clgen/proto/model.proto";
+import "deeplearning/clgen/proto/reinforcement_learning.proto";
+import "deeplearning/clgen/proto/sampler.proto";
+
+// The schema for a corpus metafile. An instance of this proto is created with
+// name META.pbtxt in the cache directory of each corpus.
+message CorpusMeta {
+  optional Corpus config = 1;
+  optional int32 preprocess_time_ms = 2;
+}
+
+// The schema for a model metafile. An instance of this proto is created with
+// name META.pbtxt in the cache directory of each model.
+message ModelMeta {
+  optional Model config = 1;
+}
+
+// The schema for a model metafile. An instance of this proto is created with
+// name META.pbtxt in the cache directory of each model.
+message RLModelMeta {
+  optional RLModel config = 1;
+}
+
+// The schema for a sampler metafile. An instance of this proto is created with
+// name META.pbtxt in the cache directory of each model that samples it.
+message SamplerMeta {
+  optional Sampler config = 1;
+}
+
+// A preprocessor worker input.
+message PreprocessorWorkerJob {
+  optional string contentfile_id = 1;
+  optional string src = 2;
+  repeated string preprocessors = 3;
+}
+
+// The output of a preprocessor worker.
+message PreprocessorWorkerJobOutcome {
+  enum Status {
+    OK = 0;
+    FAIL = 1;
+    // More verbose failure causes:
+    DOES_NOT_COMPILE = 2;
+    TOO_FEW_CHARACTERS = 3;
+    TOO_FEW_LINES = 4;
+    REWRITER_FAIL = 5;
+  }
+  optional string contentfile_id = 1;
+  optional string contents = 2;
+  optional Status status = 3;
+}
+
+message PreprocessorWorkerJobOutcomes {
+  repeated PreprocessorWorkerJobOutcome outcome = 1;
+  // The elapsed time of each preprocessing job.
+  repeated int64 preprocess_time_ms = 2;
+}
+
+message PreprocessorWorker {
+  optional string contentfile_root = 1;
+  optional string relpath = 2;
+  repeated string preprocessors = 3;
+}
+
+message EncoderWorker {
+  optional int64 id = 1;
+  optional string text = 3;
+  optional string contentfile_separator = 4;
+  optional bytes pickled_tokenizer = 5;
+}
+
+message JavaRewriterJob {
+  enum Status {
+    OK = 0;
+    FAIL = 1;
+  }
+  // The path of the source file.
+  optional string file_path = 1;
+  // The string source code.
+  optional string src = 2;
+  optional Status status = 3;
+  // A string description of the status. Only set if status != OK.
+  optional string status_msg = 4;
+}
+
+message LexerJob {
+  // The string to tokenize.
+  optional string string = 1;
+  // The tokenized string.
+  repeated int32 token = 2;
+}
+
+message LexerBatchJob {
+  repeated LexerJob input = 1;
+  // The candidate vocabulary. This is the list of multicharacter tokens,
+  // including all those already in the vocabulary map below.
+  repeated string candidate_token = 2;
+  // The derived vocabulary and its numerical mapping.
+  map<string, int32> vocabulary = 3;
+}

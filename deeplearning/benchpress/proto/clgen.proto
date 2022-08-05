@@ -1,0 +1,56 @@
+// The file defines the protos for describing CLgen instances.
+//
+// Copyright (c) 2016-2020 Chris Cummins.
+//
+// clgen is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// clgen is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with clgen.  If not, see <https://www.gnu.org/licenses/>.
+
+syntax = "proto2";
+
+package clgen;
+
+option go_package = "clgenpb";
+option java_multiple_files = true;
+option java_outer_classname = "ClgenProto";
+option java_package = "com.clgen";
+
+import "deeplearning/clgen/proto/model.proto";
+import "deeplearning/clgen/proto/reinforcement_learning.proto";
+import "deeplearning/clgen/proto/sampler.proto";
+import "deeplearning/clgen/proto/github.proto";
+
+// A CLgen instance encapsulates all of the settings for training and sampling
+// a language model.
+message Instance {
+  // The path to the clgen working directory. This directory stores persistent
+  // caches files, including the corpus, model checkpoints, and sampler outputs.
+  // If not provided, the default value of $HOME/.cache/clgen is used.
+  optional string working_dir = 1;
+  // Optionally, a github miner to scrape files with a requested specification.
+  optional github.GithubMiner github_miner = 2;
+  // The language model specification. Either the full description of a model,
+  // or the path to a pretrained_model, as created by --export_tf_model option
+  // of clgen.
+  oneof model_specification {
+    Model   language_model   = 3;
+    RLModel rl_model         = 4;
+    string  pretrained_model = 5;
+  }
+  // The sampler specification.
+  optional Sampler sampler = 6;
+}
+
+// A collection of instances.
+message Instances {
+  repeated Instance instance = 1;
+}

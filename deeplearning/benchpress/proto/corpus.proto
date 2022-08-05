@@ -1,0 +1,85 @@
+// The file defines the protos for specificying CLgen training corpuses.
+//
+// Please ignore the "optional" proto syntax, ALL FIELDS MUST BE SET.
+// This is to ensure consistent hashing of proto instances to a unique checksum,
+// as default values are ommitted in serialized protos. Unfortunately, this
+// means setting a value to any new field in all of the proto files across this
+// entire repository (and any which are not tracked in this repo).
+//
+// Copyright (c) 2016-2020 Chris Cummins.
+//
+// clgen is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// clgen is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with clgen.  If not, see <https://www.gnu.org/licenses/>.
+
+syntax = "proto2";
+
+package clgen;
+
+option go_package = "clgenpb";
+option java_multiple_files = true;
+option java_outer_classname = "CorpusProto";
+option java_package = "com.clgen";
+
+// The specification of a pre-training corpus.
+message PreTrainCorpus {
+  // The input contentfiles to the corpus.
+  // Shell variables are expanded. E.g. $HOME -> /home/<user>.
+  oneof contentfiles {
+    // The ID of an already-cached corpus.
+    string content_id             = 1;
+    // The path to a directory on the local system containing content files.
+    string local_directory        = 2;
+    // The path to a tarball archive file containing content files.
+    string local_tar_archive      = 3;
+    // The path to a bigQuery database containing files.
+    string bq_database            = 4;
+    // The path to a database of encoded files.
+    string pre_encoded_corpus_url = 5;
+  }
+  optional tokenizer tokenizer    = 6;
+  // A list of preprocessor passes to run on each contentfile in the corpus
+  // prior to training, in the order in which they are run.
+  repeated string preprocessor          = 7;
+  optional string contentfile_separator = 8;
+}
+
+// The specification of a training corpus.
+message Corpus {
+  // The input contentfiles to the corpus.
+  // Shell variables are expanded. E.g. $HOME -> /home/<user>.
+  oneof contentfiles {
+    // The ID of an already-cached corpus.
+    string content_id             = 1;
+    // The path to a directory on the local system containing content files.
+    string local_directory        = 2;
+    // The path to a tarball archive file containing content files.
+    string local_tar_archive      = 3;
+    // The path to a bigQuery database containing files.
+    string bq_database            = 4;
+    // The path to a database of encoded files.
+    string pre_encoded_corpus_url = 5;
+  }
+  optional tokenizer tokenizer    = 6;
+  // A list of preprocessor passes to run on each contentfile in the corpus
+  // prior to training, in the order in which they are run.
+  repeated string preprocessor          = 7;
+  optional string contentfile_separator = 8;
+}
+
+// The tokenizer to use to encode the corpus.
+message tokenizer{
+  required string token_type             = 1;
+  optional string token_list             = 2;
+  optional bool   mask_tokens            = 3;
+  optional bool   wordpiece_tokenization = 4;
+}

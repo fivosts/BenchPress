@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+ 
+{% block body %}
+<div class="container">
+<div class="row">
+<div class="col">
+
+  <p><b>Model Specs:<br></b></p>
+
+  <p class="config">{% for config in data.config %}{{config}}<br>{% endfor %}</p>
+
+</div>
+</div>
+</div>
+{% endblock %}

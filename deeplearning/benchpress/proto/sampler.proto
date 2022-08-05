@@ -1,0 +1,129 @@
+// The file defines the protos for specificying CLgen samplers.
+//
+// Please ignore the "optional" proto syntax, ALL FIELDS MUST BE SET.
+// This is to ensure consistent hashing of proto instances to a unique checksum,
+// as default values are ommitted in serialized protos. Unfortunately, this
+// means setting a value to any new field in all of the proto files across this
+// entire repository (and any which are not tracked in this repo).
+//
+// Copyright (c) 2016-2020 Chris Cummins.
+//
+// clgen is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// clgen is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with clgen.  If not, see <https://www.gnu.org/licenses/>.
+
+syntax = "proto2";
+
+package clgen;
+
+option go_package = "clgenpb";
+option java_multiple_files = true;
+option java_outer_classname = "SamplerProto";
+option java_package = "com.clgen";
+
+import "deeplearning/clgen/proto/model.proto";
+import "deeplearning/clgen/proto/corpus.proto";
+import "deeplearning/clgen/proto/active_learning.proto";
+
+// The specification of a CLgen sampler.
+message Sampler {
+  // The initial text to the seed the language model with. Each sample will
+  // begin with this text.
+  oneof sample_feed {
+    // Simple string
+    string        start_text      = 1;
+    // Sample from training set
+    bool          train_set       = 2;
+    // Sample from validation set
+    bool          validation_set  = 3;
+    // Create set with new specs from original corpus
+    ValidationSet sample_set      = 4;
+    // Specify a whole new corpus to encode and sample with new specs.
+    SampleCorpus  sample_corpus   = 5;
+    // Sample live by getting input() from user.
+    bool          live_sampling   = 6;
+  }
+  // The sampling batch size.
+  // TODO(cec): Always sample with max batch size.
+  optional int32 batch_size = 7;
+  // The length of sampling sequences.
+  optional int32 sequence_length = 8;
+  // The sampling temperature. Must be >= 0. A recommended starting value is
+  // 1000000 (i.e. 1.0 in real values).
+  optional int32 temperature_micros = 9;
+  // The criteria that determine when to terminate a sample, in the order in
+  // which they will be executed. Duplicates are allowed, for example if you
+  // would like to have symmetrical token depth counters for two pairs of
+  // tokens.
+  repeated SampleTerminationCriterion termination_criteria = 10;
+}
+
+// Specification of a new sample corpus to get feeds from.
+message SampleCorpus {
+  optional CorpusConfig corpus_config = 1;
+  oneof input_corpus {
+    Corpus corpus     = 2;
+    string start_text = 3;
+  }
+}
+
+message CorpusConfig {
+  // Encoding and data masking configuration for sample corpus.
+  // sampling type can be 'normal', 'online', 'active'
+  // normal: corpus is pre-masked, then fed for predictions.
+  // online: A datapoint is requested from original corpus and masked on the fly.
+  // active: Same as online. Active learning is applied between sample and target features
+  oneof sampling_type {
+    bool           normal = 1;
+    bool           online = 2;
+    ActiveSampler  active = 3;
+  }
+  optional int32  max_predictions_per_seq = 4;
+  optional float  masked_lm_prob          = 5;
+  oneof mask_technique {
+    Mask mask = 6;
+    Hole hole = 7;
+    MaskSeq mask_seq = 8;
+  }
+}
+
+// Active Sampling specifications message.
+message ActiveSampler {
+  optional int32  active_search_depth   = 1;
+  optional int32  active_search_width   = 2;
+  optional float  active_dropout_prob   = 3;
+  optional int32  batch_size_per_feed   = 4;
+  optional string feature_space         = 5;
+  oneof target_features {
+    string target                = 6;
+    ActiveLearner active_learner = 7;
+  }
+}
+
+// Criteria used for determining when to stop sampling.
+message SampleTerminationCriterion {
+  oneof criterion {
+    MaxTokenLength maxlen = 1;
+    SymmetricalTokenDepth symtok = 2;
+  }
+}
+
+message MaxTokenLength {
+  // The maximum length of a sample, as a number of tokens. The length of the
+  // Sampler.start_text counts towards this total.
+  optional int32 maximum_tokens_in_sample = 1;
+}
+
+message SymmetricalTokenDepth {
+  optional string depth_increase_token = 1;
+  optional string depth_decrease_token = 2;
+}
