@@ -2,7 +2,7 @@ github_miner {
   path: "/media/fivosts/Second sata disk"
   data_format: folder
   big_query {
-    credentials: "/home/fivosts/PhD/Code/clgen/deeplearning/benchpress/github/2nd_acc_creds.json"
+    credentials: "/home/fivosts/PhD/Code/benchpress/deeplearning/benchpress/github/2nd_acc_creds.json"
     language: "opencl"
   }
 }

@@ -1,4 +1,4 @@
-workspace: "/home/foivos/PhD/Code/clgen/standard_scaler_workspace"
+workspace: "/home/foivos/PhD/Code/benchpress/standard_scaler_workspace"
 tokenizer: "/var/foivos/results/full_results/backup_tokenizer.pkl"
 evaluator {
   min_score {
