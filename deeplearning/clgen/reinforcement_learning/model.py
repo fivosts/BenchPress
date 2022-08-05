@@ -167,16 +167,21 @@ class ActionLanguageModelQV(torch.nn.Module):
       with_checkpoint              = False,
     )
     ## Decoder for token prediction, given features memory and source code.
+    if is_critic:
+      output_dim = 1
+      # self.language_model = language_model.backend.GetDecoderModule(
+      #   with_checkpoint = True,
+      #   without_label_head = True,
+      # )
+    else:
+      output_dim = config.vocab_size
     self.language_model = language_model.backend.GetDecoderModule(
       with_checkpoint = True,
       without_label_head = True,
     )
-    if is_critic:
-      output_dim = 1
-    else:
-      output_dim = config.vocab_size
     self.decoder = TokenHead(config, output_dim)
     self.softmax = torch.nn.Softmax(dim = -1)
+    self.critic  = is_critic
     return
 
   def forward(self,
@@ -188,7 +193,7 @@ class ActionLanguageModelQV(torch.nn.Module):
               decoder_position_ids : torch.LongTensor,
               encoder_input_features = None,
               ):
-    encoder_out = self.language_model(
+    encoder_out = self.encoder(
       input_ids      = encoder_feature_ids,
       input_mask     = encoder_feature_mask,
       position_ids   = encoder_position_ids,
