@@ -1,4 +1,4 @@
-workspace: "pact_data"
+workspace: "pact_plots"
 tokenizer: "pact_data/tokenizer.pkl"
 # Fig 2.1: Rodinia vs CLgen comp-mem plot
 evaluator {
