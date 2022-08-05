@@ -681,38 +681,40 @@ class torchBert(backends.BackendBase):
             self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
 
           if FLAGS.sample_per_epoch > 0:
-            sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
-            self.InitSampling(sampler, self.config.training.random_seed)
-            for _ in range(FLAGS.sample_per_epoch):
-              start_time   = datetime.datetime.utcnow()
-              self.InitSampleBatch(sampler)
-              org_inputs, input_ids, samples, indices = self.SampleNextIndices()
-              end_time = datetime.datetime.utcnow()
-              for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
-                try:
-                  stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
-                  compile_flag = 1
-                except ValueError:
-                  compile_flag = 0
+            if self.is_world_process_zero():
+              sampler, observers = self._getTestSampler(test_sampler, self.config.training.sequence_length)
+              self.InitSampling(sampler, self.config.training.random_seed)
+              for _ in range(FLAGS.sample_per_epoch):
+                start_time   = datetime.datetime.utcnow()
+                self.InitSampleBatch(sampler)
+                org_inputs, input_ids, samples, indices = self.SampleNextIndices()
+                end_time = datetime.datetime.utcnow()
+                for org, inp, sample, idxs in zip(org_inputs, input_ids, samples, indices):
+                  try:
+                    stdout = opencl.Compile(self.tokenizer.ArrayToCode(sample))
+                    compile_flag = 1
+                  except ValueError:
+                    compile_flag = 0
 
-                feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(sample))
-                sample_proto = model_pb2.Sample(
-                  train_step             = self.current_step,
-                  sample_feed            = sampler.start_text,
-                  original_input         = self.tokenizer.tokensToString(org,    with_formatting = True, ignore_token = self.tokenizer.padToken),
-                  text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
-                  encoded_text           = ",".join([str(t) for t in sample]),
-                  sample_indices         = ','.join([self.tokenizer.decoder[idx].replace('\n', '\\n') for idx in idxs]).replace('\n', '\\n'),
-                  encoded_sample_indices = ','.join([str(idx) for idx in idxs]),
-                  sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
-                  feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
-                  num_tokens             = len(sample),
-                  compile_status         = compile_flag,
-                  categorical_sampling   = self.samplesWithCategorical(),
-                  date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
-                )
-                for obs in observers:
-                  obs.OnSample(sample_proto)
+                  feature_vector = extractor.ExtractFeatures(self.tokenizer.ArrayToCode(sample))
+                  sample_proto = model_pb2.Sample(
+                    train_step             = self.current_step,
+                    sample_feed            = sampler.start_text,
+                    original_input         = self.tokenizer.tokensToString(org,    with_formatting = True, ignore_token = self.tokenizer.padToken),
+                    text                   = self.tokenizer.tokensToString(sample, with_formatting = True, ignore_token = self.tokenizer.padToken).replace("\\n", "\n"),
+                    encoded_text           = ",".join([str(t) for t in sample]),
+                    sample_indices         = ','.join([self.tokenizer.decoder[idx].replace('\n', '\\n') for idx in idxs]).replace('\n', '\\n'),
+                    encoded_sample_indices = ','.join([str(idx) for idx in idxs]),
+                    sample_time_ms         = int(round(1000 * ((end_time - start_time) / sampler.batch_size).total_seconds())),
+                    feature_vector         = "\n".join(["{}:{}".format(k, v) for (k, v) in feature_vector.items()]),
+                    num_tokens             = len(sample),
+                    compile_status         = compile_flag,
+                    categorical_sampling   = self.samplesWithCategorical(),
+                    date_added             = datetime.datetime.utcnow().strftime("%m/%d/%Y, %H:%M:%S"),
+                  )
+                  for obs in observers:
+                    obs.OnSample(sample_proto)
+            distrib.barrier()      
       except KeyboardInterrupt:
         pass
 
