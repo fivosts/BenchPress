@@ -94,13 +94,17 @@ class TokenizerBase(object):
   @classmethod
   def FromFile(cls, path: pathlib.Path) -> "TokenizerBase":
     """Load an tokenizer from file."""
-    with open(path, "rb") as infile:
-      return pickle.load(infile)
-
-  @classmethod
-  def FromTokenizer(cls, tokenizer: "TokenizerBase") -> "TokenizerBase":
-    """Update a tokenizer object by passing on the vocabulary to a new object type."""
-    raise NotImplementedError("Abstract Class")
+    try:
+      with open(path, "rb") as infile:
+        return pickle.load(infile)
+    except ModuleNotFoundError:
+      l.logger().error("Outdated path tokenizer found. Will create an alias to unpickle it.")
+      import sys
+      import deeplearning
+      import deeplearning.benchpress
+      sys.modules['deeplearning.clgen'] = deeplearning.benchpress
+      with open(path, "rb") as infile:
+        return pickle.load(infile)
 
   def __init__(self, 
                vocab: typing.Dict[str, int],
