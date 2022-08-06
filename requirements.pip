@@ -36,7 +36,6 @@ google-pasta==0.2.0
 google-resumable-media==1.0.0
 googleapis-common-protos==1.52.0
 grpcio==1.33.2
-# gym==0.24.0
 h5py==2.10.0
 humanize==0.5.1
 hyperlink==20.0.1
