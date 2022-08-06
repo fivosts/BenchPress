@@ -97,6 +97,11 @@ class TokenizerBase(object):
     with open(path, "rb") as infile:
       return pickle.load(infile)
 
+  @classmethod
+  def FromTokenizer(cls, tokenizer: "TokenizerBase") -> "TokenizerBase":
+    """Update a tokenizer object by passing on the vocabulary to a new object type."""
+    raise NotImplementedError("Abstract Class")
+
   def __init__(self, 
                vocab: typing.Dict[str, int],
                metaTokens: typing.Dict[str, str],
