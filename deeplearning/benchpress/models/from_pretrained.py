@@ -82,7 +82,8 @@ class PreTrainedModel(object):
     os.environ["PWD"] = str(config_path.parent)
 
     FLAGS.override_preprocessing = True
-    FLAGS.override_encoding = True
+    FLAGS.override_encoding      = True
+    FLAGS.sample_workload_size   = 1
     return PreTrainedModel(model_config, tokenizer_path, checkpoint_path)
 
   @property
