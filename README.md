@@ -22,7 +22,9 @@ $: ./benchpress
 
 >>> from deeplearning.benchpress.models.from_pretrained import PreTrainedModel
 >>> pretrained = PreTrainedModel.FromID("base_opencl")
->>> samples = pretrained.Sample("kernel void [HOLE]}")
+>>> texts, samples = pretrained.Sample("kernel void [HOLE]}")
+>>> for text in texts:
+...   print(text)
 >>> help(pretrained.Sample) # To list all Sample parameters.
 ```
 
