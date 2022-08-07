@@ -83,7 +83,6 @@ class PreTrainedModel(object):
 
     FLAGS.override_preprocessing = True
     FLAGS.override_encoding      = True
-    FLAGS.sample_workload_size   = 1
     return PreTrainedModel(model_config, tokenizer_path, checkpoint_path)
 
   @property
@@ -119,10 +118,20 @@ class PreTrainedModel(object):
     distrib.barrier()
     return
 
-  def Sample(self, prompt: str, batch_size: int = 1, temperature: float = 0.7) -> str:
+  def Sample(self,
+             prompt: str,
+             batch_size: int = 1,
+             temperature: float = 0.7,
+             sample_workload_size: int = 1,
+             sample_indices_limit: int = None
+             ) -> str:
     """
     Get a string input, tokenize and sample the backend online for a full code.
     """
+    FLAGS.sample_workload_size = sample_workload_size
+    if sample_indices_limit is not None:
+      FLAGS.sample_indices_limit = sample_indices_limit
+
     self.language_model.Create()
     encoded = self.tokenizer.TokenizeString(prompt)
     if self.tokenizer.holeToken not in encoded:
@@ -140,7 +149,7 @@ class PreTrainedModel(object):
     encoded = list(encoded) + [self.tokenizer.padToken] * (self.language_model.config.architecture.max_position_embeddings - len(encoded))
     test_sampler = self.getTestSampler(prompt, batch_size, temperature, self.language_model.config.architecture.max_position_embeddings)
     obs = [sample_observers.InMemorySampleSaver()]
-    self.language_model.Sample(test_sampler, obs)
+    self.language_model.Sample(test_sampler, obs, num_batches = 1)
     return obs[0].samples
 
   def getTestSampler(self,
