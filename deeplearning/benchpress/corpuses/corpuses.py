@@ -638,7 +638,7 @@ def GetHashOfArchiveContents(archive: pathlib.Path) -> str:
     UserError: If the requested archive does not exist, or cannot be unpacked.
   """
   if not (archive.parent / "corpus_registry.json").exists():
-    raise FileNotFoundError("corpus_registry.json file not found.")
+    return crypto.sha256_str("temporary_unknown_corpus")
 
   with open(archive.parent / "corpus_registry.json", 'r') as js:
     reg = json.load(js)
