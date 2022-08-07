@@ -1,4 +1,15 @@
 # Installation
+
+### TLDR
+
+`git clone` and `cd` into the repository and run:
+
+```
+mkdir build; cd build
+cmake ..
+make -j
+```
+
 ### Prerequisites [Optional]
 
 To install __BenchPress__ you need to have `cmake>=3.14` installed, and a few other standard apt packages. Inspect `requirements.apt` file to see what is required. Either `apt install` the listed packages or execute the script with sudo rights to install them. This step is optional.
