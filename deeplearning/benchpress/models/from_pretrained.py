@@ -18,13 +18,11 @@ Instance of pre-trained BenchPress Instances.
 In this mode, a checkpoint is fetched online and the model is only used
 for interactive sampling.
 """
-import typing
+import os
 import gdown
 import shutil
 import threading
 import pathlib
-import pickle
-import sys
 
 from deeplearning.benchpress.corpuses import tokenizers
 from deeplearning.benchpress.samplers import sample_observers
@@ -77,6 +75,7 @@ class PreTrainedModel(object):
     gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['checkpoint']), str(checkpoint_path))
 
     model_config = pbutil.FromFile(config_path, benchpress_pb2.Instance()).language_model
+    os.environ["PWD"] = str(config_path.parent)
 
     FLAGS.override_preprocessing = True
     FLAGS.override_encoding = True
