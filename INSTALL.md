@@ -1,6 +1,6 @@
 # Installation
 
-### TLDR
+## TLDR
 
 `git clone` and `cd` into the repository and run:
 
@@ -9,6 +9,8 @@ mkdir build; cd build
 cmake ..
 make -j
 ```
+
+## If it doesn't work
 
 ### Prerequisites [Optional]
 
