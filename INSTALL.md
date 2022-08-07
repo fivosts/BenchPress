@@ -5,11 +5,11 @@
 `git clone` and `cd` into the repository and run:
 
 ```
-mkdir build; cd build
-cmake ..
-make -j
-cd ..
-./benchpress --help
+$: mkdir build; cd build
+$: cmake ..
+$: make -j
+$: cd ..
+$: ./benchpress --help
 ```
 
 ## Else
@@ -27,7 +27,7 @@ __BenchPress__ uses `3.6<=python.version<=3.8`. `python3.8` is recommended. You 
 Build makefiles:
 
 ```
-cmake -S <path_to_src_root> -B <path_to_build_root> <-Dcmake_flag1, -Dcmake_flag2, ...>
+$: cmake -S <path_to_src_root> -B <path_to_build_root> <-Dcmake_flag1, -Dcmake_flag2, ...>
 ```
 For most of __BenchPress's__ functionalities (e.g. training and sampling the model), no cmake flags are required. The following build flags are supported:
 
@@ -42,11 +42,11 @@ For most of __BenchPress's__ functionalities (e.g. training and sampling the mod
 
 After you specify the build environment, `cd` into your build directory and:
 ```
-make -j
+$: make -j
 ```
 This will produce all libraries and binaries sandboxed in the build directory. At the root of the source directory an executable script `benchpress` will be built:
 ```
-./benchpress --help
+$: ./benchpress --help
 ```
 will list all available execution flags for the application.
 
