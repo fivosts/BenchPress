@@ -19,17 +19,18 @@ In this mode, a checkpoint is fetched online and the model is only used
 for interactive sampling.
 """
 import os
+import typing
 import gdown
 import shutil
 import threading
 import pathlib
-import numpy as np
 
 from deeplearning.benchpress.corpuses import tokenizers
 from deeplearning.benchpress.samplers import sample_observers
 from deeplearning.benchpress.samplers import samplers
-from deeplearning.benchpress.models import builders
+from deeplearning.benchpress.samplers import samples_database
 from deeplearning.benchpress.models import language_models
+from deeplearning.benchpress.preprocessors import opencl
 from deeplearning.benchpress.proto import model_pb2
 from deeplearning.benchpress.proto import sampler_pb2
 from deeplearning.benchpress.proto import benchpress_pb2
@@ -124,7 +125,7 @@ class PreTrainedModel(object):
              temperature: float = 0.7,
              sample_workload_size: int = 1,
              sample_indices_limit: int = None
-             ) -> str:
+             ) -> typing.Tuple[str, samples_database.Sample]:
     """
     Get a string input, tokenize and sample the backend online for a full code.
     """
@@ -133,24 +134,14 @@ class PreTrainedModel(object):
       FLAGS.sample_indices_limit = sample_indices_limit
 
     self.language_model.Create()
-    encoded = self.tokenizer.TokenizeString(prompt)
-    if self.tokenizer.holeToken not in encoded:
-      l.logger().error("[HOLE] token not found in prompt. BenchPress needs this meta token to perform infilling.")
-      return ""
-    if len(np.where(encoded == self.tokenizer.holeToken)) > 1:
-      l.logger().warn("BenchPress has been trained for single [HOLE] prompts only. Not sure how accurate it will be for multiple holes at the same time.")
-    if self.tokenizer.startToken in encoded or self.tokenizer.endToken in encoded:
+    if "[START]" in prompt or "[END]" in prompt:
       l.logger().error("Do not add [START] and [END] manually. They will be added automatically by the tokenizer.")
       return ""
-    encoded = [self.tokenizer.startToken] + encoded + [self.tokenizer.endToken]
-    if len(encoded) > self.language_model.config.architecture.max_position_embeddings:
-      l.logger().error("Length of prompt {} surpasses max position embeddings {}!".format(len(encoded), self.language_model.config.architecture.max_position_embeddings))
-      return
-    encoded = list(encoded) + [self.tokenizer.padToken] * (self.language_model.config.architecture.max_position_embeddings - len(encoded))
+    prompt = "[START]" + prompt + "[END]"
     test_sampler = self.getTestSampler(prompt, batch_size, temperature, self.language_model.config.architecture.max_position_embeddings)
     obs = [sample_observers.InMemorySampleSaver()]
     self.language_model.Sample(test_sampler, obs, num_batches = 1)
-    return obs[0].samples
+    return [opencl.ClangFormat(x.text) for x in obs[0].samples], obs[0].samples
 
   def getTestSampler(self,
                      prompt          : str,
