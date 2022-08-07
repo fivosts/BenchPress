@@ -332,6 +332,7 @@ class Model(object):
     sampler: 'samplers.Sampler',
     sample_observers: typing.List[sample_observers_lib.SampleObserver],
     seed: int = None,
+    num_batches: int = None,
   ) -> None:
     """Sample a model.
 
@@ -395,7 +396,11 @@ class Model(object):
 
     try:
       seq_count, cont, compiled = 0, True, 0
+      nb = 0
       while cont:
+        if num_batches and nb >= num_batches:
+          break
+        nb+=1
         cont, s, c = sample_batch()
         seq_count += s
         compiled += c
