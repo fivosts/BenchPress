@@ -1,5 +1,7 @@
 <p align="center">
+  <br>
 <img src="https://github.com/fivosts/clgen/blob/master/docs/logo.png" width="600px" />
+<br>
 </p>
 
 ***
