@@ -23,6 +23,7 @@ import gdown
 import shutil
 import threading
 import pathlib
+import numpy as np
 
 from deeplearning.benchpress.corpuses import tokenizers
 from deeplearning.benchpress.samplers import sample_observers
@@ -109,8 +110,8 @@ class PreTrainedModel(object):
         shutil.copyfile(tokenizer_path, self.language_model.corpus.tokenizer_path)
       if not (self.language_model.cache.path / "checkpoints" / "backup_tokenizer.pkl").exists():
         shutil.copyfile(tokenizer_path, self.language_model.cache.path / "checkpoints" / "backup_tokenizer.pkl")
-      if not (self.language_model.cache.path / "checkpoints" / "model-0").exists():
-        shutil.copyfile(checkpoint, self.language_model.cache.path / "checkpoints" / "model-0")
+      if not (self.language_model.cache.path / "checkpoints" / "model-0.pt").exists():
+        shutil.copyfile(checkpoint, self.language_model.cache.path / "checkpoints" / "model-0.pt")
       if not (self.language_model.cache.path / "checkpoints" / "checkpoint.meta").exists():
         with open(self.language_model.cache.path / "checkpoints" / "checkpoint.meta", 'w') as outf:
           outf.write("train_step: 0")
@@ -128,14 +129,14 @@ class PreTrainedModel(object):
       return ""
     if len(np.where(encoded == self.tokenizer.holeToken)) > 1:
       l.logger().warn("BenchPress has been trained for single [HOLE] prompts only. Not sure how accurate it will be for multiple holes at the same time.")
-    if self.tokenizer.startToken or self.tokenizer.endToken in encoded:
+    if self.tokenizer.startToken in encoded or self.tokenizer.endToken in encoded:
       l.logger().error("Do not add [START] and [END] manually. They will be added automatically by the tokenizer.")
       return ""
     encoded = [self.tokenizer.startToken] + encoded + [self.tokenizer.endToken]
     if len(encoded) > self.language_model.config.architecture.max_position_embeddings:
       l.logger().error("Length of prompt {} surpasses max position embeddings {}!".format(len(encoded), self.language_model.config.architecture.max_position_embeddings))
       return
-    encoded = encoded + [self.tokenizer.padToken] * (self.language_model.config.architecture.max_position_embeddings - len(encoded))
+    encoded = list(encoded) + [self.tokenizer.padToken] * (self.language_model.config.architecture.max_position_embeddings - len(encoded))
     test_sampler = self.getTestSampler(prompt, batch_size, temperature, self.language_model.config.architecture.max_position_embeddings)
     obs = sample_observers.InMemorySampleSaver()
     self.language_model.Sample(test_sampler, obs)
@@ -151,7 +152,7 @@ class PreTrainedModel(object):
         "start_text: \"{}\"".format(prompt),
         "batch_size: {}".format(batch_size),
         "sequence_length: {}".format(sequence_length),
-        "temperature_micros: {}".format(temperature * 10e6),
+        "temperature_micros: {}".format(int(temperature * 10e6)),
     ]
     mock_config = pbutil.FromString('\n'.join(sampler_str), sampler_pb2.Sampler())
     sampler = samplers.Sampler(mock_config, sample_db_name = None)
