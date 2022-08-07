@@ -161,16 +161,20 @@ def AnalyzeBeamSearch(**kwargs) -> None:
         stats[dbg.group_name] = {
           "zero_distance"    : 0,
           "total_epochs"     : 0,
+          "best_distance"    : [],
           "total_benchmarks" : len(benchmarks),
         }
+      stats[dbg.group_name]["best_distance"].append(math.inf)
       for dp in data:
         if dp.generation_id not in score_gens:
           score_gens[dp.generation_id] = dp.sample_quality
+          stats[dbg.group_name]['best_distance'][-1] = dp.sample_quality
           stats[dbg.group_name]['total_epochs'] += 1
           if dp.sample_quality == 0:
             stats[dbg.group_name]['zero_distance'] += 1
         else:
           score_gens[dp.generation_id] = min(score_gens[dp.generation_id], dp.sample_quality)
+          stats[dbg.group_name]['best_distance'][-1] = score_gens[dp.generation_id]
           if score_gens[dp.generation_id] == 0:
             stats[dbg.group_name]['zero_distance'] += 1
 
