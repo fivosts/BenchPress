@@ -52,3 +52,16 @@ If you have trained __BenchPress__ and ran a sampler to any downstream task you 
 $: export BENCHPRESS_BINARY=deeplearning/benchpress/experiments/evaluators.py
 $: ./benchpress --evaluator_config <path/to/your/evaluator.pbxt>
 ```
+
+## Utilities
+
+A range of useful ML utilities reside within __BenchPress's__ codebase that you may find useful. Inside `deeplearning/benchpress/util` you will find standalone modules such as:
+
+- `plotter.py`: A plotly interface that easily plots lines, scatters, radars, bars, groupped bars, stacked bars, histograms, distributions etc.
+- `distrib.py`: A utility module that handles distributed environments: barrier(), lock(), unlock(), broadcast_messages() etc.
+- `memory.py` : A RAM and GPU memory live tracker and plotter of your application.
+- `gpu.py`: Wrapper over `nvidia-smi` for GPU info.
+- `monitors.py`: A set of classes that monitor streaming data, store and plot.
+- `distributions.py`: Class for distribution operations. Populate distributions and do operations on them (+, -, /, *) and plot PMFs, PDFs.
+- `logging.py`: logging module with pretty colors.
+- and others!
