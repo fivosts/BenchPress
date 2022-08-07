@@ -277,7 +277,6 @@ def ConfigFromFlags() -> benchpress_pb2.Instance:
   if not config_path.is_file():
     raise FileNotFoundError (f"BenchPress --config file not found: '{config_path}'")
   config = pbutil.FromFile(config_path, benchpress_pb2.Instance())
-  os.environ["PWD"] = str(config_path.parent)
   return config
 
 def SampleObserversFromFlags(instance: Instance) -> typing.List[
