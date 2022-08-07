@@ -55,6 +55,17 @@ $: export BENCHPRESS_BINARY=deeplearning/benchpress/experiments/evaluators.py
 $: ./benchpress --evaluator_config <path/to/your/evaluator.pbxt>
 ```
 
+## Github and BigQuery mining
+
+__BenchPress__ provides modules to scrape source code from Github and store it into databases. Language specifications are set through protobuf files. See `model_zoo/github` for examples. For example
+
+```
+./benchpress --config model_zoo/github/bq_C_db.pbtxt
+```
+to scrape C repositories from BigQuery.
+
+__BenchPress__ comes with two datasets. A dataset of ~64,000 OpenCL kernels and a C dataset of ~6.5 million source files (about ~90 million functions). The OpenCL dataset is downloaded automatically if requested through a model description protobuf (see corpus field). The C database doesn't due to its size. If you are interested in it, get in touch.
+
 ## Utilities
 
 A range of useful ML utilities reside within __BenchPress's__ codebase that you may find useful. Inside `deeplearning/benchpress/util` you will find standalone modules such as:
