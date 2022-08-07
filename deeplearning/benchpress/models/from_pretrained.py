@@ -33,6 +33,7 @@ from deeplearning.benchpress.models import builders
 from deeplearning.benchpress.models import language_models
 from deeplearning.benchpress.proto import model_pb2
 from deeplearning.benchpress.proto import sampler_pb2
+from deeplearning.benchpress.proto import benchpress_pb2
 from deeplearning.benchpress.util import environment
 from deeplearning.benchpress.util import distrib
 from deeplearning.benchpress.util import pbutil
@@ -75,8 +76,7 @@ class PreTrainedModel(object):
     gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['tokenizer']), str(tokenizer_path))
     gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['checkpoint']), str(checkpoint_path))
 
-    model_config = model_pb2.Model()
-    model_config.CopyFrom(builders.AssertIsBuildable(model_config))
+    model_config = pbutil.FromFile(config_path, benchpress_pb2.Instance()).language_model
 
     FLAGS.override_preprocessing = True
     FLAGS.override_encoding = True
