@@ -60,9 +60,16 @@ class PreTrainedModel(object):
     if name not in PRETRAINED_MODELS:
       raise ValueError("Pre-trained model {} does not exist. Available models: {}".format(name, ', '.join([x for x in PRETRAINED_MODELS.keys()])))
 
-    config_path     = pathlib.Path(FLAGS.local_filesystem) / "from_pretrained" / "config.pbtxt"
-    tokenizer_path  = pathlib.Path(FLAGS.local_filesystem) / "from_pretrained" / "tokenizer.pkl"
-    checkpoint_path = pathlib.Path(FLAGS.local_filesystem) / "from_pretrained" / "model-0.pt"
+    tdir = "/tmp/"
+    if FLAGS.local_filesystem:
+      tdir = FLAGS.local_filesystem
+
+    config_path     = pathlib.Path(tdir) / "from_pretrained" / "config.pbtxt"
+    tokenizer_path  = pathlib.Path(tdir) / "from_pretrained" / "tokenizer.pkl"
+    checkpoint_path = pathlib.Path(tdir) / "from_pretrained" / "model-0.pt"
+
+    if environment.WORLD_RANK == 0:
+      config_path.parent.mkdir(exist_ok = True, parents = True)
 
     gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['config']), str(config_path))
     gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['tokenizer']), str(tokenizer_path))
