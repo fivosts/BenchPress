@@ -112,7 +112,7 @@ class PreTrainedModel(object):
       if not (self.language_model.cache.path / "checkpoints" / "model-0").exists():
         shutil.copyfile(checkpoint, self.language_model.cache.path / "checkpoints" / "model-0")
       if not (self.language_model.cache.path / "checkpoints" / "checkpoint.meta").exists():
-        with open(self.language_model.cache.path / "checkpoints" / "checkpoint.meta") as outf:
+        with open(self.language_model.cache.path / "checkpoints" / "checkpoint.meta", 'w') as outf:
           outf.write("train_step: 0")
     distrib.barrier()
     return
