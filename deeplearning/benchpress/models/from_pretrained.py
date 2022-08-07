@@ -138,9 +138,9 @@ class PreTrainedModel(object):
       return
     encoded = list(encoded) + [self.tokenizer.padToken] * (self.language_model.config.architecture.max_position_embeddings - len(encoded))
     test_sampler = self.getTestSampler(prompt, batch_size, temperature, self.language_model.config.architecture.max_position_embeddings)
-    obs = sample_observers.InMemorySampleSaver()
+    obs = [sample_observers.InMemorySampleSaver()]
     self.language_model.Sample(test_sampler, obs)
-    return obs.samples
+    return obs[0].samples
 
   def getTestSampler(self,
                      prompt          : str,
