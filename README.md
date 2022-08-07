@@ -15,8 +15,8 @@ __BenchPress__ is a directed program synthesizer for compiler benchmarks. Using 
 You want to see some __BenchPress__ samples fast ? You can fetch and run a pre-trained model and experiment with your own string prompts.
 
 ```
-export BENCHPRESS_BINARY=cmd
-./benchpress
+$: export BENCHPRESS_BINARY=cmd
+$: ./benchpress
 
 >>> from deeplearning.benchpress.models.from_pretrained import PreTrainedModel
 >>> pretrained = PreTrainedModel.FromID("base_opencl")
@@ -43,3 +43,12 @@ To see all available flags run `./benchpress --help/--helpfull`. Some relevant f
 ## Installation
 
 See `INSTALL.md` for instructions.
+
+## Evaluate the code
+
+If you have trained __BenchPress__ and ran a sampler to any downstream task you want to evaluate, you can use the codebase's evaluators. The evaluators usually take a list of database groups and perform operations/analysis/plotting on them. Evaluators are described in protobuf files (see examples in `model_zoo/evaluation/`). To run an evaluator run
+
+```
+$: export BENCHPRESS_BINARY=deeplearning/benchpress/experiments/evaluators.py
+$: ./benchpress --evaluator_config <path/to/your/evaluator.pbxt>
+```
