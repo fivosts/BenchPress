@@ -199,5 +199,12 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       title     = benchmark.name,
       **plot_config if plot_config else {},
     )
-
+  plotter.LogitsStepsDistrib(
+    x = [grp['zero_distance'] for grp in stats.values()],
+    atoms = [n for n in stats.items()],
+    sample_indices = [n for n in stats.items()],
+    path = workspace_path,
+    plot_name = "zero_distances_{}_{}".format(feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
+    **plot_config if plot_config else {},
+  )
   return
