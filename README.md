@@ -78,3 +78,6 @@ A range of useful ML utilities reside within __BenchPress's__ codebase that you 
 - `distributions.py`: Class for distribution operations. Populate distributions and do operations on them (+, -, /, *) and plot PMFs, PDFs.
 - `logging.py`: logging module with pretty colors.
 - and others!
+
+
+Share your ideas with me: <fivosts@gmail.com>
