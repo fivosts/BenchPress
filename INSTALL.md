@@ -10,7 +10,7 @@ cmake ..
 make -j
 ```
 
-## If it doesn't work
+## Else
 
 ### Prerequisites [Optional]
 
