@@ -15,7 +15,6 @@
 """
 Top-K or min distance of database groups against target benchmark suites.
 """
-from numpy import extract
 import tqdm
 import typing
 import math
