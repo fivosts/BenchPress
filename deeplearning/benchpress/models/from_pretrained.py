@@ -122,10 +122,11 @@ class PreTrainedModel(object):
   def Sample(self,
              prompt: str,
              batch_size: int = 1,
-             temperature: float = 0.7,
+             temperature: float = 0.6,
              sample_workload_size: int = 1,
              sample_indices_limit: int = None,
              print_samples: bool = True,
+             seed: int = None,
              ) -> typing.Tuple[str, samples_database.Sample]:
     """
     Get a string input, tokenize and sample the backend online for a full code.
@@ -143,7 +144,7 @@ class PreTrainedModel(object):
     obs = [sample_observers.InMemorySampleSaver()]
     if print_samples:
       obs.append(sample_observers.PrintSampleObserver())
-    self.language_model.Sample(test_sampler, obs, num_batches = 1)
+    self.language_model.Sample(test_sampler, obs, num_batches = 1, seed = seed)
     return [opencl.ClangFormat(x.text) for x in obs[0].samples], obs[0].samples
 
   def getTestSampler(self,
