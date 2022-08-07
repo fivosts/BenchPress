@@ -124,7 +124,8 @@ class PreTrainedModel(object):
              batch_size: int = 1,
              temperature: float = 0.7,
              sample_workload_size: int = 1,
-             sample_indices_limit: int = None
+             sample_indices_limit: int = None,
+             print_samples: bool = True,
              ) -> typing.Tuple[str, samples_database.Sample]:
     """
     Get a string input, tokenize and sample the backend online for a full code.
@@ -140,6 +141,8 @@ class PreTrainedModel(object):
     prompt = "[START]" + prompt + "[END]"
     test_sampler = self.getTestSampler(prompt, batch_size, temperature, self.language_model.config.architecture.max_position_embeddings)
     obs = [sample_observers.InMemorySampleSaver()]
+    if print_samples:
+      obs.append(sample_observers.PrintSampleObserver())
     self.language_model.Sample(test_sampler, obs, num_batches = 1)
     return [opencl.ClangFormat(x.text) for x in obs[0].samples], obs[0].samples
 
