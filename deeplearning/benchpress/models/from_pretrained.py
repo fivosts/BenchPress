@@ -56,7 +56,7 @@ class PreTrainedModel(object):
   and sampling.
   """
   @classmethod
-  def from_pretrained(name: str = "base_benchpress") -> "PreTrainedModel":
+  def FromID(cls, name: str = "base_benchpress") -> "PreTrainedModel":
     if name not in PRETRAINED_MODELS:
       raise ValueError("Pre-trained model {} does not exist. Available models: {}".format(name, ', '.join([x for x in PRETRAINED_MODELS.keys()])))
 
