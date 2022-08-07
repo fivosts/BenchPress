@@ -25,7 +25,7 @@ For most of __BenchPress's__ functionalities (e.g. training and sampling the mod
 - `-DBUILD_MUTEC=ON/OFF[Default: OFF]`: Builds `mutec` source code mutator and adds it to __BenchPress's__ environment. Details: https://github.com/chao-peng/mutec
 - `-DBUILD_SRCIROR=ON/OFF[Default: OFF]`: Builds `srciror` text-level and IR mutator and adds it to the environment. Details: https://github.com/TestingResearchIllinois/srciror
 
-After you specify the build environment, run:
+After you specify the build environment, `cd` into your build directory and:
 ```
 make -j
 ```
