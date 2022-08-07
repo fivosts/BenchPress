@@ -12,7 +12,7 @@ $: cd ..
 $: ./benchpress --help
 ```
 
-## Else
+## More info
 
 ### Prerequisites [Optional]
 
