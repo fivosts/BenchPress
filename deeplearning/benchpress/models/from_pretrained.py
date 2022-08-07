@@ -130,6 +130,21 @@ class PreTrainedModel(object):
              ) -> typing.Tuple[str, samples_database.Sample]:
     """
     Get a string input, tokenize and sample the backend online for a full code.
+
+    Args:
+      prompt:
+        String input to the language model.
+      batch_size:
+        Batch size for model inference.
+      temperature:
+        Sampling temperature
+      sample_workload_size:
+        How many batches to generate.
+      sample_indices_limit:
+        Add a limit to how many tokens BenchPress will generate for a hole.
+        By default BenchPress generates tokens until it thinks a sequence is complete
+        ([ENDHOLE] is generated). By setting this value, generation loop will be killed
+        after surpassing this threshold.
     """
     FLAGS.sample_workload_size = sample_workload_size
     if sample_indices_limit is not None:
