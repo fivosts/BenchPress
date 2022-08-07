@@ -44,7 +44,7 @@ from absl import app, flags
 FLAGS = flags.FLAGS
 
 PRETRAINED_MODELS = {
-  "base_benchpress": {
+  "base_opencl": {
     'config'     : "1Cr9I4b5mSZJgX9LqtC_38WRfEDkyJ9WO",
     'tokenizer'  : "14ZPYFgL-XT_Fknwmgp6nOatvLFS67QM1",
     'checkpoint' : "1ncwxzR23_a6IQqt4F4gIgTeduggD_N9w",
@@ -57,7 +57,7 @@ class PreTrainedModel(object):
   and sampling.
   """
   @classmethod
-  def FromID(cls, name: str = "base_benchpress") -> "PreTrainedModel":
+  def FromID(cls, name: str = "base_opencl") -> "PreTrainedModel":
     if name not in PRETRAINED_MODELS:
       raise ValueError("Pre-trained model {} does not exist. Available models: {}".format(name, ', '.join([x for x in PRETRAINED_MODELS.keys()])))
 
