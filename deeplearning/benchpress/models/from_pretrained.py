@@ -44,9 +44,9 @@ FLAGS = flags.FLAGS
 
 PRETRAINED_MODELS = {
   "base_benchpress": {
-    'config'     : "",
-    'tokenizer'  : "",
-    'checkpoint' : "",
+    'config'     : "1Cr9I4b5mSZJgX9LqtC_38WRfEDkyJ9WO",
+    'tokenizer'  : "14ZPYFgL-XT_Fknwmgp6nOatvLFS67QM1",
+    'checkpoint' : "1ncwxzR23_a6IQqt4F4gIgTeduggD_N9w",
   }
 }
 
