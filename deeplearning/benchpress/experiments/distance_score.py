@@ -131,6 +131,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     k, v = list(k), list(v)
     return k, v
 
+  stats = {}
   benchmarks = target.get_benchmarks(feature_space)
   for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
     keys, vals = feats_to_list(benchmark.features)
@@ -156,11 +157,23 @@ def AnalyzeBeamSearch(**kwargs) -> None:
         keys
       ]
       score_gens = {}
+      if dbg.group_name not in stats:
+        stats[dbg.group_name] = {
+          "zero_distance"    : 0,
+          "total_epochs"     : 0,
+          "total_benchmarks" : len(benchmarks),
+        }
       for dp in data:
         if dp.generation_id not in score_gens:
           score_gens[dp.generation_id] = dp.sample_quality
+          stats[dbg.group_name]['total_epochs'] += 1
+          if dp.sample_quality == 0:
+            stats[dbg.group_name]['zero_distance'] += 1
         else:
           score_gens[dp.generation_id] = min(score_gens[dp.generation_id], dp.sample_quality)
+          if score_gens[dp.generation_id] == 0:
+            stats[dbg.group_name]['zero_distance'] += 1
+
       generations_score[dbg.group_name] = {
         'data': [[idx, v] for idx, v in score_gens.items()],
         'names': [x for x, _ in score_gens.items()]
