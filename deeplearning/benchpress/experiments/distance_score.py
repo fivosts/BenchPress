@@ -166,6 +166,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
         'data': [[idx, v] for idx, v in score_gens.items()],
         'names': [x for x, _ in score_gens.items()]
       }
+    ## Benchmark characterization.
     plotter.GrouppedRadar(
       groups    = radar_features,
       plot_name = "feeds_radar_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
@@ -173,6 +174,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       title     = benchmark.name,
       **plot_config if plot_config else {},
     )
+    ## Score convergence per generation.
     plotter.GroupScatterPlot(
       groups    = generations_score,
       plot_name = "Beam_generation_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
