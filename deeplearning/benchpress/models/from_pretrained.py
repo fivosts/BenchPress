@@ -63,16 +63,19 @@ class PreTrainedModel(object):
     if FLAGS.local_filesystem:
       tdir = FLAGS.local_filesystem
 
-    config_path     = pathlib.Path(tdir) / "from_pretrained" / "config.pbtxt"
-    tokenizer_path  = pathlib.Path(tdir) / "from_pretrained" / "tokenizer.pkl"
-    checkpoint_path = pathlib.Path(tdir) / "from_pretrained" / "model-0.pt"
+    config_path     = pathlib.Path(tdir) / "from_pretrained" / name/ "config.pbtxt"
+    tokenizer_path  = pathlib.Path(tdir) / "from_pretrained" / name/ "tokenizer.pkl"
+    checkpoint_path = pathlib.Path(tdir) / "from_pretrained" / name/ "model-0.pt"
 
     if environment.WORLD_RANK == 0:
       config_path.parent.mkdir(exist_ok = True, parents = True)
 
-    gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['config']), str(config_path))
-    gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['tokenizer']), str(tokenizer_path))
-    gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['checkpoint']), str(checkpoint_path))
+    if not config_path.exists():
+      gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['config']), str(config_path))
+    if not tokenizer_path.exists():
+      gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['tokenizer']), str(tokenizer_path))
+    if not checkpoint_path.exists():
+      gdown.download("https://drive.google.com/uc?id={}".format(PRETRAINED_MODELS[name]['checkpoint']), str(checkpoint_path))
 
     model_config = pbutil.FromFile(config_path, benchpress_pb2.Instance()).language_model
     os.environ["PWD"] = str(config_path.parent)
