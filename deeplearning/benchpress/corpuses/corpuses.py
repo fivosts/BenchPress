@@ -304,6 +304,16 @@ class Corpus(object):
           yield list(x.indices_array)
     return
 
+  def GetTrainingDataFeaturesGenerator(self, offset: int = None) -> typing.Generator:
+    with self.encoded.get_session() as session:
+      if offset is None:
+        for x in session.query(encoded.EncodedContentFile).yield_per(1000000):
+          yield list(x.indices_array), x.features
+      else:
+        for x in session.query(encoded.EncodedContentFile).offset(offset).yield_per(1000000):
+          yield list(x.indices_array), x.features
+    return
+
   def GetTrainingData(self,
                       shuffle: bool = False,
                       sequence_length: int = False,
