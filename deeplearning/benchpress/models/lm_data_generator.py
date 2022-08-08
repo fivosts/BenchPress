@@ -330,6 +330,7 @@ class MaskLMDataGenerator(object):
     else:
       self.num_train_steps = self.training_opts.num_train_steps
     shaped_corpus = self.createCorpus(self.cache.path)
+    distrib.barrier()
     if self.config.datapoint_time == "pre":
       if self.feature_encoder:
         raise NotImplementedError("Pre masking corpus does not work with feature encoding model.")
@@ -531,6 +532,7 @@ class MaskLMDataGenerator(object):
         raise FileNotFoundError("Trying to sample training dataset, but it doesn't exist!")
 
       shaped_corpus = self.createCorpus(path)
+      distrib.barrier()
 
       if self.sampler.config.HasField("sample_set"):
         config_list = [self.sampler.config.sample_set]
@@ -649,9 +651,7 @@ class MaskLMDataGenerator(object):
               json.dump(cache_lengths, outf)
           kernel_length_monitor.plot()
           pool.close()
-          distrib.barrier()
         else:
-          distrib.barrier()
           if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
             return []
           else:
@@ -785,7 +785,6 @@ class MaskLMDataGenerator(object):
           fm.plot()
       with open(path / corpus_file, 'wb') as outf:
         pickle.dump(shaped_corpus, outf)
-    distrib.barrier()
     return shaped_corpus
 
   def _maskCorpus(self,
