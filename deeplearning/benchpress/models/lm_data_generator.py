@@ -233,7 +233,7 @@ def AssertConfigIsValid(config: model_pb2.DataGenerator) -> model_pb2.DataGenera
     )
   return config
 
-def _addStartEndPadToken(inp: list, tokenizer, trunc: int = None, seq_len: int = None) -> typing.Tuple[int, np.array]:
+def _addStartEndPadToken(inp: typing.Union[list, tuple], tokenizer, trunc: int = None, seq_len: int = None) -> typing.Tuple[int, np.array]:
   """
   Inserts [START] and [END] token at the beginnning and end of a sequence
   
@@ -244,6 +244,9 @@ def _addStartEndPadToken(inp: list, tokenizer, trunc: int = None, seq_len: int =
     [START] + input_sequence + [END]
   """
   tokenizer = pickle.loads(tokenizer)
+  features = None
+  if isinstance(inp, tuple):
+    inp, features = inp
   try:
     if trunc is not None:
       inp = inp[:trunc]
@@ -260,7 +263,10 @@ def _addStartEndPadToken(inp: list, tokenizer, trunc: int = None, seq_len: int =
     rlen = len(ret)
     if seq_len is not None:
       ret += [tokenizer.padToken] * (seq_len - len(ret))
-    return rlen, np.array(ret)
+    if features:
+      return rlen, np.array(ret), features
+    else:
+      return rlen, np.array(ret)
   except AssertionError:
     return None
 
@@ -624,9 +630,19 @@ class MaskLMDataGenerator(object):
                                 seq_len   = sequence_length),
                               self.corpus.GetTrainingDataGenerator()):
             if dp:
-              rlen, enc_kernel = dp
+              input_features = None
+              if self.feature_encoder:
+                rlen, enc_kernel, input_features = dp
+              else:
+                rlen, enc_kernel = dp
               kernel_length_monitor.register(rlen)
-              encoded_corpus.append(enc_kernel)
+              if self.feature_encoder:
+                for fspace in extractor.extractors.KEYS():
+                  if fspace in input_features:
+                    encoded_features = self.feature_tokenizer.TokenizeFeatureVector(input_features[fspace], fspace = fspace, seq_len = self.feature_sequence_length)
+                    encoded_corpus.append((enc_kernel, encoded_features))
+              else:
+                encoded_corpus.append(enc_kernel)
             i += 1
             if i % chunk_size == 0:
               encoded_corpus = np.array(encoded_corpus)
@@ -641,7 +657,10 @@ class MaskLMDataGenerator(object):
               encoded_corpus = []
             bar.update(1)
           if encoded_corpus:
-            encoded_corpus = np.array(encoded_corpus)
+            if self.feature_encoder:
+              encoded_corpus = np.array(encoded_corpus, dtype = object)
+            else:
+              encoded_corpus = np.array(encoded_corpus)
             l.logger().info("Storing chunk {}, len: {}".format(ch_idx, encoded_corpus.shape))
             corpus_file = "pre_corpus_{}.pkl".format(ch_idx)
             cache_lengths[corpus_file] = len(encoded_corpus)
