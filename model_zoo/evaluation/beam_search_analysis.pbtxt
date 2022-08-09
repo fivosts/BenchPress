@@ -1,26 +1,4 @@
 workspace: "/private/home/foivos/baseopencl_vs_baseopenclfeats"
-# evaluator {
-#   human_likeness {
-#     target: "rodinia"
-#     top_k: 1
-#     feature_space: "GreweFeatures"
-#     db_group {
-#       group_name: "BenchPress_base"
-#       db_type: "ActiveFeedDatabase"
-#       database: "/checkpoint/foivos/base_opencl/AST/sampler/6237d2a012cedcd7b177350433b495a76c18097d/sample_corpus/active_feeds.db"
-#     }
-#     db_group {
-#       group_name: "BenchPress_base_feat"
-#       db_type: "ActiveFeedDatabase"
-#       database: "/checkpoint/foivos/base_opencl_features/AST/sampler/c6fcf7cb396bd193e77c1a272e359e7076580f9d/sample_corpus/active_feeds.db"
-#     }
-#     db_group {
-#       group_name: "InCoder"
-#       db_type: "ActiveFeedDatabase"
-#       database: "/checkpoint/foivos/incoder_workspace_grewe/AST/sampler/b715557452daa7a43d8dd175fd7120f1ca6f7309/sample_corpus/active_feeds.db"
-#     }
-#   }
-# }
 evaluator {
   analyze_beam_search {
     target: "rodinia"
