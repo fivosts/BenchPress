@@ -800,7 +800,8 @@ class torchBert(backends.BackendBase):
             masked_lm_loss     = step_out['masked_lm_loss'    ].cpu()
             # next_sentence_loss = step_out['next_sentence_loss'].cpu()
 
-          avg_mask_loss.append(masked_lm_loss.mean().item())
+          avg_mlm_loss = [x.mean().item() for x in masked_lm_loss]
+          avg_mask_loss.append(sum(avg_mlm_loss) / len(avg_mlm_loss))
           # avg_nsp_loss.append(next_sentence_loss.mean().item())
       except KeyboardInterrupt:
         pass
