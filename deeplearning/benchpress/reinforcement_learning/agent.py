@@ -192,7 +192,7 @@ class Agent(object):
 
 
     ########### DOES LM WORK ALONE ?
-    code = "[START]kernel void[HOLE][END]"
+    code = "[START][HOLE]kernel[END]"
     encoded = list(self.tokenizer.TokenizeString(code))
     encoded = encoded + [self.tokenizer.padToken] * (self.language_model.backend.config.architecture.max_position_embeddings - len(encoded))
 
@@ -210,7 +210,7 @@ class Agent(object):
     )
 
     preds = torch.argmax(out['prediction_logits'], dim = -1)
-    l.logger().info(self.tokenizer.tokensToString([int(x) for x in preds.squeeze(0).cpu()]))
+    l.logger().info(self.tokenizer.tokensToString([int(x) for x in preds.squeeze(0)[:10].cpu()]))
 
     ########### DOES LM WORK ALONE ?
 
@@ -721,6 +721,12 @@ class Agent(object):
         step_token_values_probs = step_token_values_probs[(ep_idx, seq_idx)]
         # According to policy, select the best token.
         step_tokens = self.policy.SampleTokens(step_token_logits)
+
+        for inp in lm_input_ids:
+          l.logger().info(self.tokenizer.tokensToString([int(x) for x in inp], ignore_token = self.tokenizer.padToken))
+        for preds in step_tokens:
+          l.logger().info(self.tokenizer.tokensToString([int(preds)], ignore_token = self.tokenizer.padToken))
+        input()
         # Get probability of said token, per episode.
         step_token_probs = step_token_probs[(torch.arange(step_token_probs.shape[0]), step_tokens)]
 
