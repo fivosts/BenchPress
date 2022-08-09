@@ -27,6 +27,7 @@ from deeplearning.benchpress.experiments import public
 from deeplearning.benchpress.experiments import clsmith
 from deeplearning.benchpress.experiments import workers
 from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.util import distributions
 from deeplearning.benchpress.util import logging as l
 
 @public.evaluator
@@ -162,6 +163,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
           "zero_distance"    : 0,
           "total_epochs"     : 0,
           "best_distance"    : [],
+          "singleshot_distance": [],
           "total_benchmarks" : len(benchmarks),
         }
       stats[dbg.group_name]["best_distance"].append(math.inf)
@@ -169,14 +171,14 @@ def AnalyzeBeamSearch(**kwargs) -> None:
         if dp.generation_id not in score_gens:
           score_gens[dp.generation_id] = dp.sample_quality
           stats[dbg.group_name]['best_distance'][-1] = dp.sample_quality
-          stats[dbg.group_name]['total_epochs'] += 1
-          if dp.sample_quality == 0:
-            stats[dbg.group_name]['zero_distance'] += 1
+          stats[dbg.group_name]['singleshot_distance'][-1] = dp.sample_quality
         else:
           score_gens[dp.generation_id] = min(score_gens[dp.generation_id], dp.sample_quality)
           stats[dbg.group_name]['best_distance'][-1] = score_gens[dp.generation_id]
-          if score_gens[dp.generation_id] == 0:
-            stats[dbg.group_name]['zero_distance'] += 1
+
+      stats[dbg.group_name]['total_epochs'] += len(list(score_gens.keys()))
+      if stats[dbg.group_name]['best_distance'][-1] == 0:
+        stats[dbg.group_name]['zero_distance'] += 1
 
       generations_score[dbg.group_name] = {
         'data': [[idx, v] for idx, v in score_gens.items()],
@@ -199,20 +201,39 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       title     = benchmark.name,
       **plot_config if plot_config else {},
     )
-  plotter.LogitsStepsDistrib(
-    x = [grp['zero_distance'] for grp in stats.values()],
-    atoms = [n for n in stats.items()],
-    sample_indices = [n for n in stats.items()],
+  plotter.GrouppedBars(
+    groups = {
+      '#zero_distanced': (
+        list(stats.keys()),
+        [x['zero_distance'] for x in stats.values()],
+      )
+    },
     plot_name = "zero_distances_{}_{}".format(feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
     path = workspace_path,
     **plot_config if plot_config else {},
   )
-  plotter.LogitsStepsDistrib(
-    x = [grp['total_epochs'] for grp in stats.values()],
-    atoms = [n for n in stats.items()],
-    sample_indices = [n for n in stats.items()],
+  plotter.GrouppedBars(
+    groups = {
+      '#total_epochs': (
+        list(stats.keys()),
+        [x['total_epochs'] for x in stats.values()],
+      )
+    },
     plot_name = "total_epochs_{}_{}".format(feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
     path = workspace_path,
     **plot_config if plot_config else {},
   )
+  base_dist = distributions.GenericDistribution(
+    samples = [int(x*10) for x in stats['Base']['best_distance']],
+    log_path = workspace_path,
+    set_name = "Base_best_dist_distr_{}".format(feature_space)
+  )
+  feat_dist = distributions.GenericDistribution(
+    samples = [int(x*10) for x in stats['Feature_Head']['best_distance']],
+    log_path = workspace_path,
+    set_name = "FeatHead_best_dist_distr_{}".format(feature_space)
+  )
+  base_dist.plot()
+  feat_dist.plot()
+  (base_dist - feat_dist).plot()
   return
