@@ -69,7 +69,7 @@ language_model {
       use_start_end : true
       truncate_large_kernels: true
       steps_per_epoch: 20000
-      validation_split: 10
+      validation_split: 0
       hole {
         relative_length: 1.0
         uniform_distribution: true
