@@ -171,7 +171,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
         if dp.generation_id not in score_gens:
           score_gens[dp.generation_id] = dp.sample_quality
           stats[dbg.group_name]['best_distance'][-1] = dp.sample_quality
-          stats[dbg.group_name]['singleshot_distance'][-1] = dp.sample_quality
+          stats[dbg.group_name]['singleshot_distance'].append(dp.sample_quality)
         else:
           score_gens[dp.generation_id] = min(score_gens[dp.generation_id], dp.sample_quality)
           stats[dbg.group_name]['best_distance'][-1] = score_gens[dp.generation_id]
@@ -236,4 +236,18 @@ def AnalyzeBeamSearch(**kwargs) -> None:
   base_dist.plot()
   feat_dist.plot()
   (base_dist - feat_dist).plot()
+
+  single_base_dist = distributions.GenericDistribution(
+    samples = [int(x*10) for x in stats['Base']['singleshot_distance']],
+    log_path = workspace_path,
+    set_name = "Base_single_dist_distr_{}".format(feature_space)
+  )
+  single_feat_dist = distributions.GenericDistribution(
+    samples = [int(x*10) for x in stats['Feature_Head']['singleshot_distance']],
+    log_path = workspace_path,
+    set_name = "FeatHead_single_dist_distr_{}".format(feature_space)
+  )
+  single_base_dist.plot()
+  single_feat_dist.plot()
+  (single_base_dist - single_feat_dist).plot()
   return
