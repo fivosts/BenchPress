@@ -662,7 +662,7 @@ class torchBert(backends.BackendBase):
           if self.pytorch.num_nodes > 1:
             loader.sampler.set_epoch(epoch)
 
-          if FLAGS.validate_per_epoch and self.train.data_generator.config.validation_split > 0:
+          if FLAGS.validate_per_epoch > 0 and self.train.data_generator.config.validation_split > 0:
             val_ml_loss = self.Validate(per_epoch = True, pre_train = pre_train)
             if self.is_world_process_zero():
               train_hook.end_epoch(
