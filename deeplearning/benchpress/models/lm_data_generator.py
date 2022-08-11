@@ -671,10 +671,7 @@ class MaskLMDataGenerator(object):
           kernel_length_monitor.plot()
           pool.close()
         else:
-          if len(glob.glob(str(path / "pre_corpus_*.pkl"))) > 0:
-            return []
-          else:
-            raise FileNotFoundError(glob.glob(str(path / "pre_corpus_*.pkl")))
+          return []
         return encoded_corpus
       else:
         if environment.WORLD_RANK == 0:
