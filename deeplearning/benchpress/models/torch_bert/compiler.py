@@ -34,6 +34,12 @@ flags.DEFINE_integer(
   "Hard-stop model generating more indices per sample than this specified integer."
 )
 
+flags.DEFINE_boolean(
+  "match_braces",
+  False,
+  "Set True to stop sampling when braces ('{', '}') exist and match in numbers."
+)
+
 class CompilationSampler(object):
   """
   Compilation driven generation handler.
@@ -328,6 +334,10 @@ class CompilationSampler(object):
     queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze()
     if workload_input_features is not None:
       queue_input_features = torch.reshape(workload_input_features, (1, nseq, feature_sequence_length)).squeeze()
+    if FLAGS.match_braces is not None:
+      brace_count = torch.full((batch_size, 2), 0, dtype = torch.int64).to(device)
+      brace_count[:,0] = torch.where(input_ids == self.tokenizer.vocab['{'])[0]
+      brace_count[:,1] = torch.where(input_ids == self.tokenizer.vocab['}'])[0]
 
     #! This is the return queue [nseq x sequence_length].
     queue = torch.zeros(tuple(queue_input_ids.shape), dtype = torch.int64).to(device)
@@ -338,7 +348,8 @@ class CompilationSampler(object):
       sample_indices,
       sidx_length if FLAGS.sample_indices_limit else None,
       prediction_scores,
-      device
+      device,
+      brace_count = brace_count if FLAGS.match_braces else None,
     )
     open_holes   = torch.where(new_holes == True)[0].to(device)
     closed_holes = torch.where(new_holes == False)[0]
@@ -367,6 +378,10 @@ class CompilationSampler(object):
         sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0, dtype = torch.int64).to(device)), 0)
       w_idx += res
 
+    if FLAGS.match_braces is not None:
+      brace_count[:,0] = torch.where(input_ids == self.tokenizer.vocab['{'])[0]
+      brace_count[:,1] = torch.where(input_ids == self.tokenizer.vocab['}'])[0]
+
     while w_idx < nseq or torch.any(new_holes):
 
       prediction_scores, _, _, _ = model.get_output(
@@ -379,7 +394,8 @@ class CompilationSampler(object):
         sample_indices,
         sidx_length if FLAGS.sample_indices_limit else None,
         prediction_scores,
-        device
+        device,
+        brace_count = brace_count if FLAGS.match_braces else None,
       )
       # Fill these holes.
       open_holes   = torch.where(new_holes == True)[0].to(device)
@@ -410,6 +426,9 @@ class CompilationSampler(object):
         if FLAGS.sample_indices_limit:
           sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0, dtype = torch.int64).to(device)), 0)
         w_idx += res
+      if FLAGS.match_braces is not None:
+        brace_count[:,0] = torch.where(input_ids == self.tokenizer.vocab['{'])[0]
+        brace_count[:,1] = torch.where(input_ids == self.tokenizer.vocab['}'])[0]
     return queue, sample_indices
 
   def StepHoleSeq(self,
@@ -418,7 +437,8 @@ class CompilationSampler(object):
                   sample_indices    : torch.LongTensor,
                   indices_lengths   : torch.LongTensor,
                   prediction_scores : torch.LongTensor,
-                  device,
+                  device            : torch.device,
+                  brace_count       : torch.LongTensor = None,
                   ) -> typing.Tuple[
                          bool,
                          torch.LongTensor,
@@ -455,7 +475,10 @@ class CompilationSampler(object):
       else:
         # Replace with prediction and keep hole.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx:][:-1]), 0)
-        new_hole[seq_idx] = True
+        if brace_count is not None and brace_count[seq_idx][0] > 0 and brace_count[seq_idx][1] == brace_count[seq_idx][0]:
+          new_holes[seq_idx] = False
+        else:
+          new_hole[seq_idx] = True
       q_idx = batch_idxs[seq_idx]
       sample_indices[q_idx][el_idx] = predictions[seq_idx]
       if indices_lengths is not None:
@@ -470,6 +493,7 @@ class CompilationSampler(object):
                   indices_lengths   : torch.LongTensor,
                   prediction_scores : torch.LongTensor,
                   device,
+                  brace_count       : torch.LongTensor = None,
                   ) -> typing.Tuple[
                          bool,
                          torch.LongTensor,
