@@ -492,7 +492,7 @@ class torchBert(backends.BackendBase):
       del self.train
       self.train = None
       return
-      
+
     self.current_step = self.loadCheckpoint(self.train, pre_train = pre_train)
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
