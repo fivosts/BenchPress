@@ -476,7 +476,7 @@ class CompilationSampler(object):
         # Replace with prediction and keep hole.
         batch[seq_idx] = torch.cat((batch[seq_idx][:el_idx], predictions[seq_idx].unsqueeze(0), batch[seq_idx][el_idx:][:-1]), 0)
         if brace_count is not None and brace_count[seq_idx][0] > 0 and brace_count[seq_idx][1] == brace_count[seq_idx][0]:
-          new_holes[seq_idx] = False
+          new_hole[seq_idx] = False
         else:
           new_hole[seq_idx] = True
       q_idx = batch_idxs[seq_idx]
