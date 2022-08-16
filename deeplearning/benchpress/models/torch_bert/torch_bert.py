@@ -476,6 +476,12 @@ class torchBert(backends.BackendBase):
     """
     Main training entry point.
     """
+
+    if FLAGS.only_sample:
+      del self.train
+      self.train = None
+      return
+
     self._ConfigTrainParams(
       torchLMDataGenerator.TrainMaskLMBatchGenerator(
         corpus, self.config.training,
@@ -487,11 +493,6 @@ class torchBert(backends.BackendBase):
         self.feature_sequence_length,
       ), pre_train
     )
-
-    if FLAGS.only_sample:
-      del self.train
-      self.train = None
-      return
 
     self.current_step = self.loadCheckpoint(self.train, pre_train = pre_train)
     if self.pytorch.num_gpus > 0:
