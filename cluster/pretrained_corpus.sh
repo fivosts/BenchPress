@@ -7,6 +7,7 @@
 #SBATCH --partition=learnfair,learnlab
 #SBATCH --ntasks-per-node 8
 #SBATCH --requeue
+#SBATCH --constraint volta32gb
 #SBATCH -e slurm_logs/pretrain_base-%j.err
 #SBATCH -o slurm_logs/pretrain_base-%j.out
 #SBATCH --mail-user=foivos@fb.com
