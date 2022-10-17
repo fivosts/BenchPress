@@ -374,8 +374,8 @@ function(setup_python)
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m pip install virtualenv
       COMMAND ${PYTHON} -m virtualenv --python=python3 ${LOCAL}/env
-      COMMAND ${PYTHON_ENV} -m pip install wheel setuptools==53.1.0
-      COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==21.0.1
+      COMMAND ${PYTHON_ENV} -m pip install wheel setuptools==58.0.4
+      COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==22.3
       COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check --upgrade -r ${CMAKE_SOURCE_DIR}/requirements.pip
       DEPENDS python
       COMMENT "Installing python package dependencies"
@@ -384,8 +384,8 @@ function(setup_python)
     add_custom_target(requirements ALL
       COMMAND ${PYTHON} -m pip install virtualenv
       COMMAND ${PYTHON} -m virtualenv --python=python3 ${LOCAL}/env
-      COMMAND ${PYTHON_ENV} -m pip install wheel setuptools==53.1.0
-      COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==21.0.1
+      COMMAND ${PYTHON_ENV} -m pip install wheel setuptools==58.0.4
+      COMMAND ${PYTHON_ENV} -m pip install --upgrade pip==22.3
       COMMAND ${PYTHON_ENV} -m pip install --disable-pip-version-check --upgrade -r ${CMAKE_SOURCE_DIR}/requirements.pip
       COMMENT "Installing python package dependencies"
     )
