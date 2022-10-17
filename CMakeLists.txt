@@ -59,8 +59,8 @@ function(find_binaries)
 
     # Append to python default if PYTHON variable is not explicitly defined.
     if ("${PYTHON}" STREQUAL "")
-      set(PYTHON python3 CACHE FILEPATH
-        "Provide specific python for application. Default: [python3]. Ignored if BUILD_FROM_SOURCE is enabled."
+      set(PYTHON python3.8 CACHE FILEPATH
+        "Provide specific python for application. Default: [python3.8]. Ignored if BUILD_FROM_SOURCE is enabled."
         FORCE
       )
     endif()
@@ -90,7 +90,7 @@ function(find_binaries)
       message("-- Python binary found in " ${PYTHON_FOUND})
       set(PYTHON_FROM_SOURCE OFF PARENT_SCOPE)
     elseif (NOT PYTHON_FOUND)
-      message(WARNING "-- Python binary " ${PYTHON_FOUND} " not found. Will install python3.7 from source.")
+      message(WARNING "-- Python binary " ${PYTHON_FOUND} " not found. Will install python3.8 from source.")
       set(PYTHON_FROM_SOURCE ON PARENT_SCOPE)
     else()
         message(FATAL_ERROR "-- Unknown python binary error. Aborting.")
@@ -131,8 +131,8 @@ function(install_external_deps)
   if (PYTHON_FROM_SOURCE)
     # Python 3.7.5 from source
     ExternalProject_Add(python
-      URL               https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tar.xz
-      URL_MD5           08ed8030b1183107c48f2092e79a87e2
+      URL               https://www.python.org/ftp/python/3.8.15/Python-3.8.15.tar.xz
+      URL_MD5           cca78a827d2327f5c3ff2dee9f526e7e
       PREFIX            ${THIRD_PARTY}
       TMP_DIR           ${THIRD_PARTY}/tmp
       STAMP_DIR         ${THIRD_PARTY}/stamp
@@ -142,7 +142,7 @@ function(install_external_deps)
       INSTALL_DIR       ${LOCAL}
       CONFIGURE_COMMAND ${THIRD_PARTY}/python/python/configure --prefix=${LOCAL} --enable-optimizations --enable-loadable-sqlite-extensions
     )
-    set(PYTHON          ${LOCAL}/bin/python3.7 PARENT_SCOPE)
+    set(PYTHON          ${LOCAL}/bin/python3.8 PARENT_SCOPE)
   endif()
 
   if (BOOST_FROM_SOURCE)

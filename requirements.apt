@@ -7,14 +7,14 @@ function install_apt_deps()
   read is_sudo
   if [[ $is_sudo == "y" || $is_sudo == "Y" || $is_sudo == "yes" || $is_sudo == "Yes" || $is_sudo == "YES" ]]
   then
-    echo "-- Select python version to install. [Default]: python3.7"
+    echo "-- Select python version to install. [Default]: python3.8"
     read python_version
     if [[ $python_version == "" ]]
     then
-      python_version="python3.7"
-    elif [[ $python_version != "python3.5" && $python_version != "python3.6" && $python_version != "python3.7" && $python_version != "python3.8" ]]
+      python_version="python3.8"
+    elif [[ $python_version != "python3.8" ]]
     then
-      echo "-- $python_version not recognized. Exiting..."
+      echo "-- $python_version not supported. Exiting..."
       exit
     else
       echo "-- Selected $python_version"
@@ -64,13 +64,13 @@ function install_apt_deps()
     echo "-- This script could install gcc from source, but will not. The complexity would rise significantly and weird dependencies would come up (installing gcc from source needs cmake, but cmake will be updated in the next step, if version >= 3.13 is not found."
     echo "-- If you do not have have gcc >= 6, it means your machine has not been updated since April 27, 2016 (https://www.gnu.org/software/gcc/gcc-6/)."
     echo -e "   In this case, \e[4m$(tput bold)failure to build this project is not my concern!$(tput sgr0)\e[0m"
-    echo "-- python3.7 and protobuf compiler CAN be installed from source during cmake phase. If you desire this, all you need to do is run cmake with -DBUILD_FROM_SOURCE=ON flag."
+    echo "-- python3.8 and protobuf compiler CAN be installed from source during cmake phase. If you desire this, all you need to do is run cmake with -DBUILD_FROM_SOURCE=ON flag."
     echo "-- If any of the remaining packages are missing and the building process crashes"
     echo -e "   \e[4m$(tput bold)It is not of my concern!$(tput sgr0)\e[0m"
     echo "-- "
     echo "-- "
     echo "-- "
-    echo "-- TLDR; Ask your admin for gcc >= 7 (6 should be ok too) or install from source. Fear not about python3.7 and protobuf compiler; will be installed from source during cmake process. If anything crashes or command not found, ask your admin to install the apt packages included in this script."
+    echo "-- TLDR; Ask your admin for gcc >= 7 (6 should be ok too) or install from source. Fear not about python3.8 and protobuf compiler; will be installed from source during cmake process. If anything crashes or command not found, ask your admin to install the apt packages included in this script."
     echo "-- Press any key to continue."
     read $hit_continue
   fi
