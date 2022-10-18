@@ -52,7 +52,7 @@ language_model {
     num_train_steps: 10000000
     num_warmup_steps: 20000
     sequence_length: 512
-    batch_size: 32
+    batch_size: 64
     max_predictions_per_seq: 1
     dupe_factor: 1
     masked_lm_prob: 0.4
