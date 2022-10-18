@@ -540,8 +540,8 @@ class BertLMFeaturePredictionHead(torch.nn.Module):
     encoded_features = self.feature_encoder(features, hidden_states.size(1))
     res1 = torch.cat((hidden_states, encoded_features), -1)
     hidden_states = self.transform(res1)
-    res2 = torch.cat((hidden_states, encoded_features), -1)
-    hidden_states = self.res_transform(res2)
+    # res2 = torch.cat((hidden_states, encoded_features), -1)
+    # hidden_states = self.res_transform(res2)
     hidden_states = self.decoder(hidden_states)
     return hidden_states, encoded_features
 
