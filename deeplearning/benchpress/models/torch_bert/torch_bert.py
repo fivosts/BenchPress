@@ -953,6 +953,15 @@ class torchBert(backends.BackendBase):
               else:
                 val = int(prompt)
               input_features[k] = val
+          if feat_space == "":
+            feat_space = "GreweFeatures"
+            input_features = {
+              k: -1 for k in extractor.extractors.KEYS[feat_space]
+            }
+            for k in input_features.keys():
+              if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
+                input_features[k] = int(np.random.poisson(8))
+            print(input_features)
           if feat_space == "GreweFeatures":
             try:
               input_features["F2:coalesced/mem"] = input_features["coalesced"] / input_features["mem"]
