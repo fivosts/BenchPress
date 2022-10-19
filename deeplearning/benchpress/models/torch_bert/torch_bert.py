@@ -971,7 +971,7 @@ class torchBert(backends.BackendBase):
               input_features["F4:comp/mem"] = input_features["comp"] / input_features["mem"]
             except ZeroDivisionError:
               input_features["F4:comp/mem"] = 0
-          self.step_inputs['input_features'] = input_features
+          self.step_inputs['input_features'] = self.feature_tokenizer.TokenizeFeatureVector(input_features, feat_space, self.feature_sequence_length)
         step_out, time = self.sample_model_step(
             self.sample.model,
             self.step_inputs,
