@@ -366,8 +366,6 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
       cache_path = workspace,
       set_name = group['name'],
     )
-    tsne_mon.register(
-    )
     for k in {'CPU', 'GPU'}:
       for dp in group_map[k] + base_map[k]:
         sample = (
