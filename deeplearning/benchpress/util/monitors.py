@@ -375,7 +375,7 @@ class TSNEMonitor(Monitor):
   def getStrData(self) -> None:
     raise NotImplementedError
 
-  def register(self, actual_sample: typing.Tuple[typing.Dict[str, int], str, typing.Optional[str]]) -> None:
+  def register(self, actual_sample: typing.Tuple[typing.Union[typing.List, typing.Dict[str, int]], str, typing.Optional[str]]) -> None:
     """
     A registered sample must contain:
     1. A feature vector.
