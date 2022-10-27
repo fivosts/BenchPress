@@ -362,6 +362,31 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
       'CPU': group_df[group_df['oracle'] == 'CPU'],
       'GPU': group_df[group_df['oracle'] == 'GPU'],
     }
+    tsne_mon = monitors.TSNEMonitor(
+      cache_path = workspace,
+      set_name = group['name'],
+    )
+    tsne_mon.register(
+    )
+    for k in {'CPU', 'GPU'}:
+      for dp in group_map[k] + base_map[k]:
+        sample = (
+          k,
+          [
+            dp['comp'],
+            dp['rational'],
+            dp['mem'],
+            dp['localmem'],
+            dp['coalesced'],
+            dp['atomic'],
+            dp['transfer'],
+            dp['wgsize'],
+            dp['F1:transfer/(comp+mem)'],
+            dp['F2:coalesced/mem'],
+            dp['F3:(localmem/mem)*avgws'],
+            dp['F4:comp/mem']
+          ]
+        )
 
   return
 
