@@ -388,6 +388,36 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
       tsne_mon.plot()
   return
 
+@public.evaluator
+def FeatureSpaceCovGroup(**kwargs) -> None:
+  """
+  For each baseline + ground truth, collect
+  all Grewe datapoints from CSV and plot the feature
+  space coverage.
+  Points are colored based on group, everything is plotted
+  in one figure.
+  """
+  grewe_baseline = kwargs.get('grewe_baseline')
+  csv_groups     = kwargs.get('csv_groups')
+  plot_config    = kwargs.get('plot_config')
+  workspace      = kwargs.get('workspace_path')
+
+  groups = {
+    'GPGPU': [dp[2:14] for dp in CSVPathToFrame(grewe_baseline).values.tolist()],
+  }
+  tsne_mon = monitors.TSNEMonitor(
+    cache_path = workspace,
+    set_name = 'Benchmarks',
+  )
+
+  for group in csv_groups:
+    groups[group['name']] = [dp[2:14] for dp in CSVPathToFrame(group['path']).values.tolist()]
+  for l in groups.values():
+    for dp in l:
+      tsne_mon.register(dp)
+  tsne_mon.plot()
+  return
+
 def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathlib.Path, out_path: pathlib.Path) -> None:
   """
   Parse GPGPU folder, isolate and collect all kernel instances.
