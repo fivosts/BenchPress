@@ -58,7 +58,8 @@ message evaluators {
     GreweCSV                  grewe_csv                   = 17;
     TrainGrewe                train_grewe                 = 18;
     FeatureSpaceCovLabel      feature_space_cov_label     = 19;
-    AnalyzeBeamSearch         analyze_beam_search         = 20;
+    FeatureSpaceCovGroup      feature_space_cov_group     = 20;
+    AnalyzeBeamSearch         analyze_beam_search         = 21;
   }
 }
 
@@ -235,6 +236,13 @@ message FeatureSpaceCovLabel {
 }
 
 // 20
+message FeatureSpaceCovGroup {
+  optional string               grewe_baseline = 1;
+  repeated GreweCSVGroup        csv            = 2;
+  optional PlotterConfiguration plot_config    = 3;
+}
+
+// 21
 message AnalyzeBeamSearch {
   optional string               target        = 1;
   optional string               feature_space = 2;
