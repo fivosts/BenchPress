@@ -815,6 +815,7 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.GreweTopKCSV              : grewe_api.GreweTopKCSV,
     evaluator_pb2.GreweCSV                  : grewe_api.GreweCSV,
     evaluator_pb2.TrainGrewe                : grewe_api.TrainGrewe,
+    evaluator_pb2.FeatureSpaceCovLabel      : grewe_api.FeatureSpaceCovLabel,
     evaluator_pb2.AnalyzeBeamSearch         : distance_score.AnalyzeBeamSearch
   }
   db_cache       = {}
