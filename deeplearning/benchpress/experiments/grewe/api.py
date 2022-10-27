@@ -124,6 +124,12 @@ def ToDataFrameRow(name                 : str,
     0
   ]
 
+def CSVPathToFrame(csv_path: pathlib.Path) -> pd.DataFrame:
+  """
+  Receive a csv path and return a dataframe.
+  """
+  return pd.read_csv(csv_path)
+
 def DriveSource(src        : str,
                 include    : str,
                 group_name : str,
@@ -342,6 +348,9 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
   csv_groups     = kwargs.get('csv_groups')
   plot_config    = kwargs.get('plot_config')
   workspace      = kwargs.get('workspace_path')
+
+  for group in csv_groups:
+
 
   return
 
