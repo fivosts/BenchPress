@@ -57,7 +57,8 @@ message evaluators {
     GreweTopKCSV              grewe_top_k_csv             = 16;
     GreweCSV                  grewe_csv                   = 17;
     TrainGrewe                train_grewe                 = 18;
-    AnalyzeBeamSearch         analyze_beam_search         = 19;
+    FeatureSpaceCovLabel      feature_space_cov_label     = 19;
+    AnalyzeBeamSearch         analyze_beam_search         = 20;
   }
 }
 
