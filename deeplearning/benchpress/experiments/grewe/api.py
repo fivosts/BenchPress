@@ -296,11 +296,6 @@ def TrainGrewe(**kwargs) -> None:
   plot_config    = kwargs.get('plot_config')
   workspace      = kwargs.get('workspace_path')
 
-  try:
-    tdir = FLAGS.local_filesystem
-  except Exception:
-    tdir = None
-
   speedups = {}
   accuracies = {}
   for group in csv_groups:
