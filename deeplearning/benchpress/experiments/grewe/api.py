@@ -357,7 +357,10 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
 
   for group in csv_groups:
     group_df = CSVPathToFrame(group['path'])
-    group_map = 
+    group_map = {
+      'CPU': group_df[group_df['oracle'] == 'CPU'],
+      'GPU': group_df[group_df['oracle'] == 'GPU'],
+    }
 
   return
 
