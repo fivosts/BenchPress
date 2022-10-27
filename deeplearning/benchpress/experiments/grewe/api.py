@@ -336,6 +336,20 @@ def TrainGrewe(**kwargs) -> None:
   )
   return
 
+@public.evaluator
+def FeatureSpaceCovLabel(**kwargs) -> None:
+  """
+  For each baseline + ground truth, collect
+  all Grewe datapoints from CSV and plot the feature
+  space coverage. Points are colored based on label, CPU or GPU.
+  """
+  grewe_baseline = kwargs.get('grewe_baseline')
+  csv_groups     = kwargs.get('csv_groups')
+  plot_config    = kwargs.get('plot_config')
+  workspace      = kwargs.get('workspace_path')
+
+  return
+
 def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathlib.Path, out_path: pathlib.Path) -> None:
   """
   Parse GPGPU folder, isolate and collect all kernel instances.
