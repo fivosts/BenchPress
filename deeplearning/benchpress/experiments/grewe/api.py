@@ -387,7 +387,8 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
             dp['F4:comp/mem']
           ]
         )
-
+        tsne_mon.register(sample)
+      tsne_mon.plot()
   return
 
 def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathlib.Path, out_path: pathlib.Path) -> None:
