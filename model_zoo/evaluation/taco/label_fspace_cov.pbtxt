@@ -1,0 +1,22 @@
+workspace: "/home/fivosts/feat_coverage/grewe_workspace"
+evaluator {
+  feature_space_cov_label {
+    grewe_baseline: "/home/fivosts/pact_data/gpgpu_benchmarks.csv"
+    csv {
+      name: "BenchPress"
+      path: "/home/fivosts/pact_data/grewe_workspace/benchpress_active.csv"
+    }
+    csv {
+      name: "BenchPress_passive"
+      path: "/home/fivosts/pact_data/grewe_workspace/benchpress_passive.csv"
+    }
+    csv {
+      name: "CLgen"
+      path: "/home/fivosts/pact_data/grewe_workspace/clgen.csv"
+    }
+    csv {
+      name: "GitHub"
+      path: "/home/fivosts/pact_data/grewe_workspace/github.csv"
+    }
+  }
+}
