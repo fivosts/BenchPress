@@ -369,8 +369,8 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
     for k in {'CPU', 'GPU'}:
       for dp in group_map[k] + base_map[k]:
         sample = (
-          k,
           dp[2:14],
+          k,
         )
         tsne_mon.register(sample)
       tsne_mon.plot()
