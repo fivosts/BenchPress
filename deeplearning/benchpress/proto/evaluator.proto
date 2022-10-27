@@ -39,25 +39,25 @@ message Evaluation {
 message evaluators {
   // Define all different evauators supported.
   oneof evaluator {
-    LogFile                 log_file                      = 1;
-    KAverageScore           k_average_score               = 2;
-    MinScore                min_score                     = 3;
-    AnalyzeTarget           analyze_target                = 4;
+    LogFile                   log_file                    = 1;
+    KAverageScore             k_average_score             = 2;
+    MinScore                  min_score                   = 3;
+    AnalyzeTarget             analyze_target              = 4;
     TokenSizeDistribution     token_size_distribution     = 5;
     LLVMInstCountDistribution llvm_instcount_distribution = 6;
     PCASamplesFeatures        pca_samples_features        = 7;
-    FeaturesDistribution    features_distribution         = 8;
-    HumanLikeness           human_likeness                = 9;
-    CompMemGrewe            comp_mem_grewe                = 10;
-    TopKCLDrive             topk_cldrive                  = 11;
-    MutecVsBenchPress       mutec_vs_benchpress           = 12;
-    SRCIROR_srcVsBenchPress srciror_src_vs_benchpress     = 13;
-    SRCIROR_IRVsBenchPress  srciror_ir_vs_benchpress      = 14;
-    GenerateCLSmith         generate_clsmith              = 15;
-    GreweTopKCSV            grewe_top_k_csv               = 16;
-    GreweCSV                grewe_csv                     = 17;
-    TrainGrewe              train_grewe                   = 18;
-    AnalyzeBeamSearch       analyze_beam_search           = 19;
+    FeaturesDistribution      features_distribution       = 8;
+    HumanLikeness             human_likeness              = 9;
+    CompMemGrewe              comp_mem_grewe              = 10;
+    TopKCLDrive               topk_cldrive                = 11;
+    MutecVsBenchPress         mutec_vs_benchpress         = 12;
+    SRCIROR_srcVsBenchPress   srciror_src_vs_benchpress   = 13;
+    SRCIROR_IRVsBenchPress    srciror_ir_vs_benchpress    = 14;
+    GenerateCLSmith           generate_clsmith            = 15;
+    GreweTopKCSV              grewe_top_k_csv             = 16;
+    GreweCSV                  grewe_csv                   = 17;
+    TrainGrewe                train_grewe                 = 18;
+    AnalyzeBeamSearch         analyze_beam_search         = 19;
   }
 }
 
