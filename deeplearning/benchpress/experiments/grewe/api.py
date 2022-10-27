@@ -33,6 +33,7 @@ from deeplearning.benchpress.experiments import clsmith
 from deeplearning.benchpress.preprocessors import opencl
 from deeplearning.benchpress.samplers import samples_database
 from deeplearning.benchpress.util import crypto
+from deeplearning.benchpress.util import monitors
 from deeplearning.benchpress.util import logging as l
 from deeplearning.benchpress.util import plotter
 
