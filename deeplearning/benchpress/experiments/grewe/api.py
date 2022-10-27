@@ -349,8 +349,15 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
   plot_config    = kwargs.get('plot_config')
   workspace      = kwargs.get('workspace_path')
 
-  for group in csv_groups:
+  base_df = CSVPathToFrame(grewe_baseline)
+  base_map = {
+    'CPU': base_df[base_df['oracle'] == 'CPU'],
+    'GPU': base_df[base_df['oracle'] == 'GPU'],
+  }
 
+  for group in csv_groups:
+    group_df = CSVPathToFrame(group['path'])
+    group_map = 
 
   return
 
