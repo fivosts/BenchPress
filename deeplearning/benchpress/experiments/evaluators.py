@@ -766,6 +766,21 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         p = pathlib.Path(c.path)
         if not p.exists():
           raise FileNotFoundError(p)
+    elif ev.HasField("feature_space_cov_group"):
+      ### FeatureSpaceCovGroup
+      # Generic fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      # CSV groups
+      pbutil.AssertFieldIsSet(ev.feature_space_cov_group, "grewe_baseline")
+      p = pathlib.Path(ev.feature_space_cov_group.grewe_baseline)
+      if not p.exists():
+        raise FileNotFoundError(p)
+      for c in ev.feature_space_cov_group.csv:
+        pbutil.AssertFieldIsSet(c, "name")
+        pbutil.AssertFieldIsSet(c, "path")
+        p = pathlib.Path(c.path)
+        if not p.exists():
+          raise FileNotFoundError(p)
     elif ev.HasField("analyze_beam_search"):
       ### AnalyzeBeamSearch
       # Generic Fields
@@ -831,6 +846,7 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.GreweCSV                  : grewe_api.GreweCSV,
     evaluator_pb2.TrainGrewe                : grewe_api.TrainGrewe,
     evaluator_pb2.FeatureSpaceCovLabel      : grewe_api.FeatureSpaceCovLabel,
+    evaluator_pb2.FeatureSpaceCovGroup      : grewe_api.FeatureSpaceCovGroup,
     evaluator_pb2.AnalyzeBeamSearch         : distance_score.AnalyzeBeamSearch
   }
   db_cache       = {}
@@ -1207,6 +1223,15 @@ def main(config: evaluator_pb2.Evaluation):
 
     elif ev.HasField("feature_space_cov_label"):
       sev = ev.feature_space_cov_label
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
+      kw_args['grewe_baseline'] = pathlib.Path(sev.grewe_baseline).resolve()
+      kw_args['csv_groups'] = []
+      for c in sev.csv:
+        kw_args['csv_groups'].append({'name': c.name, 'path': pathlib.Path(c.path).resolve()})
+
+    elif ev.HasField("feature_space_cov_group"):
+      sev = ev.feature_space_cov_group
       if sev.HasField("plot_config"):
         kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
       kw_args['grewe_baseline'] = pathlib.Path(sev.grewe_baseline).resolve()
