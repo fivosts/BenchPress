@@ -228,6 +228,13 @@ message TrainGrewe {
 }
 
 // 19
+message FeatureSpaceCovLabel {
+  optional string               grewe_baseline = 1;
+  repeated GreweCSVGroup        csv            = 2;
+  optional PlotterConfiguration plot_config    = 3;
+}
+
+// 20
 message AnalyzeBeamSearch {
   optional string               target        = 1;
   optional string               feature_space = 2;
