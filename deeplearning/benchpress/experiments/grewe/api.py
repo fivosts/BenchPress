@@ -355,6 +355,18 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
     'CPU': base_df[base_df['oracle'] == 'CPU'].values.tolist(),
     'GPU': base_df[base_df['oracle'] == 'GPU'].values.tolist(),
   }
+  tsne_mon = monitors.TSNEMonitor(
+    cache_path = workspace,
+    set_name = 'GPGPU',
+  )
+  for k in {'CPU', 'GPU'}:
+    for dp in base_map[k]:
+      sample = (
+        dp[2:14],
+        k,
+      )
+      tsne_mon.register(sample)
+    tsne_mon.plot()
 
   for group in csv_groups:
     group_df = CSVPathToFrame(group['path'])
