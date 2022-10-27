@@ -352,15 +352,15 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
 
   base_df = CSVPathToFrame(grewe_baseline)
   base_map = {
-    'CPU': base_df[base_df['oracle'] == 'CPU'],
-    'GPU': base_df[base_df['oracle'] == 'GPU'],
+    'CPU': base_df[base_df['oracle'] == 'CPU'].values.tolist(),
+    'GPU': base_df[base_df['oracle'] == 'GPU'].values.tolist(),
   }
 
   for group in csv_groups:
     group_df = CSVPathToFrame(group['path'])
     group_map = {
-      'CPU': group_df[group_df['oracle'] == 'CPU'],
-      'GPU': group_df[group_df['oracle'] == 'GPU'],
+      'CPU': group_df[group_df['oracle'] == 'CPU'].values.tolist(),
+      'GPU': group_df[group_df['oracle'] == 'GPU'].values.tolist(),
     }
     tsne_mon = monitors.TSNEMonitor(
       cache_path = workspace,
@@ -370,20 +370,7 @@ def FeatureSpaceCovLabel(**kwargs) -> None:
       for dp in group_map[k] + base_map[k]:
         sample = (
           k,
-          [
-            dp['comp'],
-            dp['rational'],
-            dp['mem'],
-            dp['localmem'],
-            dp['coalesced'],
-            dp['atomic'],
-            dp['transfer'],
-            dp['wgsize'],
-            dp['F1:transfer/(comp+mem)'],
-            dp['F2:coalesced/mem'],
-            dp['F3:(localmem/mem)*avgws'],
-            dp['F4:comp/mem']
-          ]
+          dp[2:14],
         )
         tsne_mon.register(sample)
       tsne_mon.plot()
