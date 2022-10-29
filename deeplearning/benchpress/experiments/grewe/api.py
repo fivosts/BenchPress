@@ -306,7 +306,7 @@ def TrainGrewe(**kwargs) -> None:
   speedups = {}
   accuracies = {}
   for group in csv_groups:
-    base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr = preamble.plot_speedups_with_clgen(
+    R, base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr = preamble.plot_speedups_with_clgen(
       open(grewe_baseline, 'r'),
       open(group['path'], 'r'),
       synth_bench_name = group['name'],
@@ -402,20 +402,116 @@ def FeatureSpaceCovGroup(**kwargs) -> None:
   plot_config    = kwargs.get('plot_config')
   workspace      = kwargs.get('workspace_path')
 
-  groups = {
-    'GPGPU': [dp[2:14] for dp in CSVPathToFrame(grewe_baseline).values.tolist()],
+  base_df = CSVPathToFrame(grewe_baseline)
+  groups = {}
+  csv_data = {
+    'GPGPU_CPU': [[dp[13], dp[10]] for dp in base_df[base_df['oracle'] == 'CPU'].values.tolist()],
+    'GPGPU_GPU': [[dp[13], dp[10]] for dp in base_df[base_df['oracle'] == 'GPU'].values.tolist()],
   }
   tsne_mon = monitors.TSNEMonitor(
     cache_path = workspace,
-    set_name = 'Benchmarks',
+    set_name = 'Benchmarks_without_derived_split',
   )
 
   for group in csv_groups:
-    groups[group['name']] = [dp[2:14] for dp in CSVPathToFrame(group['path']).values.tolist()]
-  for l in groups.values():
-    for dp in l:
-      tsne_mon.register(dp)
-  tsne_mon.plot()
+
+    R, base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr = preamble.plot_speedups_with_clgen(
+      open(grewe_baseline, 'r'),
+      open(group['path'], 'r'),
+      synth_bench_name = group['name'],
+    )
+
+    b_mask = R["training"] == "Grewe et al."
+    bs_mask = R["training"] == "w. {}".format(group['name'])
+
+    groups['GPGPU_correct'] = [[dp[13], dp[10]] for dp in R[b_mask][R[b_mask]['oracle'] == R[b_mask]['p']].values.tolist()]
+    groups['GPGPU_wrong'] = [[dp[13], dp[10]] for dp in R[b_mask][R[b_mask]['oracle'] != R[b_mask]['p']].values.tolist()]
+
+    groups['{}_correct'.format(group['name'])] = [[dp[13], dp[10]] for dp in R[bs_mask][R[bs_mask]['oracle'] == R[bs_mask]['p']].values.tolist()]
+    groups['{}_wrong'.format(group['name'])] = [[dp[13], dp[10]] for dp in R[bs_mask][R[bs_mask]['oracle'] != R[bs_mask]['p']].values.tolist()]
+
+    group_df = CSVPathToFrame(group['path'])
+    csv_data["{}_CPU".format(group['name'])] = [[dp[13], dp[10]] for dp in group_df[group_df['oracle'] == 'CPU'].values.tolist()]
+    csv_data["{}_GPU".format(group['name'])] = [[dp[13], dp[10]] for dp in group_df[group_df['oracle'] == 'GPU'].values.tolist()]
+
+
+
+  # norm_0, norm_1 = 0, 0
+  # for k, v in groups.items():
+  #   for dp in v:
+  #     norm_0 = max(norm_0, dp[0])
+  #     norm_1 = max(norm_1, dp[1])
+  # for k, v in groups.items():
+  #   for idx, dp in enumerate(v):
+  #     groups[k][idx][0] = groups[k][idx][0] / norm_0
+  #     groups[k][idx][1] = groups[k][idx][1] / norm_1
+
+
+  # norm_0, norm_1 = 0, 0
+  # for k, v in csv_data.items():
+  #   for dp in v:
+  #     norm_0 = max(norm_0, dp[0])
+  #     norm_1 = max(norm_1, dp[1])
+  # for k, v in csv_data.items():
+  #   for idx, dp in enumerate(v):
+  #     csv_data[k][idx][0] = csv_data[k][idx][0] / norm_0
+  #     csv_data[k][idx][1] = csv_data[k][idx][1] / norm_1
+
+
+
+    # tsne_mon = monitors.TSNEMonitor(
+    #   cache_path = workspace,
+    #   set_name = 'GPGPU',
+    # )
+    # for k in ['GPGPU_correct', 'GPGPU_wrong']:
+    #   for dp in groups[k]:
+    #     tsne_mon.register((dp, k))
+    # tsne_mon.plot()
+
+    # tsne_mon = monitors.TSNEMonitor(
+    #   cache_path = workspace,
+    #   set_name = '{}'.format(group['name']),
+    # )
+    # for k in ['{}_correct'.format(group['name']), '{}_wrong'.format(group['name'])]:
+    #   for dp in groups[k]:
+    #     tsne_mon.register((dp, k))
+    # tsne_mon.plot()
+
+    # group_df = CSVPathToFrame(group['path'])
+    # groups["{}_CPU".format(group['name'])] = [dp[10:14] for dp in group_df[group_df['oracle'] == 'CPU'].values.tolist()]
+    # groups["{}_GPU".format(group['name'])] = [dp[10:14] for dp in group_df[group_df['oracle'] == 'GPU'].values.tolist()]
+
+  plot_groups = {}
+  for k, v in groups.items():
+    plot_groups[k] = {
+      'data': v,
+      'names': []
+    }
+  plotter.GroupScatterPlot(
+    groups    = plot_groups,
+    plot_name = "test",
+    path      = workspace,
+    title     = "test",
+  )
+
+  plot_groups = {}
+  for k, v in csv_data.items():
+    plot_groups[k] = {
+      'data': v,
+      'names': []
+    }
+  plotter.GroupScatterPlot(
+    groups    = plot_groups,
+    plot_name = "test2",
+    path      = workspace,
+    title     = "test2",
+  )
+
+
+  # for k, l in groups.items():
+  #   for dp in l:
+  #     tsne_mon.register((dp, k))
+  # tsne_mon.plot()
   return
 
 def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathlib.Path, out_path: pathlib.Path) -> None:
