@@ -150,6 +150,14 @@ def DriveSource(src        : str,
     """
     Return median of list
     """
+    mid = len(lst) // 2
+    if len(lst) == 0:
+      return None
+    elif len(lst) % 2 == 0:
+      return (lst[mid] + lst[mid+1]) / 2 
+    else:
+      return lst[mid] / 2
+
   # for gsize in tqdm.tqdm([2**6, 2**7, 2**8, 2**10, 2**12, 2**14, 2**16, 2**18, 2**20], desc = "gsize", leave = False):
   for gsize in tqdm.tqdm([2**4, 2**8, 2**10, 2**12, 2**14, 2**16, 2**18, 2**20, 2**24, 2**28], desc = "gsize", leave = False):
     for lsize in tqdm.tqdm([2**2, 2**3, 2**4, 2**5, 2**6, 2**7, 2**8], desc = "lsize", leave = False):
@@ -167,15 +175,10 @@ def DriveSource(src        : str,
             global_size          = gsize,
             local_size           = lsize,
             label                = cached.status,
-            # cpu_transfer_time_ns = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']),
-            # cpu_kernel_time_ns   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan']),
-            # gpu_transfer_time_ns = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']),
-            # gpu_kernel_time_ns   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan']),
-            cpu_transfer_time_ns = [int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan'],
-            cpu_kernel_time_ns   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan']),
-            gpu_transfer_time_ns = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']),
-            gpu_kernel_time_ns   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan'])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan']),
-
+            cpu_transfer_time_ns = median_of_list([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']),
+            cpu_kernel_time_ns   = median_of_list([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan']),
+            gpu_transfer_time_ns = median_of_list([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']),
+            gpu_kernel_time_ns   = median_of_list([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan']),
           )
         else:
           yield None
