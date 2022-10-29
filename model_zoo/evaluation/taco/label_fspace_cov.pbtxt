@@ -1,6 +1,6 @@
 workspace: "/home/fivosts/feat_coverage"
 evaluator {
-  feature_space_cov_label {
+  feature_space_cov_group {
     grewe_baseline: "/home/fivosts/pact_data/gpgpu_benchmarks.csv"
     csv {
       name: "BenchPress"
