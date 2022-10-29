@@ -494,7 +494,7 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
 
   # Finalize(output = "plot.png", figsize=figsize, tight=True)
   ## Return predictive model's speedup when A) trained on gpgpu and B) gpgpu+synthetics
-  return base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr
+  return R, base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr
 
 
 def _compare_clfs(clf1, get_features1, clf2, get_features2, D1, D2, benchmark):
