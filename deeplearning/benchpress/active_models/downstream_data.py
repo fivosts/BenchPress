@@ -246,20 +246,21 @@ class DownstreamData(sqlutil.Database):
       for sample in batch:
         src = tokenizer.ArrayToCode(sample.sample)
         instance = self.task_type.FromArgs(
-          src               = src,
-          sampling_epoch    = sampling_epoch,
-          global_size       = sample.runtime_features['global_size'],
-          grewe_feats       = sample.features,
-          target_features   = target_features,
-          transferred_bytes = sample.runtime_features['transferred_bytes'],
-          local_size        = sample.runtime_features['local_size'],
-          oracle            = sample.runtime_features['label'],
-          cpu_transfer_ns   = sample.runtime_features['cpu_transfer_ns'],
-          cpu_kernel_ns     = sample.runtime_features['cpu_kernel_ns'],
-          gpu_transfer_ns   = sample.runtime_features['gpu_transfer_ns'],
-          gpu_kernel_ns     = sample.runtime_features['gpu_kernel_ns'],
-          kernel_nlines     = len(src.split('\n')),
-          kernel_size       = len(src.split(' ')),
+          src                = src,
+          sampling_epoch     = sampling_epoch,
+          global_size        = sample.runtime_features['global_size'],
+          grewe_feats        = sample.features,
+          target_features    = target_features,
+          euclidean_distance = distance,
+          transferred_bytes  = sample.runtime_features['transferred_bytes'],
+          local_size         = sample.runtime_features['local_size'],
+          oracle             = sample.runtime_features['label'],
+          cpu_transfer_ns    = sample.runtime_features['cpu_transfer_ns'],
+          cpu_kernel_ns      = sample.runtime_features['cpu_kernel_ns'],
+          gpu_transfer_ns    = sample.runtime_features['gpu_transfer_ns'],
+          gpu_kernel_ns      = sample.runtime_features['gpu_kernel_ns'],
+          kernel_nlines      = len(src.split('\n')),
+          kernel_size        = len(src.split(' ')),
         )
         entry = ses.query(self.task_type).filter_by(sha256 = instance.sha256).first()
         if entry is None:
