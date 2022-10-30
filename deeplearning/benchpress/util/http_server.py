@@ -227,8 +227,8 @@ def index():
     return flask.render_template("index.html", data = multi_status)
 
 def http_serve(read_queue    : multiprocessing.Queue,
-               write_queues  : multiprocessing.dict,
-               reject_queues : multiprocessing.dict,
+               write_queues  : multiprocessing.Manager.dict,
+               reject_queues : multiprocessing.Manager.dict,
                work_flag     : multiprocessing.Value,
                peers         : multiprocessing.Manager.list,
                manager       : multiprocessing.Manager,
