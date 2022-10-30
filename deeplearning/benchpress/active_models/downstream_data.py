@@ -169,6 +169,7 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
     sha = crypto.sha256_str(
       src,
       + str(grewe_feats),
+      + str(target_features),
       + str(transferred_bytes),
       + str(local_size),
       + str(global_size),
