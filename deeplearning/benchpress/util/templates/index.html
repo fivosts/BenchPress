@@ -9,3 +9,20 @@
       </div>
 
  </form>
+
+<lu>Server Status: {{data['work_flag']}}<br><br></lu>
+
+<lu> Read Queue: {{data['read_queue']}}<br><br></lu>
+<lu> Read Queue size: {{data['read_queue_size']}}<br><br></lu>
+
+
+<lu>Write Queues: <br><br></lu>
+{% for key, value in data['out_servers'].items() %}
+  <lu>{{key}}</lu>
+  <p>
+    write_queue: {{value['write_queue']}}<br>
+    write_queue_size: {{value['write_queue_size']}}<br>
+    reject_queue: {{value['reject_queue']}}<br>
+    reject_queue_size: {{value['reject_queue_size']}}<br>
+  </p>
+{% endfor %}
