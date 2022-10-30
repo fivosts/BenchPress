@@ -1,24 +1,12 @@
-<form id="package_form" action="submit" method="post">
-    <lu>Visitor input: <textarea name="text"></textarea></lu><br><br>
-    <lu>Temperature: <input type="text" id="temperature" name="temperature" value="1.0"></lu><br><br>
-      <div class="panel-body">
-          <input type ="submit" name="Single step" value="Single step">
-      </div><br>
-      <div class="panel-body">
-          <input type ="submit" name="Full prediction" value="Full prediction">
-      </div>
+<h1>Server Status: {{data['work_flag']}}<br><br></h1>
 
- </form>
-
-<lu>Server Status: {{data['work_flag']}}<br><br></lu>
-
-<lu> Read Queue: {{data['read_queue']}}<br><br></lu>
-<lu> Read Queue size: {{data['read_queue_size']}}<br><br></lu>
+<h2> Read Queue: {{data['read_queue']}}<br><br></h2>
+<h2> Read Queue size: {{data['read_queue_size']}}<br><br></h2>
 
 
-<lu>Write Queues: <br><br></lu>
+<h1>Write Queues: <br><br></h1>
 {% for key, value in data['out_servers'].items() %}
-  <lu>{{key}}</lu>
+  <h2>{{key}}</h2>
   <p>
     write_queue: {{value['write_queue']}}<br>
     write_queue_size: {{value['write_queue_size']}}<br>
