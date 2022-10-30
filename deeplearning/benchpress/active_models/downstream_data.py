@@ -242,7 +242,6 @@ class DownstreamData(sqlutil.Database):
                 batch              : typing.List[typing.Dict],
                 sampling_epoch     : int,
                 target_features    : typing.Dict[str, float],
-                euclidean_distance : float,
                 tokenizer          : 'tokenizers.TokenizerBase',
                 ) -> None:
     """
@@ -257,7 +256,7 @@ class DownstreamData(sqlutil.Database):
           global_size        = sample.runtime_features['global_size'],
           grewe_feats        = sample.features,
           target_features    = target_features,
-          euclidean_distance = euclidean_distance,
+          euclidean_distance = sample.score,
           transferred_bytes  = sample.runtime_features['transferred_bytes'],
           local_size         = sample.runtime_features['local_size'],
           oracle             = sample.runtime_features['label'],
