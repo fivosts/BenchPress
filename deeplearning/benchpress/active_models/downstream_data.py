@@ -80,67 +80,73 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
   """
   __tablename__    = "grewe_training_instances"
   # entry id
-  id             : int = sql.Column(sql.Integer,    primary_key = True)
+  id                 : int = sql.Column(sql.Integer,    primary_key = True)
   # Indexable hash
-  sha256         : str = sql.Column(sql.String(64), nullable = False, index = True)
+  sha256             : str = sql.Column(sql.String(64), nullable = False, index = True)
   # source code of the first occurence that created this row.
-  src            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  src                : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Sampling epoch where training instance was first collected.
-  sampling_epoch : int = sql.Column(sql.Integer,   nullable = False)
+  sampling_epoch     : int = sql.Column(sql.Integer,   nullable = False)
+  # Grewe features of kernel.
+  features           : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Target grewe features of kernel.
+  target_features    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Distance from target.
+  euclidean_distance : float = sql.Column(sql.Float, nullable = False)
   # Name of benchmark.
-  benchmark      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  benchmark          : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # For some reason, this is the global size.
-  dataset        : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  dataset            : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # #comp instructions.
-  comp           : int = sql.Column(sql.Integer,   nullable = False)
+  comp               : int = sql.Column(sql.Integer,   nullable = False)
   # #rational instructions.
-  rational       : int = sql.Column(sql.Integer,   nullable = False)
+  rational           : int = sql.Column(sql.Integer,   nullable = False)
   # #mem instructions.
-  mem            : int = sql.Column(sql.Integer,   nullable = False)
+  mem                : int = sql.Column(sql.Integer,   nullable = False)
   # #localmem instructions.
-  localmem       : int = sql.Column(sql.Integer,   nullable = False)
+  localmem           : int = sql.Column(sql.Integer,   nullable = False)
   # #coalesced instructions.
-  coalesced      : int = sql.Column(sql.Integer,   nullable = False)
+  coalesced          : int = sql.Column(sql.Integer,   nullable = False)
   # #atomic instructions.
-  atomic         : int = sql.Column(sql.Integer,   nullable = False)
+  atomic             : int = sql.Column(sql.Integer,   nullable = False)
   # amount of transferred bytes.
-  transfer       : int = sql.Column(sql.Integer,   nullable = False)
+  transfer           : int = sql.Column(sql.Integer,   nullable = False)
   # work-group size as in local size.
-  wgsize         : int = sql.Column(sql.Integer,   nullable = False)
+  wgsize             : int = sql.Column(sql.Integer,   nullable = False)
   # F1:transfer/(comp+mem) score
-  F1             : float = sql.Column(sql.Float, nullable = False)
+  F1                 : float = sql.Column(sql.Float, nullable = False)
   # F2:coalesced/mem
-  F2             : float = sql.Column(sql.Float, nullable = False)
+  F2                 : float = sql.Column(sql.Float, nullable = False)
   # F3:(localmem/mem)*avgws
-  F3             : float = sql.Column(sql.Float, nullable = False)
+  F3                 : float = sql.Column(sql.Float, nullable = False)
   # F4:comp/mem
-  F4             : float = sql.Column(sql.Float, nullable = False)
+  F4                 : float = sql.Column(sql.Float, nullable = False)
   # Is CPU or GPU the best place to run this instance?
-  oracle         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  oracle             : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Total execution time for optimal device
-  runtime        : float = sql.Column(sql.Float, nullable = False)
+  runtime            : float = sql.Column(sql.Float, nullable = False)
   # How much faster is the faster device from the slower
-  speedup        : float = sql.Column(sql.Float, nullable = False)
+  speedup            : float = sql.Column(sql.Float, nullable = False)
   # The inverse of speedup
-  penalty        : float = sql.Column(sql.Float, nullable = False)
+  penalty            : float = sql.Column(sql.Float, nullable = False)
   # The runtime of CPU.
-  runtime_cpu    : int = sql.Column(sql.Integer, nullable = False)
+  runtime_cpu        : int = sql.Column(sql.Integer, nullable = False)
   # transfer time of CPU.
-  ci_cpu         : int = sql.Column(sql.Integer, nullable = False)
+  ci_cpu             : int = sql.Column(sql.Integer, nullable = False)
   # kernel time of CPU.
-  ci_mean_cpu    : int = sql.Column(sql.Integer, nullable = False)
+  ci_mean_cpu        : int = sql.Column(sql.Integer, nullable = False)
   # The runtime of GPU.
-  runtime_gpu    : int = sql.Column(sql.Integer, nullable = False)
+  runtime_gpu        : int = sql.Column(sql.Integer, nullable = False)
   # transfer time of GPU.
-  ci_gpu         : int = sql.Column(sql.Integer, nullable = False)
+  ci_gpu             : int = sql.Column(sql.Integer, nullable = False)
   # kernel time of GPU.
-  ci_mean_gpu    : int = sql.Column(sql.Integer, nullable = False)
+  ci_mean_gpu        : int = sql.Column(sql.Integer, nullable = False)
   # Number of source code lines of kernel.
-  kernel_nlines  : int = sql.Column(sql.Integer, nullable = False)
+  kernel_nlines      : int = sql.Column(sql.Integer, nullable = False)
   # Size of kernel in number of tokens
-  kernel_size    : int = sql.Column(sql.Integer, nullable = False)
+  kernel_size        : int = sql.Column(sql.Integer, nullable = False)
   # Date added
-  date_added     : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+  date_added         : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
   def FromArgs(cls,
@@ -228,9 +234,10 @@ class DownstreamData(sqlutil.Database):
     return
 
   def add_epoch(self,
-                batch: typing.List[typing.Dict],
-                sampling_epoch : int,
-                tokenizer,
+                batch           : typing.List[typing.Dict],
+                sampling_epoch  : int,
+                target_features : typing.Dict[str, float],
+                tokenizer       : 'tokenizers.TokenizerBase',
                 ) -> None:
     """
     Add new row entry in downstream data DB.
@@ -243,6 +250,7 @@ class DownstreamData(sqlutil.Database):
           sampling_epoch    = sampling_epoch,
           global_size       = sample.runtime_features['global_size'],
           grewe_feats       = sample.features,
+          target_features   = target_features,
           transferred_bytes = sample.runtime_features['transferred_bytes'],
           local_size        = sample.runtime_features['local_size'],
           oracle            = sample.runtime_features['label'],
