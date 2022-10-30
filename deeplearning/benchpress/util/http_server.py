@@ -225,7 +225,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
                reject_queues : 'multiprocessing.Dict',
                work_flag     : multiprocessing.Value,
                manager       : multiprocessing.Manager,
-               ):
+               ) -> None:
   """
   Run http server for read and write workload queues.
   """
@@ -250,7 +250,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
     raise e
   return
 
-def client_status_request() -> typing.Tuple:
+def client_status_request() -> typing.Tuple[typing.Dict, int]:
   """
   Get status of http server.
   """
@@ -298,7 +298,7 @@ def client_put_request(msg: typing.List[typing.Dict]) -> None:
     l.logger().error("Error code {} in write_message request.".format(r.status_code))
   return
 
-def start_server_process():
+def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocessing.Value, multiprocessing.Queue, typing.Dict, typing.Dict]:
   """
   This is an easy wrapper to start server from parent routine.
   Starts a new process or thread and returns all the multiprocessing
