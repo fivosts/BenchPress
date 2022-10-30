@@ -77,6 +77,8 @@ handler = FlaskHandler()
 @app.route('/write_message', methods=['PUT'])
 def write_message(): # Expects serialized json file, one list of dictionaries..
   """
+  This function receives new kernels that need to be computed.
+
   Collect a json file with data and send to computation..
 
   Example command:
