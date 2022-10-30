@@ -170,7 +170,7 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
       "src"            : src,
       "sampling_epoch" : sampling_epoch,
       "sha256"         : sha,
-      "benchmark" : sha,
+      "benchmark" : "{}-cl.A".format(sha),
       "dataset"   : global_size,
       "comp"      : grewe_feats['comp'],
       "rational"  : grewe_feats['rational'],
