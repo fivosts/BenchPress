@@ -47,6 +47,12 @@ flags.DEFINE_string(
   "Set the target IP address of the host http server."
 )
 
+flags.DEFINE_list(
+  "http_server_peers",
+  None,
+  "Set comma-separated http address to load balance on secondary nodes."
+)
+
 flags.DEFINE_string(
   "host_address",
   "localhost",
@@ -221,9 +227,10 @@ def index():
     return flask.render_template("index.html", data = multi_status)
 
 def http_serve(read_queue    : multiprocessing.Queue,
-               write_queues  : 'multiprocessing.Dict',
-               reject_queues : 'multiprocessing.Dict',
+               write_queues  : multiprocessing.dict,
+               reject_queues : multiprocessing.dict,
                work_flag     : multiprocessing.Value,
+               peers         : multiprocessing.Manager.list,
                manager       : multiprocessing.Manager,
                ) -> None:
   """
@@ -305,7 +312,7 @@ def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocess
   elements needed to control the server.
   """
   m = multiprocessing.Manager()
-  rq, wqs, rjqs = multiprocessing.Queue(), m.dict(), m.dict()
+  rq, wqs, rjqs, peers = multiprocessing.Queue(), m.dict(), m.dict(), m.list()
   wf = multiprocessing.Value('i', False)
   p = multiprocessing.Process(
     target = http_serve,
@@ -314,6 +321,7 @@ def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocess
       'write_queues'  : wqs,
       'reject_queues' : rjqs,
       'work_flag'     : wf,
+      'peers'         : peers
       'manager'       : m,
     }
   )
