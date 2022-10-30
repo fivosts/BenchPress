@@ -93,13 +93,13 @@ class ActiveSampleFeed(typing.NamedTuple):
   Representation of an active learning input to the model.
   """
   # An array of original input
-  input_feed       : np.array
+  input_feed     : np.array
   # The feature space of the original input
-  input_features   : typing.Dict[str, float]
+  input_features : typing.Dict[str, float]
   # Distance from target features of input feed. Valid after 1st generation.
-  input_score      : float
+  input_score    : float
   # Depth increases when a valid inference sample is fed back as an input.
-  gen_id           : int
+  gen_id         : int
 
 def ActiveSampleFeed_to_JSON(f: ActiveSampleFeed) -> typing.Dict[str, typing.Any]:
   """
