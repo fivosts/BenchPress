@@ -198,7 +198,7 @@ class GrewePredictive(DownstreamTask):
       self.dataset = self.data_generator.dataset
     else:
       self.dataset = []
-      data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")]
+      data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")] ## TODO: Here you must get original training dataset instead of random github benchmarks.
       pool = multiprocessing.Pool()
       it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
       idx = 0
@@ -409,9 +409,10 @@ class GrewePredictive(DownstreamTask):
     return
 
   def UpdateDataGenerator(self,
-                          new_samples: typing.List['ActiveSample'],
-                          top_k: int,
-                          tokenizer: 'tokenizers.TokenizerBase',
+                          new_samples     : typing.List['ActiveSample'],
+                          target_features : typing.Dict[str, float],
+                          top_k           : int,
+                          tokenizer       : 'tokenizers.TokenizerBase',
                           ) -> data_generator.ListTrainDataloader:
     """
     Collect new generated samples, find their runtime features and processs to a torch dataset.
