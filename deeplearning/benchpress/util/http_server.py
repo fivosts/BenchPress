@@ -49,7 +49,7 @@ flags.DEFINE_string(
 
 flags.DEFINE_list(
   "http_server_peers",
-  None,
+  [],
   "Set comma-separated http address to load balance on secondary nodes."
 )
 
@@ -66,14 +66,16 @@ class FlaskHandler(object):
     self.read_queue   = None
     self.write_queues = None
     self.reject_queue = None
+    self.peers        = None
     self.backlog      = None
     return
 
-  def set_params(self, read_queue, write_queues, reject_queues, manager, work_flag):
+  def set_params(self, read_queue, write_queues, reject_queues, peers, manager, work_flag):
     self.read_queue    = read_queue
     self.write_queues  = write_queues
     self.work_flag     = work_flag
     self.reject_queues = reject_queues
+    self.peers         = FLAGS.http_server_peers
     self.manager       = manager
     self.backlog       = []
     return
@@ -240,7 +242,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
     port = FLAGS.http_port
     if port is None:
       port = portpicker.pick_unused_port()
-    handler.set_params(read_queue, write_queues, reject_queues, manager, work_flag)
+    handler.set_params(read_queue, write_queues, reject_queues, peers, manager, work_flag)
     hostname = subprocess.check_output(
       ["hostname", "-i"],
       stderr = subprocess.STDOUT,
