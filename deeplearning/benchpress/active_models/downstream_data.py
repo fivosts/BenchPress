@@ -239,10 +239,10 @@ class DownstreamData(sqlutil.Database):
     return
 
   def add_epoch(self,
-                batch              : typing.List[typing.Dict],
-                sampling_epoch     : int,
-                target_features    : typing.Dict[str, float],
-                tokenizer          : 'tokenizers.TokenizerBase',
+                batch           : typing.List[typing.Dict],
+                sampling_epoch  : int,
+                target_features : typing.Dict[str, float],
+                tokenizer       : 'tokenizers.TokenizerBase',
                 ) -> None:
     """
     Add new row entry in downstream data DB.
