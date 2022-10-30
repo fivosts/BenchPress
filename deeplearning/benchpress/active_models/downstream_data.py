@@ -175,9 +175,12 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
       + str(oracle),
     )
     return GrewePredictiveInstance(**{
-      "src"            : src,
-      "sampling_epoch" : sampling_epoch,
-      "sha256"         : sha,
+      "src"                : src,
+      "sampling_epoch"     : sampling_epoch,
+      "sha256"             : sha,
+      "features"           : ,
+      "target_features"    : ,
+      "euclidean_distance" : euclidean_distance,
       "benchmark" : "{}-cl.A".format(sha),
       "dataset"   : global_size,
       "comp"      : grewe_feats['comp'],
