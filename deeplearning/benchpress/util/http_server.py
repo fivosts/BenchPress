@@ -207,6 +207,7 @@ def index():
   }
   it = set(handler.write_queues.keys())
   it.update(set(handler.reject_queues.keys()))
+  multi_status['out_servers'] = {}
   for hn in it:
     status = {
       'write_queue'       : 'EMPTY' if hn in handler.write_queues and len(handler.write_queues[hn]) == 0 else 'NOT_EMPTY',
@@ -214,8 +215,8 @@ def index():
       'write_queue_size'  : len(handler.write_queues[hn]) if hn in handler.write_queues else 0,
       'reject_queue_size' : len(handler.reject_queues[hn]) if hn in handler.reject_queues else 0,
     }
-    multi_status[hn] = status
-  return json.dumps(multi_status), 200
+    multi_status['out_servers'][hn] = status
+    return flask.render_template("index.html", data = multi_status)
 
 def http_serve(read_queue    : multiprocessing.Queue,
                write_queues  : 'multiprocessing.Dict',
