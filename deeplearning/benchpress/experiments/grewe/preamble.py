@@ -404,95 +404,95 @@ def plot_speedups_with_clgen(benchmarks_data, clgen_data, synth_bench_name = "CL
   for k, v in groups.items():
     groups[k] = (list(v.keys()), list(v.values()))
 
-  # plotter.GrouppedBars(
-  #   groups = groups, # Dict[Dict[int, int]]
-  #   plot_name = "speedup_distribution",
-  #   path = pathlib.Path("."),
-  #   title = "Speedup distribution frequency",
-  #   x_name = "Speedup absolute value",
-  # )
+  plotter.GrouppedBars(
+    groups = groups, # Dict[Dict[int, int]]
+    plot_name = "speedup_distribution",
+    path = pathlib.Path("."),
+    title = "Speedup distribution frequency",
+    x_name = "Speedup absolute value",
+  )
 
-  # b_distr = distributions.GenericDistribution([int(x) for x in R[b_mask]["p_speedup"]], "plots", "benchmarks")
-  # s_distr = distributions.GenericDistribution([int(x) for x in R[s_mask]["p_speedup"]], "plots", "synthetics")
-  # bs_distr = distributions.GenericDistribution([int(x) for x in R[bs_mask]["p_speedup"]], "plots", "synthetics_benchmarks")
+  b_distr = distributions.GenericDistribution([int(x) for x in R[b_mask]["p_speedup"]], "plots", "benchmarks")
+  s_distr = distributions.GenericDistribution([int(x) for x in R[s_mask]["p_speedup"]], "plots", "synthetics")
+  bs_distr = distributions.GenericDistribution([int(x) for x in R[bs_mask]["p_speedup"]], "plots", "synthetics_benchmarks")
 
-  # b_distr.plot()
-  # s_distr.plot()
-  # bs_distr.plot()
+  b_distr.plot()
+  s_distr.plot()
+  bs_distr.plot()
 
-  # (s_distr - b_distr).plot()
-  # (bs_distr - b_distr).plot()
+  (s_distr - b_distr).plot()
+  (bs_distr - b_distr).plot()
 
   base = float(model.geomean([x for x in R[b_mask]["p_speedup"]]))
   enhanced = float(model.geomean([x for x in R[bs_mask]["p_speedup"]]))
 
-  # print("  #. benchmarks:                  ",
-  #       len(set(B["benchmark"])), "kernels,", len(B), "observations")
-  # print("  #. synthetic:                   ",
-  #       len(set(S["benchmark"])), "kernels,", len(S), "observations")
-  # print()
-  # print("  ZeroR device:                    {}".format(zeror))
-  # print()
-  # print("  Speedup of Grewe et al.:         {:.2f} x".format(B_speedup))
-  # print("  Speedup w. {}:                {:.2f} x".format(synth_bench_name, BS_speedup))
-  # print("  Speedup Only {}:              {:.2f} x".format(synth_bench_name, S_speedup))
-  # print("  Geo Speedup of Grewe et al.:         {:.2f} x".format(base))
-  # print("  Geo Speedup w. {}:                {:.2f} x".format(synth_bench_name, enhanced))
-  # print("  Geo Speedup Only {}:              {:.2f} x".format(synth_bench_name, model.geomean([x for x in R[s_mask]["p_speedup"]])))
-  # print("  Best speedup {}:              {:.2f} x".format("Best", model.geomean([x for x in R[b_mask]["best_p_speedup"]])))
+  print("  #. benchmarks:                  ",
+        len(set(B["benchmark"])), "kernels,", len(B), "observations")
+  print("  #. synthetic:                   ",
+        len(set(S["benchmark"])), "kernels,", len(S), "observations")
+  print()
+  print("  ZeroR device:                    {}".format(zeror))
+  print()
+  print("  Speedup of Grewe et al.:         {:.2f} x".format(B_speedup))
+  print("  Speedup w. {}:                {:.2f} x".format(synth_bench_name, BS_speedup))
+  print("  Speedup Only {}:              {:.2f} x".format(synth_bench_name, S_speedup))
+  print("  Geo Speedup of Grewe et al.:         {:.2f} x".format(base))
+  print("  Geo Speedup w. {}:                {:.2f} x".format(synth_bench_name, enhanced))
+  print("  Geo Speedup Only {}:              {:.2f} x".format(synth_bench_name, model.geomean([x for x in R[s_mask]["p_speedup"]])))
+  print("  Best speedup {}:              {:.2f} x".format("Best", model.geomean([x for x in R[b_mask]["best_p_speedup"]])))
 
-  # bft = [x.p_speedup for idx, x in R[b_mask].iterrows() if x.group == "FT.B"]
-  # sft = [x.p_speedup for idx, x in R[s_mask].iterrows() if x.group == "FT.B"]
-  # bsft = [x.p_speedup for idx, x in R[bs_mask].iterrows() if x.group == "FT.B"]
+  bft = [x.p_speedup for idx, x in R[b_mask].iterrows() if x.group == "FT.B"]
+  sft = [x.p_speedup for idx, x in R[s_mask].iterrows() if x.group == "FT.B"]
+  bsft = [x.p_speedup for idx, x in R[bs_mask].iterrows() if x.group == "FT.B"]
 
-  # R = R.append({  # average bars
-  #   "group": "Average",
-  #   "p_speedup": B_speedup,
-  #   "training": "Grewe et al."
-  # }, ignore_index=True)
-  # R = R.append({
-  #   "group": "Average",
-  #   "p_speedup": BS_speedup,
-  #   "training": "w. {}".format(synth_bench_name)
-  # }, ignore_index=True)
+  R = R.append({  # average bars
+    "group": "Average",
+    "p_speedup": B_speedup,
+    "training": "Grewe et al."
+  }, ignore_index=True)
+  R = R.append({
+    "group": "Average",
+    "p_speedup": BS_speedup,
+    "training": "w. {}".format(synth_bench_name)
+  }, ignore_index=True)
 
-  # R["p_speedup"] -= 1  # negative offset so that bars start at 1
+  R["p_speedup"] -= 1  # negative offset so that bars start at 1
 
-  # # colors
-  # palette = sns.cubehelix_palette(len(set(R["training"])),
-  #                                 rot=-.4, light=.85, dark=.35)
+  # colors
+  palette = sns.cubehelix_palette(len(set(R["training"])),
+                                  rot=-.4, light=.85, dark=.35)
 
-  # ax = sns.barplot(
-  #     x="group", y="p_speedup", data=R, ci=None, hue="training",
-  #     palette=palette)
-  # plt.ylabel("Speedup")
-  # plt.xlabel("")
+  ax = sns.barplot(
+      x="group", y="p_speedup", data=R, ci=None, hue="training",
+      palette=palette)
+  plt.ylabel("Speedup")
+  plt.xlabel("")
 
-  # plt.axhline(y=0, color="k", lw=1)  # speedup line
-  # plt.axvline(x=plt.xlim()[1] - 1, color="k", lw=1,
-  #             linestyle="--")  # average line
+  plt.axhline(y=0, color="k", lw=1)  # speedup line
+  plt.axvline(x=plt.xlim()[1] - 1, color="k", lw=1,
+              linestyle="--")  # average line
 
-  # ax.get_legend().set_title("")  # no legend title
-  # plt.legend(loc='upper right')
-  # ax.get_legend().draw_frame(True)
+  ax.get_legend().set_title("")  # no legend title
+  plt.legend(loc='upper right')
+  ax.get_legend().draw_frame(True)
 
-  # # plot shape and size
-  # figsize = (3*9, 3*2.2)
-  # if "nvidia" in benchmarks_data:
-  #   typecast = int;
-  #   plt.ylim(-1, 16)
-  # elif "training" in benchmarks_data:
-  #   typecast = float;
-  #   figsize = (3*7, 3*3.2)
-  # else:
-  #   typecast = float
+  # plot shape and size
+  figsize = (3*9, 3*2.2)
+  if "nvidia" in benchmarks_data:
+    typecast = int;
+    plt.ylim(-1, 16)
+  elif "training" in benchmarks_data:
+    typecast = float;
+    figsize = (3*7, 3*3.2)
+  else:
+    typecast = float
 
-  # # counter negative offset:
-  # ax.set_yticklabels([typecast(i) + 1 for i in ax.get_yticks()])
+  # counter negative offset:
+  ax.set_yticklabels([typecast(i) + 1 for i in ax.get_yticks()])
 
-  # plt.setp(ax.get_xticklabels(), rotation=90)
+  plt.setp(ax.get_xticklabels(), rotation=90)
 
-  # Finalize(output = "plot.png", figsize=figsize, tight=True)
+  Finalize(output = "plot.png", figsize=figsize, tight=True)
   ## Return predictive model's speedup when A) trained on gpgpu and B) gpgpu+synthetics
   return R, base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr
 
