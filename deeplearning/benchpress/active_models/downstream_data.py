@@ -238,7 +238,7 @@ class DownstreamData(sqlutil.Database):
     with self.Session(commit = True) as ses:
       for sample in batch:
         src = tokenizer.ArrayToCode(sample.sample)
-        instance = self.type.FromArgs(
+        instance = self.task_type.FromArgs(
           src               = src,
           sampling_epoch    = sampling_epoch,
           global_size       = sample.runtime_features['global_size'],
