@@ -399,16 +399,19 @@ class GrewePredictive(DownstreamTask):
       return new_samples
 
   def UpdateDownstreamDatabase(self,
-                               new_samples     : typing.List[typing.Dict[str, typing.Any]],
-                               target_features : typing.Dict[str, float],
-                               tokenizer       : 'tokenizers.TokenizerBase',
+                               new_samples        : typing.List[typing.Dict[str, typing.Any]],
+                               target_features    : typing.Dict[str, float],
+                               euclidean_distance : float,
+                               tokenizer          : 'tokenizers.TokenizerBase',
                                ) -> None:
     """
     Update exported database of downstream task.
     """
     if environment.WORLD_RANK == 0:
       cur_sample_ep = self.downstream_data.sampling_epoch
-      self.downstream_data.add_epoch(new_samples, cur_sample_ep, target_features, tokenizer)
+      self.downstream_data.add_epoch(
+        new_samples, cur_sample_ep, target_features, euclidean_distance, tokenizer
+      )
     distrib.barrier()
     return
 
