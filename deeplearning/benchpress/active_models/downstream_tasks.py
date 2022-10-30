@@ -182,6 +182,8 @@ class GrewePredictive(DownstreamTask):
 
   def setup_server(self) -> None:
     """
+    This is server mode.
+
     In server mode, initialize the serving process.
     """
     if environment.WORLD_RANK == 0:
