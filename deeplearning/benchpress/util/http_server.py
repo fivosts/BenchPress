@@ -201,6 +201,17 @@ def status():
   elif status['read_queue'] == 'NOT_EMPTY' and status['write_queue'] == 'NOT_EMPTY':
     return bytes(json.dumps(status), encoding = 'utf-8'), 203 + (100 if handler.work_flag.value else 0)
 
+@app.route('/ping', methods = ['PUT'])
+def ping():
+  """
+  A peer compute node receives a ping from master node before initializing the compute network.
+  """
+  source = flask.request.headers.get("Server-Name")
+  if source is None:
+    return "Server-Name is undefined", 404
+  raise NotImplementedError
+  return 100
+
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
   """
