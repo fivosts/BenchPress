@@ -424,9 +424,7 @@ class GrewePredictive(DownstreamTask):
     Collect new generated samples, find their runtime features and processs to a torch dataset.
     """
     new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
-    self.UpdateDownstreamDatabase(
-      new_samples, target_features, euclidean_distance, tokenizer
-    )
+    self.UpdateDownstreamDatabase(new_samples, target_features, tokenizer)
     updated_dataset = [
       (
         self.InputtoEncodedVector(entry.features,
