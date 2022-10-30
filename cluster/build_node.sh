@@ -8,7 +8,7 @@
 mkdir -p /disk/scratch/s1879742/benchpress_build
 cd /disk/scratch/s1879742/benchpress_build
 
-cmake ~/clgen
+cmake ~/BenchPress
 
 make -j 16
 make -j 16 install_lib_ap
