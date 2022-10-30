@@ -260,6 +260,10 @@ def http_serve(read_queue    : multiprocessing.Queue,
     raise e
   return
 
+##########################
+# Client request methods #
+##########################
+
 def client_status_request() -> typing.Tuple[typing.Dict, int]:
   """
   Get status of http server.
@@ -307,6 +311,8 @@ def client_put_request(msg: typing.List[typing.Dict]) -> None:
   if r.status_code != 200:
     l.logger().error("Error code {} in write_message request.".format(r.status_code))
   return
+
+########################
 
 def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocessing.Value, multiprocessing.Queue, typing.Dict, typing.Dict]:
   """
