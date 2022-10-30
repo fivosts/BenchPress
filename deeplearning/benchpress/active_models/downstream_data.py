@@ -150,19 +150,21 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
 
   @classmethod
   def FromArgs(cls,
-               sampling_epoch    : int,
-               src               : str,
-               grewe_feats       : typing.Dict[str, float],
-               global_size       : int,
-               local_size        : int,
-               transferred_bytes : int,
-               oracle            : str,
-               cpu_transfer_ns   : int,
-               cpu_kernel_ns     : int,
-               gpu_transfer_ns   : int,
-               gpu_kernel_ns     : int,
-               kernel_nlines     : int,
-               kernel_size       : int,
+               sampling_epoch     : int,
+               src                : str,
+               grewe_feats        : typing.Dict[str, float],
+               target_features    : typing.Dict[str, float],
+               euclidean_distance : float,
+               global_size        : int,
+               local_size         : int,
+               transferred_bytes  : int,
+               oracle             : str,
+               cpu_transfer_ns    : int,
+               cpu_kernel_ns      : int,
+               gpu_transfer_ns    : int,
+               gpu_kernel_ns      : int,
+               kernel_nlines      : int,
+               kernel_size        : int,
                ) -> typing.Dict[str, typing.Any]:
     sha = crypto.sha256_str(
       src,
@@ -234,10 +236,11 @@ class DownstreamData(sqlutil.Database):
     return
 
   def add_epoch(self,
-                batch           : typing.List[typing.Dict],
-                sampling_epoch  : int,
-                target_features : typing.Dict[str, float],
-                tokenizer       : 'tokenizers.TokenizerBase',
+                batch              : typing.List[typing.Dict],
+                sampling_epoch     : int,
+                target_features    : typing.Dict[str, float],
+                euclidean_distance : float,
+                tokenizer          : 'tokenizers.TokenizerBase',
                 ) -> None:
     """
     Add new row entry in downstream data DB.
