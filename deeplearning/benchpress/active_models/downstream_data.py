@@ -257,7 +257,7 @@ class DownstreamData(sqlutil.Database):
           global_size        = sample.runtime_features['global_size'],
           grewe_feats        = sample.features,
           target_features    = target_features,
-          euclidean_distance = distance,
+          euclidean_distance = euclidean_distance,
           transferred_bytes  = sample.runtime_features['transferred_bytes'],
           local_size         = sample.runtime_features['local_size'],
           oracle             = sample.runtime_features['label'],
