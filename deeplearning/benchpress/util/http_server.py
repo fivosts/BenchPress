@@ -50,7 +50,7 @@ flags.DEFINE_string(
 flags.DEFINE_list(
   "http_server_peers",
   [],
-  "Set comma-separated http address to load balance on secondary nodes."
+  "Set comma-separated http address <dns_name:port> to load balance on secondary nodes."
 )
 
 flags.DEFINE_string(
@@ -75,7 +75,7 @@ class FlaskHandler(object):
     self.write_queues  = write_queues
     self.work_flag     = work_flag
     self.reject_queues = reject_queues
-    self.peers         = FLAGS.http_server_peers
+    self.peers         = ["https://{}".format(s) for s in FLAGS.http_server_peers]
     self.manager       = manager
     self.backlog       = []
     return
@@ -252,6 +252,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
     else:
       ips = "ipv4: {}".format(hostname[0])
     l.logger().warn("Server Public IP: {}".format(ips))
+
     waitress.serve(app, host = FLAGS.host_address, port = port)
   except KeyboardInterrupt:
     return
