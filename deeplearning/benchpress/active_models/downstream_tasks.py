@@ -399,10 +399,9 @@ class GrewePredictive(DownstreamTask):
       return new_samples
 
   def UpdateDownstreamDatabase(self,
-                               new_samples        : typing.List[typing.Dict[str, typing.Any]],
-                               target_features    : typing.Dict[str, float],
-                               euclidean_distance : float,
-                               tokenizer          : 'tokenizers.TokenizerBase',
+                               new_samples     : typing.List[typing.Dict[str, typing.Any]],
+                               target_features : typing.Dict[str, float],
+                               tokenizer       : 'tokenizers.TokenizerBase',
                                ) -> None:
     """
     Update exported database of downstream task.
@@ -410,7 +409,7 @@ class GrewePredictive(DownstreamTask):
     if environment.WORLD_RANK == 0:
       cur_sample_ep = self.downstream_data.sampling_epoch
       self.downstream_data.add_epoch(
-        new_samples, cur_sample_ep, target_features, euclidean_distance, tokenizer
+        new_samples, cur_sample_ep, target_features, tokenizer
       )
     distrib.barrier()
     return
@@ -425,7 +424,9 @@ class GrewePredictive(DownstreamTask):
     Collect new generated samples, find their runtime features and processs to a torch dataset.
     """
     new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
-    self.UpdateDownstreamDatabase(new_samples, tokenizer)
+    self.UpdateDownstreamDatabase(
+      new_samples, target_features, euclidean_distance, tokenizer
+    )
     updated_dataset = [
       (
         self.InputtoEncodedVector(entry.features,
