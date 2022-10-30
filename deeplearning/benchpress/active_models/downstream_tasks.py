@@ -398,7 +398,11 @@ class GrewePredictive(DownstreamTask):
             return new_samples
       return new_samples
 
-  def UpdateDownstreamDatabase(self, new_samples: typing.List[typing.Dict[str, typing.Any]], tokenizer) -> None:
+  def UpdateDownstreamDatabase(self,
+                               new_samples     : typing.List[typing.Dict[str, typing.Any]],
+                               target_features : typing.Dict[str, float],
+                               tokenizer       : 'tokenizers.TokenizerBase',
+                               ) -> None:
     """
     Update exported database of downstream task.
     """
