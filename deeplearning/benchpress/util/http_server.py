@@ -379,7 +379,7 @@ def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> i
     l.logger().warn("PUT status Request at {}/ping has failed.".format(peer))
     print(e)
     return None, 404
-  return r.json(), r.status_code
+  return r.content, r.status_code
 
 
 def client_status_request(address: str = None, servername: str = None) -> typing.Tuple[typing.Dict, int]:
