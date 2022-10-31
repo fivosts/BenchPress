@@ -50,7 +50,7 @@ def listen() -> None:
       print(stderr)
   return
 
-def start_proxy_bash() -> None:
+def start() -> None:
   """
   Initialize daemon thread to run your proxy bash commands.
   """
