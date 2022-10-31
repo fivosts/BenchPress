@@ -29,9 +29,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean(
   "proxy_bash",
   False,
-  "Set True to start a proxy bash thread.",
-  "Commands are provided from BenchPress's",
-  "running terminal and standard's input format",
+  "Set True to start a proxy bash thread."
+  "Commands are provided from BenchPress's"
+  "running terminal and standard's input format"
   "must be: `>> CMD'."
 )
 
