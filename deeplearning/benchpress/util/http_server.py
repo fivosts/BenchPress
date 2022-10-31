@@ -366,7 +366,7 @@ def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocess
       'write_queues'  : wqs,
       'reject_queues' : rjqs,
       'work_flag'     : wf,
-      'peers'         : peers
+      'peers'         : peers,
       'manager'       : m,
     }
   )
