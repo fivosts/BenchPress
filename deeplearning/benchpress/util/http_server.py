@@ -473,7 +473,7 @@ def client_get_backlog(address: str = None) -> typing.List[typing.Dict]:
     l.logger().error("Error code {} in get_backlog request.".format(r.status_code))
   return None
 
-def client_put_request(msg: typing.List[typing.Dict], address: str = None, servername: None) -> None:
+def client_put_request(msg: typing.List[typing.Dict], address: str = None, servername: str = None) -> None:
   """
   Helper function to perform put at /write_message of http target host.
   """
