@@ -162,7 +162,7 @@ def read_message() -> bytes:
 
   if handler.master_node:
     for peer in handler.peers:
-      ret += client_get_request(peer, servername = source)
+      ret += client_get_request(address = peer, servername = source)
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_rejects', methods = ['GET'])
@@ -179,7 +179,7 @@ def read_rejects() -> bytes:
 
   if handler.master_node:
     for peer in handler.peers:
-      ret += client_get_rejects(servername = source)
+      ret += client_get_rejects(address = peer, servername = source)
     raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
 
   return bytes(json.dumps(ret), encoding="utf-8"), 200
