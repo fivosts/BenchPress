@@ -77,8 +77,8 @@ class FlaskHandler(object):
     self.write_queues  = write_queues
     self.work_flag     = work_flag
     self.reject_queues = reject_queues
-    self.my_address    = "https://{}:{}".format(FLAGS.http_server_ip_address, FLAGS.http_port)
-    self.peers         = ["https://{}".format(s) for s in FLAGS.http_server_peers]
+    self.my_address    = "http://{}:{}".format(FLAGS.http_server_ip_address, FLAGS.http_port)
+    self.peers         = ["http://{}".format(s) for s in FLAGS.http_server_peers]
     self.master_node   = True if self.peers else False
     self.manager       = manager
     self.backlog       = []
@@ -343,12 +343,13 @@ def http_serve(read_queue    : multiprocessing.Queue,
       queue = [[p, 0] for p in handler.peers]
       while queue:
         cur = queue.pop(0)
-        _, sc = ping_peer_request(cur[0], handler.peers + [handler.my_address], "https://{}:{}".format(hostname, FLAGS.http_port))
+        _, sc = ping_peer_request(cur[0], handler.peers + [handler.my_address], "http://{}:{}".format(hostname, FLAGS.http_port))
         if sc != 200:
           queue.append([cur[0], cur[1] + 1])
         else:
           l.logger().info("Successfully connected to {}, {} attempts".format(cur[0], cur[1]))
         time.sleep(5)
+      l.logger().info("Successfully connected to all peers")
     waitress.serve(app, host = FLAGS.host_address, port = port)
   except KeyboardInterrupt:
     return
