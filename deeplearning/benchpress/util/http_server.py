@@ -343,7 +343,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
       queue = [[p, 0] for p in handler.peers]
       while queue:
         cur = queue.pop(0)
-        _, sc = ping_peer_request(cur[0], handler.peers, handler.my_address)
+        sc = ping_peer_request(cur[0], handler.peers, handler.my_address)
         if sc != 200:
           queue.append([cur[0], cur[1] + 1])
         else:
