@@ -37,11 +37,16 @@ flags.DEFINE_boolean(
 
 def listen() -> None:
   """
-  Listen for bash commands from standard input and execute using a subprocess PIPE.
+  Listen for bash commands from standard input
+  and execute using a subprocess PIPE.
   """
   while True:
     cmd = input()
-
+    if cmd[:3] == ">> ":
+      cmd = cmd[3:]
+      pr = subprocess.Popen(cmd.split(), stdin = subprocess.PIPE, stdout = subprocess.PIPE)
+      pr.start()
+  return
 
 def start_proxy_bash() -> None:
   """
