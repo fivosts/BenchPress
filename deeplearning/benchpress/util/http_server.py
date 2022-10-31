@@ -255,6 +255,10 @@ def status():
   if handler.master_node:
     for peer in handler.peers:
       peer_status = client_status_request()
+      status['read_queue']   = 'EMPTY' if peer_status['read_queue']   == 'EMPTY' and status['read_queue']   == 'EMPTY' else 'NOT_EMPTY'
+      status['write_queue']  = 'EMPTY' if peer_status['write_queue']  == 'EMPTY' and status['write_queue']  == 'EMPTY' else 'NOT_EMPTY'
+      status['reject_queue'] = 'EMPTY' if peer_status['reject_queue'] == 'EMPTY' and status['reject_queue'] == 'EMPTY' else 'NOT_EMPTY'
+      status['work_flag']    = 'IDLE'  if peer_status['work_flag']    == 'IDLE'  and status['work_flag']    == 'IDLE'  else 'WORKING'
 
 
   if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
