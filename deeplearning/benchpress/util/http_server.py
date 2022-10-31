@@ -283,7 +283,7 @@ def ping():
     return "Server-Name is undefined", 404
 
   data = flask.request.json
-  handler.peers = [x for x in data['peers'] if x != handler.my_address] + data['master']
+  handler.peers = [x for x in data['peers'] if x != handler.my_address] + [data['master']]
   return 100
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
