@@ -20,6 +20,7 @@ import subprocess
 import json
 import typing
 import requests
+import time
 import flask
 import heapq
 
@@ -347,6 +348,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
           queue.append([cur[0], cur[1] + 1])
         else:
           l.logger().info("Successfully connected to {}, {} attempts".format(cur[0], cur[1]))
+        time.sleep(5)
     waitress.serve(app, host = FLAGS.host_address, port = port)
   except KeyboardInterrupt:
     return
