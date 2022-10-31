@@ -240,10 +240,10 @@ def index():
     return flask.render_template("index.html", data = multi_status)
 
 def http_serve(read_queue    : multiprocessing.Queue,
-               write_queues  : multiprocessing.Manager.dict,
-               reject_queues : multiprocessing.Manager.dict,
+               write_queues  : 'multiprocessing.Dict',
+               reject_queues : 'multiprocessing.Dict',
                work_flag     : multiprocessing.Value,
-               peers         : multiprocessing.Manager.list,
+               peers         : 'multiprocessing.List',
                manager       : multiprocessing.Manager,
                ) -> None:
   """
