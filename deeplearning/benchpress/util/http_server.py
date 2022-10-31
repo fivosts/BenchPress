@@ -369,6 +369,7 @@ def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> i
   try:
     r = requests.put("{}/ping".format(peer), data = json.dumps({'peers': peers, 'master': master_node}), headers = {"Server-Name": environment.HOSTNAME})
   except Exception as e:
+    l.logger().warn("PUT status Request at {}/ping has failed.".format(peer))
     return None, 404
   return r.json(), r.status_code
 
