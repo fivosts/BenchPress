@@ -267,14 +267,14 @@ def http_serve(read_queue    : multiprocessing.Queue,
     if len(peers) > 0:
       l.logger().info("This is master compute server {}.".format(hostname))
       l.logger().info("Idling until I ensure all peer compute servers are responding:\n{}".format('\n'.join(peers)))
-      queue = [[p, 0] for p in peers]
+      queue = [[p, 0] for p in handler.peers]
       while queue:
         cur = queue.pop(0)
-        _, sc = ping_peer_request(cur[0], peers)
+        _, sc = ping_peer_request(cur[0], peers, "https://{}:{}".format(hostname, FLAGS.http_port))
         if sc != 200:
           queue.append([cur[0], cur[1] + 1])
         else:
-          l.logger().info("Successfully connected to {}".format(cur[1]))
+          l.logger().info("Successfully connected to {}, {} attempts".format(cur[0], cur[1]))
     waitress.serve(app, host = FLAGS.host_address, port = port)
   except KeyboardInterrupt:
     return
@@ -286,14 +286,14 @@ def http_serve(read_queue    : multiprocessing.Queue,
 # Client request methods #
 ##########################
 
-def ping_peer_request(peer: str, peers: typing.List[str]) -> int:
+def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> int:
   """
   Master compute node peers a peer compute node to check if it's alive.
   If so, also pass the information of all peers that must be alive
   inside the compute network.
   """
   try:
-    r = requests.put("{}/ping".format(peer), data = json.dumps(peers), headers = {"Server-Name": environment.HOSTNAME})
+    r = requests.put("{}/ping".format(peer), data = json.dumps({'peers': peers, 'master': master_node}), headers = {"Server-Name": environment.HOSTNAME})
   except Exception as e:
     l.logger().error("PUT status Request at {} has failed.".format(peer))
     raise e
