@@ -284,7 +284,7 @@ def ping():
 
   data = flask.request.json
   handler.peers = [x for x in data['peers'] if x != handler.my_address] + [data['master']]
-  return 100
+  return bytes(json.dumps(handler.peers), encoding = 'utf-8'), 100
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
@@ -343,7 +343,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
       queue = [[p, 0] for p in handler.peers]
       while queue:
         cur = queue.pop(0)
-        sc = ping_peer_request(cur[0], handler.peers, handler.my_address)
+        _, sc = ping_peer_request(cur[0], handler.peers, handler.my_address)
         if sc != 200:
           queue.append([cur[0], cur[1] + 1])
         else:
@@ -377,8 +377,8 @@ def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> i
           )
   except Exception as e:
     l.logger().warn("PUT status Request at {}/ping has failed.".format(peer))
-    return 404
-  return r.status_code
+    return None, 404
+  return r.json(), r.status_code
 
 
 def client_status_request(address: str = None, servername: str = None) -> typing.Tuple[typing.Dict, int]:
