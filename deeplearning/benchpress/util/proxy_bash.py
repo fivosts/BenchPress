@@ -44,8 +44,10 @@ def listen() -> None:
     cmd = input()
     if cmd[:3] == ">> ":
       cmd = cmd[3:]
-      pr = subprocess.Popen(cmd.split(), stdin = subprocess.PIPE, stdout = subprocess.PIPE)
-      pr.start()
+      pr = subprocess.Popen(cmd.split(), stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+      stdout, stderr = pr.communicate()
+      print(stdout)
+      print(stderr)
   return
 
 def start_proxy_bash() -> None:
