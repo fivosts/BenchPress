@@ -259,7 +259,9 @@ def status():
       status['write_queue']  = 'EMPTY' if peer_status['write_queue']  == 'EMPTY' and status['write_queue']  == 'EMPTY' else 'NOT_EMPTY'
       status['reject_queue'] = 'EMPTY' if peer_status['reject_queue'] == 'EMPTY' and status['reject_queue'] == 'EMPTY' else 'NOT_EMPTY'
       status['work_flag']    = 'IDLE'  if peer_status['work_flag']    == 'IDLE'  and status['work_flag']    == 'IDLE'  else 'WORKING'
-
+      status['read_queue_size']   += peer_status['read_queue_size']
+      status['write_queue_size']  += peer_status['write_queue_size']
+      status['reject_queue_size'] += peer_status['reject_queue_size']
 
   if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
     return bytes(json.dumps(status), encoding = 'utf-8'), 200 + (100 if handler.work_flag.value else 0)
