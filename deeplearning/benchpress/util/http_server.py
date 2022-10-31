@@ -402,6 +402,30 @@ def client_get_request(address: str = None, servername: str = None) -> typing.Li
     l.logger().error("Error code {} in read_message request.".format(r.status_code))
   return None
 
+def client_get_rejects(address: str = None, servername: str = None) -> typing.List[typing.Dict]:
+  """
+  Helper function to perform get request at /read_rejects of http target host.
+  """
+  try:
+    if FLAGS.http_port == -1 or address:
+      r = requests.get(
+        "{}/read_rejects".format(FLAGS.http_server_ip_address if not address else address),
+        headers = {"Server-Name": (environment.HOSTNAME if servername is None else servername)}
+      )
+    else:
+      r = requests.get(
+        "http://{}:{}/read_rejects".format(FLAGS.http_server_ip_address, FLAGS.http_port),
+        headers = {"Server-Name": (environment.HOSTNAME if servername is None else servername)}
+      )
+  except Exception as e:
+    l.logger().error("GET Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+    raise e
+  if r.status_code == 200:
+    return r.json()
+  else:
+    l.logger().error("Error code {} in read_rejects request.".format(r.status_code))
+  return None
+
 def client_put_request(msg: typing.List[typing.Dict], address: str = None, servername: None) -> None:
   """
   Helper function to perform put at /write_message of http target host.
