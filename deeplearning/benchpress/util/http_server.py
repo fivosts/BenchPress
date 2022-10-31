@@ -284,7 +284,8 @@ def ping():
 
   data = flask.request.json
   handler.peers = [x for x in data['peers'] if x != handler.my_address] + [data['master']]
-  return bytes(json.dumps(handler.peers), encoding = 'utf-8'), 100
+  print(','.join(handler.peers))
+  return "OK", 100
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
@@ -370,7 +371,7 @@ def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> i
   try:
     r = requests.put(
           "{}/ping".format(peer),
-          data = json.dumps({'peers': peers,'master': master_node,}),
+          data = json.dumps({'peers': peers, 'master': master_node}),
           headers = {
             "Content-Type": "application/json",
             "Server-Name": environment.HOSTNAME}
