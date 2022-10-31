@@ -209,7 +209,10 @@ def ping():
   source = flask.request.headers.get("Server-Name")
   if source is None:
     return "Server-Name is undefined", 404
-  raise NotImplementedError
+
+  data = flask.request.json
+  my_address = "https://{}:{}".format(FLAGS.http_server_ip_address, FLAGS.http_port)
+  handler.peers = [x for x in data['peers'] if x != my_address] + data['master']
   return 100
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
