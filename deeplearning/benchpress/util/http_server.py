@@ -160,9 +160,9 @@ def read_message() -> bytes:
   handler.write_queues[source] = handler.manager.list()
   handler.backlog += [[source, r] for r in ret]
 
-  if handler.peers:
-    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
-
+  if handler.master_node:
+    for peer in handler.peers:
+      ret += client_get_request(servername = source)
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_rejects', methods = ['GET'])
@@ -376,7 +376,7 @@ def client_status_request() -> typing.Tuple[typing.Dict, int]:
     raise e
   return r.json(), r.status_code
 
-def client_get_request() -> typing.List[typing.Dict]:
+def client_get_request(servername: str = None) -> typing.List[typing.Dict]:
   """
   Helper function to perform get request at /read_message of http target host.
   """
@@ -384,12 +384,12 @@ def client_get_request() -> typing.List[typing.Dict]:
     if FLAGS.http_port == -1:
       r = requests.get(
         "{}/read_message".format(FLAGS.http_server_ip_address),
-        headers = {"Server-Name": environment.HOSTNAME}
+        headers = {"Server-Name": (environment.HOSTNAME if servername is None else servername)}
       )
     else:
       r = requests.get(
         "http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port),
-        headers = {"Server-Name": environment.HOSTNAME}
+        headers = {"Server-Name": (environment.HOSTNAME if servername is None else servername)}
       )
   except Exception as e:
     l.logger().error("GET Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
