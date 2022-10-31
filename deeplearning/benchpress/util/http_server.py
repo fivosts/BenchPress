@@ -214,10 +214,8 @@ def read_reject_labels() -> bytes:
 @app.route('/read_queue_size', methods = ['GET'])
 def read_queue_size() -> bytes:
   """
-  Read size of pending workload in read_queue.
+  Read size of pending workload in read_queue for current compute node.
   """
-  if handler.peers:
-    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
   return handler.read_queue.qsize(), 200
 
 @app.route('/get_backlog', methods = ['GET'])
