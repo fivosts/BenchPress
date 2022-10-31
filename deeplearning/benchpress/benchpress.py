@@ -142,6 +142,15 @@ flags.DEFINE_boolean(
   "dashboard_only", False, "If true, launch dashboard only."
 )
 
+flags.DEFINE_boolean(
+  "proxy_bash",
+  False,
+  "Set True to start a proxy bash thread."
+  "Commands are provided from BenchPress's"
+  "running terminal and standard's input format"
+  "must be: `>> CMD'."
+)
+
 class Instance(object):
   """A BenchPress instance encapsulates a github_miner, model, sampler, and working directory."""
 
