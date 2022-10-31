@@ -137,7 +137,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
         for entry in workload:
           handler.read_queue.put([source, entry])
       else:
-        client_put_request(workload)
+        client_put_request(workload, servername = source)
   else:
     for entry in data:
       handler.read_queue.put([source, entry])
