@@ -18,22 +18,8 @@ A tool that helps running bash commands using BenchPress as proxy.
 Especially useful when deploying BenchPress on clusters but still
 need to keep an eye on resources (e.g. nvidia-smi) or files.
 """
-import typing
 import subprocess
 import threading
-
-from absl import flags
-
-FLAGS = flags.FLAGS
-
-flags.DEFINE_boolean(
-  "proxy_bash",
-  False,
-  "Set True to start a proxy bash thread."
-  "Commands are provided from BenchPress's"
-  "running terminal and standard's input format"
-  "must be: `>> CMD'."
-)
 
 def listen() -> None:
   """
