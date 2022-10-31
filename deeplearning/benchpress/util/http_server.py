@@ -407,7 +407,14 @@ def client_put_request(msg: typing.List[typing.Dict], servername: None) -> None:
         }
       )
     else:
-      r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": (environment.HOSTNAME if servername is None else servername)})
+      r = requests.put(
+        "http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port),
+        data = json.dumps(msg),
+        headers = {
+          "Content-Type": "application/json",
+          "Server-Name": (environment.HOSTNAME if servername is None else servername)
+        }
+      )
   except Exception as e:
     l.logger().error("PUT Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
