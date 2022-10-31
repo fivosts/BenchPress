@@ -53,6 +53,7 @@ from deeplearning.benchpress.proto import model_pb2
 from deeplearning.benchpress.proto import sampler_pb2
 from deeplearning.benchpress.github import miner
 from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util import proxy_bash
 
 from eupy.hermes import client
 
@@ -424,6 +425,8 @@ def initMain(*args, **kwargs):
     mem_monitor_threads = memory.init_mem_monitors(
       pathlib.Path(FLAGS.workspace_dir).resolve()
     )
+  if FLAGS.proxy_bash:
+    proxy_bash.start()
   if FLAGS.debug:
     # Enable verbose stack traces. See: https://pymotw.com/2/cgitb/
     import cgitb
