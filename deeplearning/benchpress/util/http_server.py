@@ -338,7 +338,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
     l.logger().warn("Server Public IP: {}:{}".format(ips, port))
 
     if handler.master_node:
-      l.logger().info("This is master compute server {}.".format(hostname))
+      l.logger().info("This is master compute server at {}.".format(handler.my_address))
       l.logger().info("Idling until I ensure all peer compute servers are responding:\n{}".format('\n'.join(handler.peers)))
       queue = [[p, 0] for p in handler.peers]
       while queue:
