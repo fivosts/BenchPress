@@ -139,7 +139,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
           handler.read_queue.put([source, entry])
       # Otherwise run a request
       else:
-        client_put_request(workload, servername = source)
+        client_put_request(workload, address = node, servername = source)
   else:
     for entry in data:
       handler.read_queue.put([source, entry])
@@ -162,7 +162,7 @@ def read_message() -> bytes:
 
   if handler.master_node:
     for peer in handler.peers:
-      ret += client_get_request(servername = source)
+      ret += client_get_request(peer, servername = source)
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_rejects', methods = ['GET'])
@@ -177,7 +177,9 @@ def read_rejects() -> bytes:
   source = flask.request.headers.get("Server-Name")
   ret = [r for r in handler.reject_queues[source]]
 
-  if handler.peers:
+  if handler.master_node:
+    for peer in handler.peers:
+      ret += client_get_rejects(servername = source)
     raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
 
   return bytes(json.dumps(ret), encoding="utf-8"), 200
@@ -376,14 +378,14 @@ def client_status_request() -> typing.Tuple[typing.Dict, int]:
     raise e
   return r.json(), r.status_code
 
-def client_get_request(servername: str = None) -> typing.List[typing.Dict]:
+def client_get_request(address: str = None, servername: str = None) -> typing.List[typing.Dict]:
   """
   Helper function to perform get request at /read_message of http target host.
   """
   try:
-    if FLAGS.http_port == -1:
+    if FLAGS.http_port == -1 or address:
       r = requests.get(
-        "{}/read_message".format(FLAGS.http_server_ip_address),
+        "{}/read_message".format(FLAGS.http_server_ip_address if not address else address),
         headers = {"Server-Name": (environment.HOSTNAME if servername is None else servername)}
       )
     else:
@@ -400,14 +402,14 @@ def client_get_request(servername: str = None) -> typing.List[typing.Dict]:
     l.logger().error("Error code {} in read_message request.".format(r.status_code))
   return None
 
-def client_put_request(msg: typing.List[typing.Dict], servername: None) -> None:
+def client_put_request(msg: typing.List[typing.Dict], address: str = None, servername: None) -> None:
   """
   Helper function to perform put at /write_message of http target host.
   """
   try:
-    if FLAGS.http_port == -1:
+    if FLAGS.http_port == -1 or address:
       r = requests.put(
-        "{}/write_message".format(FLAGS.http_server_ip_address),
+        "{}/write_message".format(FLAGS.http_server_ip_address if not address else address),
         data = json.dumps(msg),
         headers = {
           "Content-Type": "application/json",
