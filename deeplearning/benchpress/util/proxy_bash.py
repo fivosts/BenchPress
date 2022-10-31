@@ -30,10 +30,14 @@ def listen() -> None:
     cmd = input()
     if cmd[:3] == ">> ":
       cmd = cmd[3:]
-      pr = subprocess.Popen(cmd.split(), stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-      stdout, stderr = pr.communicate()
-      print(stdout)
-      print(stderr)
+      try:
+        pr = subprocess.Popen(cmd.split(), stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        stdout, stderr = pr.communicate()
+        print(stdout.decode('utf-8'))
+        if stderr:
+          print(stderr.decode('utf-8'))
+      except FileNotFoundError:
+        print("{}: command not found".format(cmd))
   return
 
 def start() -> None:
