@@ -311,7 +311,7 @@ def index():
       'reject_queue_size' : len(handler.reject_queues[hn]) if hn in handler.reject_queues else 0,
     }
     multi_status['out_servers'][hn] = status
-    return flask.render_template("index.html", data = multi_status)
+  return flask.render_template("index.html", data = multi_status)
 
 def http_serve(read_queue    : multiprocessing.Queue,
                write_queues  : 'multiprocessing.Dict',
@@ -377,6 +377,7 @@ def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> i
           )
   except Exception as e:
     l.logger().warn("PUT status Request at {}/ping has failed.".format(peer))
+    print(e)
     return None, 404
   return r.json(), r.status_code
 
