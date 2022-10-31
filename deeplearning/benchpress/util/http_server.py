@@ -180,8 +180,6 @@ def read_rejects() -> bytes:
   if handler.master_node:
     for peer in handler.peers:
       ret += client_get_rejects(address = peer, servername = source)
-    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
-
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_reject_labels', methods = ['GET'])
