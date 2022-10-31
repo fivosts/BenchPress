@@ -21,6 +21,7 @@ import json
 import typing
 import requests
 import flask
+import heapq
 
 from absl import flags
 
@@ -75,7 +76,9 @@ class FlaskHandler(object):
     self.write_queues  = write_queues
     self.work_flag     = work_flag
     self.reject_queues = reject_queues
+    self.my_address    = "https://{}:{}".format(FLAGS.http_server_ip_address, FLAGS.http_port)
     self.peers         = ["https://{}".format(s) for s in FLAGS.http_server_peers]
+    self.master_node   = True if self.peers else False
     self.manager       = manager
     self.backlog       = []
     return
@@ -97,15 +100,48 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
   source = flask.request.headers.get("Server-Name")
   if source is None:
     return "Source address not provided.", 404
+
   if source not in handler.write_queues:
     handler.write_queues[source] = handler.manager.list()
   if source not in handler.reject_queues:
     handler.reject_queues[source] = handler.manager.list()
+
   data = flask.request.json
+
   if not isinstance(data, list):
     return "ERROR: JSON Input has to be a list of dictionaries. One for each entry.\n", 400
-  for entry in data:
-    handler.read_queue.put([source, entry])
+
+  if handler.master_node:
+    # 1. Read the pending queue from all peer nodes.
+    heap = []
+    for add in handler.peers:
+      size, sc = client_read_queue_size(add)
+      if sc != 200:
+        l.logger().error("{}, {}".format(size, sc))
+      else:
+        heap.append((size, add))
+    heap.append([handler.read_queue.qsize(), handler.my_address])
+    heapq.heapify(heap)
+    # 2. Create the schedule: dict[node_address -> list of workload]
+    schedule = {}
+    for entry in data:
+      min_load = heapq.heappop(heap)
+      size, address = min_load
+      if address not in schedule:
+        schedule[address] = []
+      schedule[address].append([source, entry])
+      heapq.heappush(heap, (size+1, address))
+    # 3. For each compute node other than myself, do a write_message request.
+    for node, workload in schedule.items():
+      if node == handler.my_address:
+        for entry in workload:
+          handler.read_queue.put([source, entry])
+      else:
+        client_put_request(workload)
+  else:
+    for entry in data:
+      handler.read_queue.put([source, entry])
+
   return 'OK\n', 200
 
 @app.route('/read_message', methods = ['GET'])
@@ -121,6 +157,10 @@ def read_message() -> bytes:
   ret = [r for r in handler.write_queues[source]]
   handler.write_queues[source] = handler.manager.list()
   handler.backlog += [[source, r] for r in ret]
+
+  if handler.peers:
+    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
+
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_rejects', methods = ['GET'])
@@ -134,6 +174,10 @@ def read_rejects() -> bytes:
   """
   source = flask.request.headers.get("Server-Name")
   ret = [r for r in handler.reject_queues[source]]
+
+  if handler.peers:
+    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
+
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_reject_labels', methods = ['GET'])
@@ -154,6 +198,10 @@ def read_reject_labels() -> bytes:
       labels[c['runtime_features']['label']] = 1
     else:
       labels[c['runtime_features']['label']] += 1
+
+  if handler.peers:
+    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
+
   return bytes(json.dumps(labels), encoding="utf-8"), 200
 
 @app.route('/read_queue_size', methods = ['GET'])
@@ -161,6 +209,8 @@ def read_queue_size() -> bytes:
   """
   Read size of pending workload in read_queue.
   """
+  if handler.peers:
+    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
   return handler.read_queue.qsize(), 200
 
 @app.route('/get_backlog', methods = ['GET'])
@@ -172,6 +222,10 @@ def get_backlog() -> bytes:
   Example command:
     curl -X GET http://localhost:PORT/get_backlog
   """
+
+  if handler.peers:
+    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
+
   return bytes(json.dumps(handler.backlog), encoding = "utf-8"), 200
 
 @app.route('/status', methods = ['GET'])
@@ -182,6 +236,10 @@ def status():
   source = flask.request.headers.get("Server-Name")
   if source is None:
     return "Server-Name is undefined", 404
+
+  if handler.peers:
+    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
+
   status = {
     'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'       : 'EMPTY' if len(handler.write_queues[source]) == 0 else 'NOT_EMPTY',
@@ -211,8 +269,7 @@ def ping():
     return "Server-Name is undefined", 404
 
   data = flask.request.json
-  my_address = "https://{}:{}".format(FLAGS.http_server_ip_address, FLAGS.http_port)
-  handler.peers = [x for x in data['peers'] if x != my_address] + data['master']
+  handler.peers = [x for x in data['peers'] if x != handler.my_address] + data['master']
   return 100
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
@@ -335,21 +392,39 @@ def client_get_request() -> typing.List[typing.Dict]:
     l.logger().error("Error code {} in read_message request.".format(r.status_code))
   return None
 
-def client_put_request(msg: typing.List[typing.Dict]) -> None:
+def client_put_request(msg: typing.List[typing.Dict], servername: None) -> None:
   """
   Helper function to perform put at /write_message of http target host.
   """
   try:
     if FLAGS.http_port == -1:
-      r = requests.put("{}/write_message".format(FLAGS.http_server_ip_address), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": environment.HOSTNAME})
+      r = requests.put(
+        "{}/write_message".format(FLAGS.http_server_ip_address),
+        data = json.dumps(msg),
+        headers = {
+          "Content-Type": "application/json",
+          "Server-Name": (environment.HOSTNAME if servername is None else servername)
+        }
+      )
     else:
-      r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": environment.HOSTNAME})
+      r = requests.put("http://{}:{}/write_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), data = json.dumps(msg), headers = {"Content-Type": "application/json", "Server-Name": (environment.HOSTNAME if servername is None else servername)})
   except Exception as e:
     l.logger().error("PUT Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
   if r.status_code != 200:
     l.logger().error("Error code {} in write_message request.".format(r.status_code))
   return
+
+def client_read_queue_size(address: str) -> int:
+  """
+  Read the pending queue size of a compute node.
+  """
+  try:
+    r = requests.get("{}/status".format(address), headers = {"Server-Name": environment.HOSTNAME})
+  except Exception as e:
+    l.logger().error("GET status Request at {} has failed.".format(address))
+    raise e
+  return r.json(), r.status_code
 
 ########################
 
