@@ -536,9 +536,7 @@ def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocess
   elements needed to control the server.
   """
   m = multiprocessing.Manager()
-  rq, wqs, rjqs, peers = multiprocessing.Queue(), m.dict(), m.dict(), m.list()
-  l.logger().info(peers)
-  l.logger().info(rjqs)
+  rq, wqs, rjqs = multiprocessing.Queue(), m.dict(), m.dict()
   wf = multiprocessing.Value('i', False)
   p = multiprocessing.Process(
     target = http_serve,
@@ -547,7 +545,6 @@ def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocess
       'write_queues'  : wqs,
       'reject_queues' : rjqs,
       'work_flag'     : wf,
-      'peers'         : peers,
       'manager'       : m,
     }
   )
