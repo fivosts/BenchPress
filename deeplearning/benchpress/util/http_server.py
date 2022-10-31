@@ -284,8 +284,7 @@ def ping():
 
   data = flask.request.json
   handler.peers = [x for x in data['peers'] if x != handler.my_address] + [data['master']]
-  print(','.join(handler.peers))
-  return "OK", 100
+  return ",".join(handler.peers)
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
