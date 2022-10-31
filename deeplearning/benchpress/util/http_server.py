@@ -377,7 +377,7 @@ def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> i
           )
   except Exception as e:
     l.logger().warn("PUT status Request at {}/ping has failed.".format(peer))
-    return None, 404
+    return 404
   return r.status_code
 
 
