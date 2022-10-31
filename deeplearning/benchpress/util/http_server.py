@@ -227,11 +227,11 @@ def get_backlog() -> bytes:
   Example command:
     curl -X GET http://localhost:PORT/get_backlog
   """
-
-  if handler.peers:
-    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
-
-  return bytes(json.dumps(handler.backlog), encoding = "utf-8"), 200
+  backlog = handler.backlog
+  if handler.master_node:
+    for peer in handler.peers:
+      backlog += client_get_backlog(address = peer)
+  return bytes(json.dumps(backlog), encoding = "utf-8"), 200
 
 @app.route('/status', methods = ['GET'])
 def status():
@@ -449,6 +449,28 @@ def client_read_reject_labels(address: str = None, servername: str = None) -> ty
     return r.json()
   else:
     l.logger().error("Error code {} in read_reject_labels request.".format(r.status_code))
+  return None
+
+def client_get_backlog(address: str = None) -> typing.List[typing.Dict]:
+  """
+  Read backlog from compute node.
+  """
+  try:
+    if FLAGS.http_port == -1 or address:
+      r = requests.get(
+        "{}/get_backlog".format(FLAGS.http_server_ip_address if not address else address),
+      )
+    else:
+      r = requests.get(
+        "http://{}:{}/get_backlog".format(FLAGS.http_server_ip_address, FLAGS.http_port),
+      )
+  except Exception as e:
+    l.logger().error("GET Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
+    raise e
+  if r.status_code == 200:
+    return r.json()
+  else:
+    l.logger().error("Error code {} in get_backlog request.".format(r.status_code))
   return None
 
 def client_put_request(msg: typing.List[typing.Dict], address: str = None, servername: None) -> None:
