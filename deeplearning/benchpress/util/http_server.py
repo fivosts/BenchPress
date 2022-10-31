@@ -335,7 +335,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
       ips = "ipv4: {}, ipv6: {}".format(hostname[1], hostname[0])
     else:
       ips = "ipv4: {}".format(hostname[0])
-    l.logger().warn("Server Public IP: {}".format(ips))
+    l.logger().warn("Server Public IP: {}:{}".format(ips, port))
 
     if len(peers) > 0:
       l.logger().info("This is master compute server {}.".format(hostname))
