@@ -242,9 +242,6 @@ def status():
   if source is None:
     return "Server-Name is undefined", 404
 
-  if handler.peers:
-    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
-
   status = {
     'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
     'write_queue'       : 'EMPTY' if len(handler.write_queues[source]) == 0 else 'NOT_EMPTY',
@@ -254,6 +251,11 @@ def status():
     'write_queue_size'  : len(handler.write_queues[source]),
     'reject_queue_size' : len(handler.reject_queues[source]),
   }
+
+  if handler.master_node:
+    for peer in handler.peers:
+      peer_status = client_status_request()
+
 
   if status['read_queue'] == 'EMPTY' and status['write_queue'] == 'EMPTY':
     return bytes(json.dumps(status), encoding = 'utf-8'), 200 + (100 if handler.work_flag.value else 0)
@@ -365,15 +367,21 @@ def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> i
   return r.json(), r.status_code
 
 
-def client_status_request() -> typing.Tuple[typing.Dict, int]:
+def client_status_request(address: str = None, servername: str = None) -> typing.Tuple[typing.Dict, int]:
   """
   Get status of http server.
   """
   try:
-    if FLAGS.http_port == -1:
-      r = requests.get("{}/status".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
+    if FLAGS.http_port == -1 or address:
+      r = requests.get(
+        "{}/status".format(FLAGS.http_server_ip_address if not address else address),
+        headers = {"Server-Name": (environment.HOSTNAME if not servername else servername)}
+      )
     else:
-      r = requests.get("http://{}:{}/status".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
+      r = requests.get(
+        "http://{}:{}/status".format(FLAGS.http_server_ip_address, FLAGS.http_port),
+        headers = {"Server-Name": (environment.HOSTNAME if not servername else servername)}
+      )
   except Exception as e:
     l.logger().error("GET status Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
