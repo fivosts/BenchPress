@@ -343,7 +343,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
       queue = [[p, 0] for p in handler.peers]
       while queue:
         cur = queue.pop(0)
-        _, sc = ping_peer_request(cur[0], handler.peers + [handler.my_address], "http://{}:{}".format(hostname, FLAGS.http_port))
+        _, sc = ping_peer_request(cur[0], handler.peers, handler.my_address)
         if sc != 200:
           queue.append([cur[0], cur[1] + 1])
         else:
@@ -368,11 +368,17 @@ def ping_peer_request(peer: str, peers: typing.List[str], master_node: str) -> i
   inside the compute network.
   """
   try:
-    r = requests.put("{}/ping".format(peer), data = json.dumps({'peers': peers, 'master': master_node}), headers = {"Server-Name": environment.HOSTNAME})
+    r = requests.put(
+          "{}/ping".format(peer),
+          data = json.dumps({'peers': peers,'master': master_node,}),
+          headers = {
+            "Content-Type": "application/json",
+            "Server-Name": environment.HOSTNAME}
+          )
   except Exception as e:
     l.logger().warn("PUT status Request at {}/ping has failed.".format(peer))
     return None, 404
-  return r.json(), r.status_code
+  return r.status_code
 
 
 def client_status_request(address: str = None, servername: str = None) -> typing.Tuple[typing.Dict, int]:
