@@ -380,9 +380,15 @@ def client_get_request() -> typing.List[typing.Dict]:
   """
   try:
     if FLAGS.http_port == -1:
-      r = requests.get("{}/read_message".format(FLAGS.http_server_ip_address), headers = {"Server-Name": environment.HOSTNAME})
+      r = requests.get(
+        "{}/read_message".format(FLAGS.http_server_ip_address),
+        headers = {"Server-Name": environment.HOSTNAME}
+      )
     else:
-      r = requests.get("http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port), headers = {"Server-Name": environment.HOSTNAME})
+      r = requests.get(
+        "http://{}:{}/read_message".format(FLAGS.http_server_ip_address, FLAGS.http_port),
+        headers = {"Server-Name": environment.HOSTNAME}
+      )
   except Exception as e:
     l.logger().error("GET Request at {}:{} has failed.".format(FLAGS.http_server_ip_address, FLAGS.http_port))
     raise e
