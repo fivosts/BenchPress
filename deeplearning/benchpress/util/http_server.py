@@ -133,9 +133,11 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
       heapq.heappush(heap, (size+1, address))
     # 3. For each compute node other than myself, do a write_message request.
     for node, workload in schedule.items():
+      # If I need to add to my workload, just add to queue.
       if node == handler.my_address:
         for entry in workload:
           handler.read_queue.put([source, entry])
+      # Otherwise run a request
       else:
         client_put_request(workload, servername = source)
   else:
