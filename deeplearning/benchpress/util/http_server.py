@@ -71,7 +71,7 @@ class FlaskHandler(object):
     self.backlog      = None
     return
 
-  def set_params(self, read_queue, write_queues, reject_queues, peers, manager, work_flag):
+  def set_params(self, read_queue, write_queues, reject_queues, manager, work_flag):
     self.read_queue    = read_queue
     self.write_queues  = write_queues
     self.work_flag     = work_flag
@@ -316,7 +316,6 @@ def http_serve(read_queue    : multiprocessing.Queue,
                write_queues  : 'multiprocessing.Dict',
                reject_queues : 'multiprocessing.Dict',
                work_flag     : multiprocessing.Value,
-               peers         : 'multiprocessing.List',
                manager       : multiprocessing.Manager,
                ) -> None:
   """
@@ -326,7 +325,7 @@ def http_serve(read_queue    : multiprocessing.Queue,
     port = FLAGS.http_port
     if port is None:
       port = portpicker.pick_unused_port()
-    handler.set_params(read_queue, write_queues, reject_queues, peers, manager, work_flag)
+    handler.set_params(read_queue, write_queues, reject_queues, manager, work_flag)
     hostname = subprocess.check_output(
       ["hostname", "-i"],
       stderr = subprocess.STDOUT,
@@ -337,13 +336,13 @@ def http_serve(read_queue    : multiprocessing.Queue,
       ips = "ipv4: {}".format(hostname[0])
     l.logger().warn("Server Public IP: {}:{}".format(ips, port))
 
-    if len(peers) > 0:
+    if handler.master_node:
       l.logger().info("This is master compute server {}.".format(hostname))
       l.logger().info("Idling until I ensure all peer compute servers are responding:\n{}".format('\n'.join(peers)))
       queue = [[p, 0] for p in handler.peers]
       while queue:
         cur = queue.pop(0)
-        _, sc = ping_peer_request(cur[0], peers, "https://{}:{}".format(hostname, FLAGS.http_port))
+        _, sc = ping_peer_request(cur[0], handler.peers + [handler.my_address], "https://{}:{}".format(hostname, FLAGS.http_port))
         if sc != 200:
           queue.append([cur[0], cur[1] + 1])
         else:
@@ -538,6 +537,8 @@ def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocess
   """
   m = multiprocessing.Manager()
   rq, wqs, rjqs, peers = multiprocessing.Queue(), m.dict(), m.dict(), m.list()
+  l.logger().info(peers)
+  l.logger().info(rjqs)
   wf = multiprocessing.Value('i', False)
   p = multiprocessing.Process(
     target = http_serve,
