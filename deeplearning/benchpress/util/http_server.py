@@ -201,9 +201,14 @@ def read_reject_labels() -> bytes:
     else:
       labels[c['runtime_features']['label']] += 1
 
-  if handler.peers:
-    raise NotImplementedError("If you are master, fetch stuff from all compute nodes.")
-
+  if handler.master_node:
+    for peer in handler.peers:
+      peer_labels = client_read_reject_labels(address = peer, servername = source)
+      for lab, frq in peer_labels.items():
+        if lab not in labels:
+          labels[lab] = frq
+        else:
+          labels[lab] += frq
   return bytes(json.dumps(labels), encoding="utf-8"), 200
 
 @app.route('/read_queue_size', methods = ['GET'])
