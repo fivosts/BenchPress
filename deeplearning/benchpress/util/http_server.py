@@ -254,7 +254,7 @@ def status():
 
   if handler.master_node:
     for peer in handler.peers:
-      peer_status = client_status_request(peer, servername = source)
+      peer_status = client_status_request(address = peer, servername = source)
       status['read_queue']   = 'EMPTY' if peer_status['read_queue']   == 'EMPTY' and status['read_queue']   == 'EMPTY' else 'NOT_EMPTY'
       status['write_queue']  = 'EMPTY' if peer_status['write_queue']  == 'EMPTY' and status['write_queue']  == 'EMPTY' else 'NOT_EMPTY'
       status['reject_queue'] = 'EMPTY' if peer_status['reject_queue'] == 'EMPTY' and status['reject_queue'] == 'EMPTY' else 'NOT_EMPTY'
