@@ -21,6 +21,8 @@ need to keep an eye on resources (e.g. nvidia-smi) or files.
 import subprocess
 import threading
 
+from deeplearning.benchpress.util import environment
+
 def listen() -> None:
   """
   Listen for bash commands from standard input
@@ -44,9 +46,10 @@ def start() -> None:
   """
   Initialize daemon thread to run your proxy bash commands.
   """
-  th = threading.Thread(
-    target = listen,
-    daemon = True
-  )
-  th.start()
+  if environment.WORLD_RANK == 0:
+    th = threading.Thread(
+      target = listen,
+      daemon = True
+    )
+    th.start()
   return
