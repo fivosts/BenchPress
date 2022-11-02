@@ -36,6 +36,7 @@ from deeplearning.benchpress.util import crypto
 from deeplearning.benchpress.util import monitors
 from deeplearning.benchpress.util import logging as l
 from deeplearning.benchpress.util import plotter
+from deeplearning.benchpress.util import distributions
 
 from deeplearning.benchpress.experiments.grewe import preamble
 
@@ -417,34 +418,63 @@ def FeatureSpaceCovGroup(**kwargs) -> None:
   base_df = CSVPathToFrame(grewe_baseline)
   groups = {}
   csv_data = {
-    'GPGPU_CPU': [[dp[13], dp[10]] for dp in base_df[base_df['oracle'] == 'CPU'].values.tolist()],
-    'GPGPU_GPU': [[dp[13], dp[10]] for dp in base_df[base_df['oracle'] == 'GPU'].values.tolist()],
+    'GPGPU_CPU': [(dp[10:14], "{}-{}-{}".format(dp[0], dp[1], dp[9])) for dp in base_df[base_df['oracle'] == 'CPU'].values.tolist()],
+    'GPGPU_GPU': [(dp[10:14], "{}-{}-{}".format(dp[0], dp[1], dp[9])) for dp in base_df[base_df['oracle'] == 'GPU'].values.tolist()],
   }
   tsne_mon = monitors.TSNEMonitor(
     cache_path = workspace,
     set_name = 'Benchmarks_without_derived_split',
   )
 
+  ranges = [
+    [167, 250],
+    [500, 533],
+    [50, 167],
+  ]
+
+  print(len(base_df[base_df["F1:transfer/(comp+mem)"] == 64]) / len(base_df))
+  for idx, f_dim in enumerate(range(11, 14)):
+    samples = [int((dp[f_dim] * 100))  for dp in base_df.values.tolist()]
+    d = distributions.GenericDistribution(samples, log_path = workspace, set_name = "GPGPU_distr_{}".format(f_dim))
+    print("P[X inside range] = {}%".format(100 * (1 - (d < ranges[idx][0]) - (d > ranges[idx][1]))))
+    d.plot()
+
+  for k in ['GPGPU_CPU', 'GPGPU_GPU']:
+    for dp, name in csv_data[k]:
+      tsne_mon.register((dp, k, name))
+
   for group in csv_groups:
+    # Run the predictive model and plot per group-predicted_label.
+    # R, base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr = preamble.plot_speedups_with_clgen(
+    #   open(grewe_baseline, 'r'),
+    #   open(group['path'], 'r'),
+    #   synth_bench_name = group['name'],
+    # )
 
-    R, base, enhanced, base_precision, base_recall, base_tnr, enhanced_precision, enhanced_recall, enhanced_tnr = preamble.plot_speedups_with_clgen(
-      open(grewe_baseline, 'r'),
-      open(group['path'], 'r'),
-      synth_bench_name = group['name'],
-    )
+    # b_mask = R["training"] == "Grewe et al."
+    # bs_mask = R["training"] == "w. {}".format(group['name'])
 
-    b_mask = R["training"] == "Grewe et al."
-    bs_mask = R["training"] == "w. {}".format(group['name'])
+    # groups['GPGPU_correct'] = [[dp[13], dp[10]] for dp in R[b_mask][R[b_mask]['oracle'] == R[b_mask]['p']].values.tolist()]
+    # groups['GPGPU_wrong'] = [[dp[13], dp[10]] for dp in R[b_mask][R[b_mask]['oracle'] != R[b_mask]['p']].values.tolist()]
 
-    groups['GPGPU_correct'] = [[dp[13], dp[10]] for dp in R[b_mask][R[b_mask]['oracle'] == R[b_mask]['p']].values.tolist()]
-    groups['GPGPU_wrong'] = [[dp[13], dp[10]] for dp in R[b_mask][R[b_mask]['oracle'] != R[b_mask]['p']].values.tolist()]
-
-    groups['{}_correct'.format(group['name'])] = [[dp[13], dp[10]] for dp in R[bs_mask][R[bs_mask]['oracle'] == R[bs_mask]['p']].values.tolist()]
-    groups['{}_wrong'.format(group['name'])] = [[dp[13], dp[10]] for dp in R[bs_mask][R[bs_mask]['oracle'] != R[bs_mask]['p']].values.tolist()]
+    # groups['{}_correct'.format(group['name'])] = [[dp[13], dp[10]] for dp in R[bs_mask][R[bs_mask]['oracle'] == R[bs_mask]['p']].values.tolist()]
+    # groups['{}_wrong'.format(group['name'])] = [[dp[13], dp[10]] for dp in R[bs_mask][R[bs_mask]['oracle'] != R[bs_mask]['p']].values.tolist()]
 
     group_df = CSVPathToFrame(group['path'])
-    csv_data["{}_CPU".format(group['name'])] = [[dp[13], dp[10]] for dp in group_df[group_df['oracle'] == 'CPU'].values.tolist()]
-    csv_data["{}_GPU".format(group['name'])] = [[dp[13], dp[10]] for dp in group_df[group_df['oracle'] == 'GPU'].values.tolist()]
+    csv_data["{}_CPU".format(group['name'])] = [(dp[10:14], "{}-{}-{}".format(dp[0], dp[1], dp[9])) for dp in group_df[group_df['oracle'] == 'CPU'].values.tolist()]
+    csv_data["{}_GPU".format(group['name'])] = [(dp[10:14], "{}-{}-{}".format(dp[0], dp[1], dp[9])) for dp in group_df[group_df['oracle'] == 'GPU'].values.tolist()]
+    for k in ['{}_CPU'.format(group['name']), '{}_GPU'.format(group['name'])]:
+      for dp, name in csv_data[k]:
+        tsne_mon.register((dp, k, name))
+  tsne_mon.plot()
+#                                                                                         runtime    runtime_cpu                                 runtime_gpu
+# npb-3.3-BT-exact_rhs5 16  4   4 8 5 2 0 768  [ 8 64  0.25  5                 0.5  ] CPU 0.036555  0.039456282295465 0.036221266726596 0.036555  0.028247  0.008308  0.039122  0.031148  0.007974  0 0
+# npb-3.3-SP-rhs_norm   64  10  5 6 4 1 0 1024 [ 8 64  0.167 5.33333333333333  1.67 ] GPU 0.029257  0.032185415898677 0.027501519665707 0.030429  0.019423  0.011006  0.029257  0.021179  0.008078  0 0
+
+
+# shoc-1.1.5-S3D-ratt2_kernel 16384 2426  0 702 0 0 0 262144  32  [83.8056265984655  0 0 3.46]  GPU 0.169562  0.48240488604774  0.174838721962068 0.487672  0.060578  0.427094  0.169562  0.055309  0.114253  0 0
+# npb-3.3-LU-setbv3           64    14    3 4   0 0 0 1536    8   [85.3333333333333  0 0 3.5 ]  CPU 0.037712  0.041938274881693 0.034214350094968 0.037712  0.026837  0.010875  0.03844   0.031063  0.007377  0 0
+
 
 
 
@@ -458,7 +488,6 @@ def FeatureSpaceCovGroup(**kwargs) -> None:
   #     groups[k][idx][0] = groups[k][idx][0] / norm_0
   #     groups[k][idx][1] = groups[k][idx][1] / norm_1
 
-
   # norm_0, norm_1 = 0, 0
   # for k, v in csv_data.items():
   #   for dp in v:
@@ -469,55 +498,50 @@ def FeatureSpaceCovGroup(**kwargs) -> None:
   #     csv_data[k][idx][0] = csv_data[k][idx][0] / norm_0
   #     csv_data[k][idx][1] = csv_data[k][idx][1] / norm_1
 
+  # for group in csv_groups:
+  #   tsne_mon = monitors.TSNEMonitor(
+  #     cache_path = workspace,
+  #     set_name = 'GPGPU',
+  #   )
+  #   for k in ['GPGPU_correct', 'GPGPU_wrong']:
+  #     for dp in groups[k]:
+  #       tsne_mon.register((dp, k))
+  #   tsne_mon.plot()
 
+  #   tsne_mon = monitors.TSNEMonitor(
+  #     cache_path = workspace,
+  #     set_name = '{}'.format(group['name']),
+  #   )
+  #   for k in ['{}_correct'.format(group['name']), '{}_wrong'.format(group['name'])]:
+  #     for dp in groups[k]:
+  #       tsne_mon.register((dp, k))
+  #   tsne_mon.plot()
 
-    # tsne_mon = monitors.TSNEMonitor(
-    #   cache_path = workspace,
-    #   set_name = 'GPGPU',
-    # )
-    # for k in ['GPGPU_correct', 'GPGPU_wrong']:
-    #   for dp in groups[k]:
-    #     tsne_mon.register((dp, k))
-    # tsne_mon.plot()
+  # plot_groups = {}
+  # for k, v in groups.items():
+  #   plot_groups[k] = {
+  #     'data': v,
+  #     'names': []
+  #   }
+  # plotter.GroupScatterPlot(
+  #   groups    = plot_groups,
+  #   plot_name = "test",
+  #   path      = workspace,
+  #   title     = "test",
+  # )
 
-    # tsne_mon = monitors.TSNEMonitor(
-    #   cache_path = workspace,
-    #   set_name = '{}'.format(group['name']),
-    # )
-    # for k in ['{}_correct'.format(group['name']), '{}_wrong'.format(group['name'])]:
-    #   for dp in groups[k]:
-    #     tsne_mon.register((dp, k))
-    # tsne_mon.plot()
-
-    # group_df = CSVPathToFrame(group['path'])
-    # groups["{}_CPU".format(group['name'])] = [dp[10:14] for dp in group_df[group_df['oracle'] == 'CPU'].values.tolist()]
-    # groups["{}_GPU".format(group['name'])] = [dp[10:14] for dp in group_df[group_df['oracle'] == 'GPU'].values.tolist()]
-
-  plot_groups = {}
-  for k, v in groups.items():
-    plot_groups[k] = {
-      'data': v,
-      'names': []
-    }
-  plotter.GroupScatterPlot(
-    groups    = plot_groups,
-    plot_name = "test",
-    path      = workspace,
-    title     = "test",
-  )
-
-  plot_groups = {}
-  for k, v in csv_data.items():
-    plot_groups[k] = {
-      'data': v,
-      'names': []
-    }
-  plotter.GroupScatterPlot(
-    groups    = plot_groups,
-    plot_name = "test2",
-    path      = workspace,
-    title     = "test2",
-  )
+  # plot_groups = {}
+  # for k, v in csv_data.items():
+  #   plot_groups[k] = {
+  #     'data': v,
+  #     'names': []
+  #   }
+  # plotter.GroupScatterPlot(
+  #   groups    = plot_groups,
+  #   plot_name = "test2",
+  #   path      = workspace,
+  #   title     = "test2",
+  # )
 
 
   # for k, l in groups.items():
