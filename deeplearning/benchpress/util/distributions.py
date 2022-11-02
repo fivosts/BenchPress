@@ -252,6 +252,7 @@ class GenericDistribution(Distribution):
         if s < self.min_idx:
           self.min_idx = s
       # If there is a large discrepancy in the min/max range, this array will be massive.
+      # You could turn this to a dict for only non-zero keys.
       self.distribution = [0] * abs(1 + self.max_idx - self.min_idx)
       for s in samples:
         self.distribution[s - self.min_idx] += 1
