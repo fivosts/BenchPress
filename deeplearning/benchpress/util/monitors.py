@@ -409,7 +409,9 @@ class TSNEMonitor(Monitor):
     if len(self.features) <= 0:
       # Nothing to plot.
       return
-    tsne = sklearn.manifold.TSNE()
+    tsne = sklearn.manifold.TSNE(
+      perplexity = 200,
+    )
     embeddings = tsne.fit_transform(np.array(self.features))
     groupped_data = {}
     for points, group, name in zip(embeddings, self.groups, self.names):
