@@ -96,17 +96,17 @@ class QueryByCommittee(backends.BackendBase):
     self.torch.manual_seed(self.config.random_seed)
     self.torch.cuda.manual_seed_all(self.config.random_seed)
 
-    self.ckpt_path         = self.cache_path / "checkpoints"
-    self.sample_path       = self.cache_path / "samples"
-    self.logfile_path      = self.cache_path / "logs"
+    self.ckpt_path    = self.cache_path / "checkpoints"
+    self.sample_path  = self.cache_path / "samples"
+    self.logfile_path = self.cache_path / "logs"
 
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = self.logfile_path / self.validation_results_file
 
-    self.committee         = None
+    self.committee    = None
 
-    self.is_validated      = False
-    self.is_trained        = False
+    self.is_validated = False
+    self.is_trained   = False
 
     self.committee_samples = committee_database.CommitteeSamples(
       url        = "sqlite:///{}".format(str(self.sample_path / "samples.db")),
