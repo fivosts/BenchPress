@@ -35,6 +35,7 @@ from deeplearning.benchpress.util import distrib
 from deeplearning.benchpress.active_models import downstream_tasks
 from deeplearning.benchpress.active_models.committee import active_committee
 from deeplearning.benchpress.active_models.committee import config as com_config
+from deeplearning.benchpress.active_models.expected_error_reduction import eer
 from deeplearning.benchpress.active_models.expected_error_reduction import config as eer_config
 from deeplearning.benchpress.samplers import sample_observers as sample_observers_lib
 from deeplearning.benchpress.proto import active_learning_pb2
@@ -124,7 +125,7 @@ class Model(object):
     if self.config.HasField("query_by_committee"):
       self.backend = active_committee.QueryByCommittee(self.config, self.cache_path, self.downstream_task)
     elif self.config.HasField("expected_error_reduction"):
-      self.backend = trainer.ExpectedErrorReduction(self.config, self.cache_path, self.downstream_task)
+      self.backend = eer.ExpectedErrorReduction(self.config, self.cache_path, self.downstream_task)
     l.logger().info("Initialized {} in {}".format(self.backend, self.cache_path))
     return
 
