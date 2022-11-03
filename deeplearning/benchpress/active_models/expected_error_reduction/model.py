@@ -79,9 +79,9 @@ class MLP(CommitteeModels, torch.nn.Module):
     return label_loss, torch.FloatTensor([hits / total])
 
   def forward(self,
-              input_ids       : torch.Tensor,
-              target_ids      : torch.Tensor = None,
-              is_sampling     : bool = False
+              input_ids   : torch.Tensor,
+              target_ids  : torch.Tensor = None,
+              is_sampling : bool = False
               ) -> torch.Tensor:
     """
     Args:
