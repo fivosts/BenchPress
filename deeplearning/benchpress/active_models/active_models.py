@@ -60,8 +60,10 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     lambda x: x in downstream_tasks.TASKS,
     "Downstream task has to be one of {}".format(', '.join([str(x) for x in downstream_tasks.TASKS]))
   )
-  if config.HasField("committee"):
+  if config.HasField("query_by_committee"):
     com_config.AssertConfigIsValid(config)
+  elif config.HasField("expected_error_reduction"):
+    eer_config.AssertConfigIsValid(config)
   else:
     raise NotImplementedError(config)
   return config
