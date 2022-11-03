@@ -35,6 +35,7 @@ from deeplearning.benchpress.util import distrib
 from deeplearning.benchpress.active_models import downstream_tasks
 from deeplearning.benchpress.active_models.committee import active_committee
 from deeplearning.benchpress.active_models.committee import config as com_config
+from deeplearning.benchpress.active_models.expected_error_reduction import config as eer_config
 from deeplearning.benchpress.samplers import sample_observers as sample_observers_lib
 from deeplearning.benchpress.proto import active_learning_pb2
 from absl import flags
