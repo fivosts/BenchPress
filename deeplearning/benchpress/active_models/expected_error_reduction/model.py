@@ -15,19 +15,11 @@
 """
 Here all the committee members are defined.
 """
-import math
-import sys
 import typing
-import numpy as np
-from sklearn import cluster as sklearn_cluster
-from sklearn import neighbors as sklearn_neighbors
 
 from deeplearning.benchpress.active_models.expected_error_reduction import config
 from deeplearning.benchpress.models.torch_bert import activations
-from deeplearning.benchpress.util import pytorch
 from deeplearning.benchpress.util.pytorch import torch
-
-from deeplearning.benchpress.util import logging as l
 
 def mish(x):
   return x * torch.tanh(torch.nn.functional.softplus(x))
