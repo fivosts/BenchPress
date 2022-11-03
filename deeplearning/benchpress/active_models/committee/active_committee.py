@@ -38,6 +38,7 @@ from deeplearning.benchpress.active_models.committee import config
 from deeplearning.benchpress.active_models.committee import committee_database
 from deeplearning.benchpress.util import environment
 from deeplearning.benchpress.util import distrib
+
 from deeplearning.benchpress.util import logging as l
 
 from absl import flags

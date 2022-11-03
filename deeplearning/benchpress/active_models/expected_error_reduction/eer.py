@@ -20,7 +20,21 @@ This head is used for feature-less learning to target benchmarks.
 import typing
 import pathlib
 
+from deeplearning.benchpress.models.torch_bert import optimizer
+from deeplearning.benchpress.models.torch_bert import hooks
 from deeplearning.benchpress.active_models import backends
+from deeplearning.benchpress.active_models import data_generator
+from deeplearning.benchpress.active_models.expected_error_reduction import model
+from deeplearning.benchpress.active_models.expected_error_reduction import config
+from deeplearning.benchpress.active_models.expected_error_reduction import eer_database
+from deeplearning.benchpress.util import environment
+from deeplearning.benchpress.util import distrib
+
+from deeplearning.benchpress.util import logging as l
+
+from absl import flags
+
+FLAGS = flags.FLAGS
 
 class ExpectedErrorReduction(backends.BackendBase):
 
