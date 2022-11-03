@@ -114,18 +114,11 @@ class ExpectedErrorReduction(backends.BackendBase):
         opt, lr_scheduler = None, None
       self.estimator = ExpectedErrorReduction.Estimator(
           model          = cm,
-          data_generator = copy.deepcopy(data_generator),
+          data_generator = data_generator,
           optimizer      = opt,
           scheduler      = lr_scheduler,
         )
       (self.ckpt_path / self.model_config.sha256).mkdir(exist_ok = True, parents = True),
       (self.logfile_path / self.model_config.sha256).mkdir(exist_ok = True, parents = True),
       l.logger().info(self.GetShortSummary())
-    # for member in self.committee:
-    #   self.committee_samples.add_member(
-    #     member_id     = member.model.id,
-    #     member_name   = member.config.name,
-    #     type          = "supervised" if isinstance(member.model, self.torch.nn.Module) else "unsupervised",
-    #     configuration = member.config.config,
-    #   )
     return
