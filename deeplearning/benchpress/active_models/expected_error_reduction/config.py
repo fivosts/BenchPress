@@ -74,7 +74,7 @@ class ModelConfig(object):
   @property
   def num_features(self) -> int:
     """
-    The number of input features to model committee.
+    The number of input features to model.
     """
     return self.downstream_task.input_size
 
@@ -121,17 +121,17 @@ class NNModelConfig(ModelConfig):
     self.max_grad_norm    = 1.0
 
     if len(self.config.layer) == 0:
-      raise ValueError("Layer list is empty for committee model")
+      raise ValueError("Layer list is empty for model")
     if self.config.layer[0].HasField("linear"):
       if self.config.layer[0].linear.in_features != self.downstream_task.input_size:
-        raise ValueError("Mismatch between committee member's input size {} and downstream task's input size {}".format(
+        raise ValueError("Mismatch between model's input size {} and downstream task's input size {}".format(
             self.config.layer[0].linear.in_features,
             self.downstream_task.input_size
           )
         )
     if self.config.layer[-1].HasField("linear"):
       if self.config.layer[-1].linear.out_features != self.downstream_task.output_size:
-        raise ValueError("Mismatch between committee member's output size {} and downstream task's output size {}".format(
+        raise ValueError("Mismatch between model's output size {} and downstream task's output size {}".format(
             self.config.layer[-1].linear.out_features,
             self.downstream_task.output_size
           )
