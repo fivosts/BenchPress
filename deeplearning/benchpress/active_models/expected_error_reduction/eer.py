@@ -65,17 +65,18 @@ class ExpectedErrorReduction(backends.BackendBase):
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = self.logfile_path / self.validation_results_file
 
+    self.model_config  = None
     self.training_opts = None
-    self.model         = None
+    self.estimator     = None
 
     self.is_validated = False
     self.is_trained   = False
 
-    self.committee_samples = committee_database.CommitteeSamples(
+    self.eer_samples = eer_database.EERSamples(
       url        = "sqlite:///{}".format(str(self.sample_path / "samples.db")),
       must_exist = False,
     )
-    self.sample_epoch = self.committee_samples.cur_sample_epoch
+    self.sample_epoch = self.eer_samples.cur_sample_epoch
     l.logger().info("Active ExpectedErrorReduction config initialized in {}".format(self.cache_path))
     return
 
@@ -86,7 +87,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     """
     Model parameter initialization.
     """
-    if not self.model:
+    if not self.estimator:
       self.model_config = config.ModelConfig.FromConfig(
         self.config.expected_error_reduction, 
         self.downstream_task,
@@ -101,7 +102,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         num_epochs       = self.model_config.num_epochs,
         num_train_steps  = self.model_config.num_train_steps,
       )
-      cm = models.MLP.FromConfig(idx, self.model_config)
+      cm = models.MLP.FromConfig(self.model_config)
       if not is_sampling:
         opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
           model           = cm,
