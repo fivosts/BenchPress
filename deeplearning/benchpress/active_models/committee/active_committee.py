@@ -126,7 +126,7 @@ class QueryByCommittee(backends.BackendBase):
     if not self.committee:
       self.committee = []
       self.committee_configs = config.ModelConfig.FromConfig(
-        self.config.committee, self.downstream_task, self.config.num_train_steps
+        self.config.query_by_committee, self.downstream_task, self.config.num_train_steps
       )
       for idx, cconfig in enumerate(self.committee_configs):
         training_opts = QueryByCommittee.TrainingOpts(
