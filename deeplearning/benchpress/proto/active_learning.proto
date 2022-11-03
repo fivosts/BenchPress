@@ -24,11 +24,14 @@ option java_outer_classname = "ActiveLearningProto";
 option java_package = "com.benchpress";
 
 message ActiveLearner {
-  optional Committee committee       = 1;
-  optional string    downstream_task = 2;
-  optional string    training_corpus = 3;
-  optional int32     num_train_steps = 4;
-  optional int32     random_seed     = 5;
+  oneof    model {
+    Committee committee = 1;
+    EER       eer       = 2;
+  }
+  optional string    downstream_task = 3;
+  optional string    training_corpus = 4;
+  optional int32     num_train_steps = 5;
+  optional int32     random_seed     = 6;
 }
 
 // Committee is a list of models.
