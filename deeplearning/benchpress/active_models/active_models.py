@@ -61,10 +61,17 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     lambda x: x in downstream_tasks.TASKS,
     "Downstream task has to be one of {}".format(', '.join([str(x) for x in downstream_tasks.TASKS]))
   )
+  pbutil.AssertFieldIsSet(config, "training_corpus")
+  pbutil.AssertFieldIsSet(config, "num_train_steps")
+  pbutil.AssertFieldIsSet(config, "random_seed")
+  p = pathlib.Path(config.training_corpus).resolve()
+  if not p.exists() and config.num_train_steps > 0:
+    raise FileNotFoundError(p)
+
   if config.HasField("query_by_committee"):
-    com_config.AssertConfigIsValid(config)
+    com_config.AssertConfigIsValid(config.query_by_committee)
   elif config.HasField("expected_error_reduction"):
-    eer_config.AssertConfigIsValid(config)
+    eer_config.AssertConfigIsValid(config.expected_error_reduction)
   else:
     raise NotImplementedError(config)
   return config
