@@ -42,6 +42,11 @@ message QueryByCommittee {
   // repeated <ModelType> model_type = x;
 }
 
+// ExpectedErrorReduction is the predictive head and a few parameters.
+message ExpectedErrorReduction {
+  optional MLP head = 1;
+}
+
 // MLP-type architecture.
 message MLP {
   repeated Layer layer                        = 1;
