@@ -136,3 +136,14 @@ class ExpectedErrorReduction(backends.BackendBase):
       (self.logfile_path / self.model_config.sha256).mkdir(exist_ok = True, parents = True),
       l.logger().info(self.GetShortSummary())
     return
+
+  def model_step(self, inputs: typing.Dict[str, 'torch.Tensor'], is_sampling: bool = False) -> float:
+    """
+    Run forward function for member model.
+    """
+    outputs = self.estimator.model(
+      input_ids   = inputs['input_ids'].to(self.pytorch.device),
+      target_ids  = inputs['target_ids'].to(self.pytorch.device) if not is_sampling else None,
+      is_sampling = is_sampling,
+    )
+    return outputs
