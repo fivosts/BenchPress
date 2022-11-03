@@ -21,7 +21,7 @@ from deeplearning.benchpress.proto import active_learning_pb2
 from deeplearning.benchpress.util import pbutil
 from deeplearning.benchpress.util import crypto
 
-def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner.QueryByCommittee) -> None:
+def AssertConfigIsValid(config: active_learning_pb2.QueryByCommittee) -> None:
   """
   Parse proto description and check for validity.
   """
@@ -97,7 +97,7 @@ class ModelConfig(object):
 
   @classmethod
   def FromConfig(cls,
-                 config: active_learning_pb2.Committee,
+                 config: active_learning_pb2.QueryByCommittee,
                  downstream_task: downstream_tasks.DownstreamTask,
                  num_train_steps: int,
                  ) -> typing.List["ModelConfig"]:
