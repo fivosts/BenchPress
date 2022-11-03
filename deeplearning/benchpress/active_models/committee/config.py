@@ -21,7 +21,7 @@ from deeplearning.benchpress.proto import active_learning_pb2
 from deeplearning.benchpress.util import pbutil
 from deeplearning.benchpress.util import crypto
 
-def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_learning_pb2.ActiveLearner:
+def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> None:
   """
   Parse proto description and check for validity.
   """
