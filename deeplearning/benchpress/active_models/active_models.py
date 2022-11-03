@@ -163,6 +163,8 @@ class Model(object):
     sample_set = self.downstream_task.sample_space(num_samples = num_samples)
     if FLAGS.disable_active_learning:
       l.logger().warn("Active learning has been disabled. Skip update training.")
+      l.logger().warn("This is passive learning mode to illustrate AL's significance.")
+      l.logger().warn("Instead of querying, a random datapoint is returned.")
       return [
         {
           'idx'             : int(x['idx']),
