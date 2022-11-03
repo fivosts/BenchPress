@@ -33,7 +33,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   if not p.exists() and config.num_train_steps > 0:
     raise FileNotFoundError(p)
   ## Parse all MLPs.
-  for nn in config.committee.mlp:
+  for nn in config.query_by_committee.mlp:
     tl = 0
     pbutil.AssertFieldIsSet(nn, "initial_learning_rate_micros")
     pbutil.AssertFieldIsSet(nn, "batch_size")
@@ -58,7 +58,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     assert tl > 0, "Model is empty. No layers found."
     tm += 1
   ## Parse all KMeans algos.
-  for km in config.committee.k_means:
+  for km in config.query_by_committee.k_means:
     pbutil.AssertFieldIsSet(km, "n_clusters")
     pbutil.AssertFieldConstraint(
       km,
@@ -77,7 +77,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
     )
     tm += 1
   ## Parse KNN algos.
-  for k in config.committee.knn:
+  for k in config.query_by_committee.knn:
     pbutil.AssertFieldIsSet(k, "n_neighbors")
     pbutil.AssertFieldConstraint(
       k,
