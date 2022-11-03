@@ -24,6 +24,23 @@ from deeplearning.benchpress.active_models import backends
 
 class ExpectedErrorReduction(backends.BackendBase):
 
+  class TrainingOpts(typing.NamedTuple):
+    """Wrapper class for training options"""
+    train_batch_size : int
+    learning_rate    : float
+    num_warmup_steps : int
+    max_grad_norm    : float
+    steps_per_epoch  : int
+    num_epochs       : int
+    num_train_steps  : int
+
+  class CommitteeEstimator(typing.NamedTuple):
+    """Named tuple to wrap BERT pipeline."""
+    model          : typing.TypeVar('nn.Module')
+    data_generator : 'torch.utils.data.Dataset'
+    optimizer      : typing.Any
+    scheduler      : typing.Any
+
   def __repr__(self):
     return "ExpectedErrorReduction"
 
@@ -48,7 +65,8 @@ class ExpectedErrorReduction(backends.BackendBase):
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = self.logfile_path / self.validation_results_file
 
-    self.model = None
+    self.training_opts = None
+    self.model         = None
 
     self.is_validated = False
     self.is_trained   = False
@@ -74,7 +92,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         self.downstream_task,
         self.config.num_train_steps
       )
-      training_opts = QueryByCommittee.TrainingOpts(
+      self.training_opts = ExpectedErrorReduction.TrainingOpts(
         train_batch_size = self.model_config.batch_size,
         learning_rate    = self.model_config.learning_rate,
         num_warmup_steps = self.model_config.num_warmup_steps,
@@ -87,9 +105,9 @@ class ExpectedErrorReduction(backends.BackendBase):
       if not is_sampling:
         opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
           model           = cm,
-          num_train_steps = training_opts.num_train_steps,
-          warmup_steps    = training_opts.num_warmup_steps,
-          learning_rate   = training_opts.learning_rate,
+          num_train_steps = self.training_opts.num_train_steps,
+          warmup_steps    = self.training_opts.num_warmup_steps,
+          learning_rate   = self.training_opts.learning_rate,
         )
       else:
         opt, lr_scheduler = None, None
@@ -98,11 +116,6 @@ class ExpectedErrorReduction(backends.BackendBase):
           data_generator = copy.deepcopy(data_generator),
           optimizer      = opt,
           scheduler      = lr_scheduler,
-          training_opts  = training_opts,
-          sha256         = self.model_config.sha256,
-          config         = self.model_config,
-          train_fn       = self.TrainNNMember if isinstance(cm, self.torch.nn.Module) else self.TrainUnsupervisedMember,
-          sample_fn      = self.SampleNNMember if isinstance(cm, self.torch.nn.Module) else self.SampleUnsupervisedMember,
         )
       (self.ckpt_path / self.model_config.sha256).mkdir(exist_ok = True, parents = True),
       (self.logfile_path / self.model_config.sha256).mkdir(exist_ok = True, parents = True),
