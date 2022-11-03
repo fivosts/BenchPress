@@ -21,19 +21,13 @@ from deeplearning.benchpress.proto import active_learning_pb2
 from deeplearning.benchpress.util import pbutil
 from deeplearning.benchpress.util import crypto
 
-def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> None:
+def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner.QueryByCommittee) -> None:
   """
   Parse proto description and check for validity.
   """
   tm = 0
-  pbutil.AssertFieldIsSet(config, "training_corpus")
-  pbutil.AssertFieldIsSet(config, "num_train_steps")
-  pbutil.AssertFieldIsSet(config, "random_seed")
-  p = pathlib.Path(config.training_corpus).resolve()
-  if not p.exists() and config.num_train_steps > 0:
-    raise FileNotFoundError(p)
   ## Parse all MLPs.
-  for nn in config.query_by_committee.mlp:
+  for nn in config.mlp:
     tl = 0
     pbutil.AssertFieldIsSet(nn, "initial_learning_rate_micros")
     pbutil.AssertFieldIsSet(nn, "batch_size")
@@ -58,7 +52,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> None:
     assert tl > 0, "Model is empty. No layers found."
     tm += 1
   ## Parse all KMeans algos.
-  for km in config.query_by_committee.k_means:
+  for km in config.k_means:
     pbutil.AssertFieldIsSet(km, "n_clusters")
     pbutil.AssertFieldConstraint(
       km,
@@ -77,7 +71,7 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> None:
     )
     tm += 1
   ## Parse KNN algos.
-  for k in config.query_by_committee.knn:
+  for k in config.knn:
     pbutil.AssertFieldIsSet(k, "n_neighbors")
     pbutil.AssertFieldConstraint(
       k,
