@@ -86,7 +86,10 @@ class Model(object):
   can lead to bad things happening.
   """
 
-  def __init__(self, config: active_learning_pb2.ActiveLearner, cache_path: pathlib.Path):
+  def __init__(self,
+               config            : active_learning_pb2.ActiveLearner,
+               cache_path        : pathlib.Path,
+               hidden_state_size : int = hidden_state_size):
     """Instantiate a model.
 
     Args:
@@ -117,6 +120,7 @@ class Model(object):
       pathlib.Path(self.config.training_corpus).resolve(),
       self.cache_path / "downstream_task",
       self.config.random_seed,
+      hidden_state_size = hidden_state_size,
     )
 
     if environment.WORLD_RANK == 0:
