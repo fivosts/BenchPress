@@ -82,7 +82,7 @@ sampler {
       active {
         active_learner {
           expected_error_reduction {
-            mlp {
+            head {
               initial_learning_rate_micros: 2000
               batch_size: 32
               num_warmup_steps: 100
