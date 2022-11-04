@@ -99,6 +99,13 @@ class torchBert(backends.BackendBase):
     model          : typing.List[typing.TypeVar('nn.Module')]
     data_generator : torchLMDataGenerator
 
+  @property
+  def hidden_state_size(self):
+    if self.bertAttrs:
+      return self.bertAttrs['hidden_size']
+    else:
+      raise ValueError("Model params have yet not been initialized.")
+
   def __repr__(self):
     return "BenchPress"
 
