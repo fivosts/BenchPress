@@ -95,7 +95,7 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             config.sample_corpus.corpus_config.active,
             "feature_space",
             lambda x : x in set(extractor.extractors.keys()),
-            "feature_space can only be one of {}".format(', '.join(["FeatureLess"] + list(extractor.extractors.keys())))
+            "feature_space can only be one of {}".format(', '.join(["HiddenState"] + list(extractor.extractors.keys())))
           )
           if config.sample_corpus.corpus_config.active.HasField("target"):
             pbutil.AssertFieldConstraint(
@@ -378,13 +378,16 @@ class Sampler(object):
   modify a property after instantiation, the hash will be out of date, which
   can lead to bad things happening.
   """
-
   @property
   def is_active(self):
     if self.config.HasField("sample_corpus"):
       return self.config.sample_corpus.corpus_config.HasField("active")
     else:
       return False
+
+  @property
+  def has_features(self):
+    return self.config.sample_corpus.corpus_config.active.feature_space != "HiddenState"
 
   @property
   def has_active_learning(self):
