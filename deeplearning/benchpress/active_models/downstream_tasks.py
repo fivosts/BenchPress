@@ -105,7 +105,7 @@ class DownstreamTask(object):
   def loadCheckpoint(self) -> None:
     raise NotImplementedError("Abstract Class")
 
-class GrewePredictive(DownstreamTask):
+class Grewe(DownstreamTask):
   """
   Specification class for Grewe et al. CGO 2013 predictive model.
   This class is responsible to fetch the raw data and act as a tokenizer
@@ -154,8 +154,8 @@ class GrewePredictive(DownstreamTask):
                random_seed   : int,
                use_as_server : bool = False,
                ) -> None:
-    super(GrewePredictive, self).__init__(
-      "GrewePredictive", cache_path, downstream_data.GrewePredictiveInstance, random_seed, use_as_server
+    super(Grewe, self).__init__(
+      "Grewe", cache_path, downstream_data.GreweInstance, random_seed, use_as_server
     )
     self.corpus_path     = corpus_path
     self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)))
@@ -178,7 +178,7 @@ class GrewePredictive(DownstreamTask):
     return
 
   def __repr__(self) -> str:
-    return "GrewePredictive"
+    return "Grewe"
 
   def setup_server(self) -> None:
     """
@@ -610,7 +610,8 @@ class GrewePredictive(DownstreamTask):
       return None
 
 TASKS = {
-  "GrewePredictive": GrewePredictive,
+  "Grewe"  : Grewe,
+  "FeatureLessGrewe" : FeatureLessGrewe,
 }
 
 def main(*args, **kwargs) -> None:
@@ -627,7 +628,7 @@ def main(*args, **kwargs) -> None:
   if not FLAGS.use_http_server and not FLAGS.use_socket_server:
     raise ValueError("This booting point is supposed to work as server. Set your flags appropriately.")
   tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
-  task = DownstreamTask.FromTask("GrewePredictive", cldrive_cache, "/tmp/", 0, use_as_server = True)
+  task = DownstreamTask.FromTask("Grewe", cldrive_cache, "/tmp/", 0, use_as_server = True)
   task.ServeRuntimeFeatures(tokenizer)
   return
 
