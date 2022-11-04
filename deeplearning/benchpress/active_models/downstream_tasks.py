@@ -626,6 +626,25 @@ class FeatureLessGrewe(GreweAbstract):
   This task uses the language model's hidden outpus as features
   instead of manually selecting the compiler features.
   """
+  @property
+  def input_size(self) -> int:
+    return self.static_features_size + self.runtime_features_size
+  
+  @property
+  def static_features_size(self) -> int:
+    return self.hidden_state_size
+
+  @property
+  def input_labels(self) -> typing.List[str]:
+    return [
+      str(r) for in range(self.input_size)
+    ]
+
+  @property
+  def feature_space(self) -> str:
+    return "HiddenState"
+
+
   def __init__(self,
                corpus_path   : pathlib.Path,
                cache_path    : pathlib.Path,
@@ -636,6 +655,9 @@ class FeatureLessGrewe(GreweAbstract):
       corpus_path, cache_path, random_seed, use_as_server
     )
     return
+
+  def __repr__(self) -> str:
+    return "Grewe"
 
 TASKS = {
   "Grewe" : Grewe,
