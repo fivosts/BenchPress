@@ -89,7 +89,8 @@ class Model(object):
   def __init__(self,
                config            : active_learning_pb2.ActiveLearner,
                cache_path        : pathlib.Path,
-               hidden_state_size : int = hidden_state_size):
+               hidden_state_size : int = None,
+               ):
     """Instantiate a model.
 
     Args:
