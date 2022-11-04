@@ -113,7 +113,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         num_epochs       = self.model_config.num_epochs,
         num_train_steps  = self.model_config.num_train_steps,
       )
-      cm = models.MLP.FromConfig(self.model_config)
+      cm = model.MLP.FromConfig(self.model_config)
       if self.pytorch.num_nodes > 1:
         distrib.barrier()
         cm = self.torch.nn.parallel.DistributedDataParallel(
