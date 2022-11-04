@@ -373,6 +373,8 @@ class ActiveSampler(FeatureSampler):
   def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
     """
     End of LM generation's epoch hook.
+
+    Sends the epoch candidates for runtime label computation.
     """
     self.active_learner.downstream_task.step_generation(candidates)
     return
