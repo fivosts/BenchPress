@@ -10,7 +10,7 @@
 working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
 language_model {
   corpus {
-    local_tar_archive: "$PWD/../corpus/ultimate_corpus.tar.bz2"
+    local_tar_archive: "$PWD/../corpus/corpus_250.tar.bz2"
     tokenizer {
       token_type: "ast"
       token_list: "deeplearning/benchpress/corpuses/token_lists.json"
