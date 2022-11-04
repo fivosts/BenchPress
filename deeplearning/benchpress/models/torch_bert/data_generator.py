@@ -978,6 +978,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
           sorted_cache_samples = sorted(cached_samples, key = lambda x: x[-1])
           # The queue will be no longer than the beam search width specified.
           for scs in sorted_cache_samples[:self.sampler.config.sample_corpus.corpus_config.active.active_search_width]:
+            # Tokenize, pad, add start/end tokens to be ready for inference.
             tokenized = self.tokenizer.TokenizeString(scs[0])
             w_start_end = self._addStartEndToken(tokenized)
             padded = self._padToMaxPosition(w_start_end)[:self.sampler.sequence_length]
@@ -1004,6 +1005,9 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               )
             )
       else:
+        # If no caching is wanted, bring whatever the dataloader
+        # specified in the sampler's pbtxt wants. Usually this is a start
+        # text, but could also be a sampled datapoint from a dataset, DB etc.
         try:
           cf = next(self.loader).squeeze(0)
         except StopIteration:
