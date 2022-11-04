@@ -102,9 +102,7 @@ class torchBert(backends.BackendBase):
   @property
   def hidden_state_size(self):
     if self.bertAttrs:
-      return self.bertAttrs['hidden_size']
-    else:
-      raise ValueError("Model params have yet not been initialized.")
+      return self.config.architecture.hidden_size
 
   def __repr__(self):
     return "BenchPress"
