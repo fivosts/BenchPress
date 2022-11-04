@@ -58,6 +58,10 @@ class Incoder(backends.BackendBase):
     model          : typing.List[typing.TypeVar('nn.Module')]
     data_generator : IncoderDataGenerator
 
+  @property
+  def hidden_state_size(self):
+    return -1
+  
   def __init__(self, *args, **kwargs):
     super(Incoder, self).__init__(*args, **kwargs)
 
