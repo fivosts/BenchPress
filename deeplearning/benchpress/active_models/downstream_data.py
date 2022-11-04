@@ -74,7 +74,7 @@ def GreweDataScheme() -> typing.List[str]:
     "kernel_size"
   ]
 
-class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
+class GreweInstance(Base, sqlutil.ProtoBackedMixin):
   """
   A database row representation for Grewe heuristic model training instance.
   """
@@ -175,7 +175,7 @@ class GrewePredictiveInstance(Base, sqlutil.ProtoBackedMixin):
       + str(global_size),
       + str(oracle),
     )
-    return GrewePredictiveInstance(**{
+    return GreweInstance(**{
       "src"                : src,
       "sampling_epoch"     : sampling_epoch,
       "sha256"             : sha,
