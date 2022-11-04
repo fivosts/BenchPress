@@ -205,7 +205,7 @@ class ExpectedErrorReduction(backends.BackendBase):
             )
           ),
           num_workers = 0,
-          drop_last   = False # if environment.WORLD_SIZE == 1 else True,
+          drop_last   = False if self.torch.distributed.get_world_size() == 1 else True,
         )
         # Set dataloader in case of TPU training.
         if self.torch_tpu_available:
