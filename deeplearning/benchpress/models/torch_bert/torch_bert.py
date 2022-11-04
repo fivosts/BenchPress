@@ -660,9 +660,6 @@ class torchBert(backends.BackendBase):
             set_mail = "Epoch {} Loss: {}\n".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss)
             l.logger().info("Epoch {} Loss: {}".format(self.current_step // self.steps_per_epoch, train_hook.epoch_loss))
 
-          if self.pytorch.num_nodes > 1:
-            loader.sampler.set_epoch(epoch)
-
           if FLAGS.validate_per_epoch > 0 and self.train.data_generator.config.validation_split > 0:
             val_ml_loss = self.Validate(per_epoch = True, pre_train = pre_train)
             if self.is_world_process_zero():
