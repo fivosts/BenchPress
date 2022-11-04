@@ -757,6 +757,17 @@ class FeatureLessGrewe(GreweAbstract):
         samples_hash.add(str(inp_ids))
     return data_generator.DictPredictionDataloader(samples)
 
+  def InputtoEncodedVector(self,
+                           static_feats      : typing.Dict[str, float],
+                           transferred_bytes : int,
+                           local_size        : int,
+                           ) -> typing.List[float]:
+    """
+    Encode consistently raw features to Grewe's predictive model inputs.
+    """
+    raise NotImplementedError
+    return 
+
 
 TASKS = {
   "Grewe" : Grewe,
