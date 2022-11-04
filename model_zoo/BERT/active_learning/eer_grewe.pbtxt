@@ -102,7 +102,7 @@ sampler {
           }
           random_seed: 12345
           num_train_steps: 0
-          downstream_task: ""
+          downstream_task: "FeatureLessGrewe"
           training_corpus: "/private/home/foivos/cldrive_cache.db"
         }
         active_search_depth: 60
