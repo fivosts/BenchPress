@@ -88,7 +88,7 @@ class DownstreamTask(object):
                random_seed : int,
                **kwargs
                ) -> "DownstreamTask":
-    return TASKS[task](corpus_path, cache_path, random_seed, kwargs)
+    return TASKS[task](corpus_path, cache_path, random_seed, **kwargs)
 
   def __init__(self,
                name          : str,
@@ -648,8 +648,6 @@ class FeatureLessGrewe(GreweAbstract):
   """
   @property
   def input_size(self) -> int:
-    print(self.static_features_size)
-    print(self.runtime_features_size)
     return self.static_features_size + self.runtime_features_size
   
   @property
@@ -671,7 +669,7 @@ class FeatureLessGrewe(GreweAbstract):
                corpus_path       : pathlib.Path,
                cache_path        : pathlib.Path,
                random_seed       : int,
-               hidden_state_size : int = None,
+               hidden_state_size : int  = None,
                use_as_server     : bool = False,
                **unused_kwargs,
                ) -> None:
