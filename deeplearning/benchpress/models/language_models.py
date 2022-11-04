@@ -80,6 +80,9 @@ class Model(object):
   modify a property after instantiation, the hash will be out of date, which
   can lead to bad things happening.
   """
+  @property
+  def hidden_state_size(self) -> int:
+    return self.backend.hidden_state_size
 
   def __init__(self, config: model_pb2.Model):
     """Instantiate a model.
