@@ -103,7 +103,7 @@ sampler {
           random_seed: 12345
           num_train_steps: 0
           downstream_task: "FeatureLessGrewe"
-          training_corpus: "/private/home/foivos/cldrive_cache.db"
+          training_corpus: "/home/fivosts/PhD/Code/BenchPress/cldrive_cache.db"
         }
         active_search_depth: 60
         active_search_width: 32
