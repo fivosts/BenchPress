@@ -320,3 +320,6 @@ class ExpectedErrorReduction(backends.BackendBase):
     """
     raise NotImplementedError
     return
+
+  def GetShortSummary(self) -> None:
+    return "Short Summary TODO"
