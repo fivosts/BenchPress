@@ -310,3 +310,13 @@ class ExpectedErrorReduction(backends.BackendBase):
       #3. get accuracy metrics.
       pass
     return
+
+  def Sample(self, sample_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
+    """
+    Active learner sampling.
+
+    sample_set contains random datapoints provided by the downstream task.
+    Expected Error Reduction algorithm is going to be applied for each datapoint for each label class.
+    """
+    raise NotImplementedError
+    return
