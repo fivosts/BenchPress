@@ -27,12 +27,12 @@ def AssertConfigIsValid(config: active_learning_pb2.ExpectedErrorReduction) -> N
   """
   Parse proto description and check for validity.
   """
-  if config.HasField("mlp"):
+  if config.HasField("head"):
     tl = 0
-    pbutil.AssertFieldIsSet(config.mlp, "initial_learning_rate_micros")
-    pbutil.AssertFieldIsSet(config.mlp, "batch_size")
-    pbutil.AssertFieldIsSet(config.mlp, "num_warmup_steps")
-    for l in config.mlp.layer:
+    pbutil.AssertFieldIsSet(config.head, "initial_learning_rate_micros")
+    pbutil.AssertFieldIsSet(config.head, "batch_size")
+    pbutil.AssertFieldIsSet(config.head, "num_warmup_steps")
+    for l in config.head.layer:
       if l.HasField("embedding"):
         pbutil.AssertFieldIsSet(l.embedding, "num_embeddings")
         pbutil.AssertFieldIsSet(l.embedding, "embedding_dim")
