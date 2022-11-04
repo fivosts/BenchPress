@@ -48,7 +48,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     num_epochs       : int
     num_train_steps  : int
 
-  class CommitteeEstimator(typing.NamedTuple):
+  class Estimator(typing.NamedTuple):
     """Named tuple to wrap BERT pipeline."""
     model          : typing.TypeVar('nn.Module')
     data_generator : 'torch.utils.data.Dataset'
