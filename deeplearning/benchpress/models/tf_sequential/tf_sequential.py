@@ -60,6 +60,10 @@ flags.DEFINE_integer(
 class tfSequential(backends.BackendBase):
   """A model with an embedding layer, using a keras backend."""
 
+  @property
+  def hidden_state_size(self) -> int:
+    return self.config.architecture.neurons_per_layer
+
   def __init__(self, *args, **kwargs):
     """Instantiate a model.
 
