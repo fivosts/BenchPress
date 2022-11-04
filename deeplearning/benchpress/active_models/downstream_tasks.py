@@ -85,9 +85,9 @@ class DownstreamTask(object):
     return TASKS[task](corpus_path, cache_path, random_seed, kwargs)
 
   def __init__(self, name: str, cache_path: pathlib.Path, task_type: typing.Callable, random_seed: int, use_as_server: bool) -> None:
-    self.name            = name
-    self.random_seed     = random_seed
-    self.cache_path      = cache_path
+    self.name        = name
+    self.random_seed = random_seed
+    self.cache_path  = cache_path
     if environment.WORLD_RANK == 0 and not use_as_server:
       self.downstream_data = downstream_data.DownstreamData(
         "sqlite:///{}/downstream_data.db".format(cache_path),
@@ -105,7 +105,97 @@ class DownstreamTask(object):
   def loadCheckpoint(self) -> None:
     raise NotImplementedError("Abstract Class")
 
-class Grewe(DownstreamTask):
+class GreweAbstract(DownstreamTask):
+  """
+  An abstract class for Grewe CPU vs GPU -related downstream tasks.
+  """
+  @property
+  def runtime_features_size(self) -> int:
+    return 2
+
+  @property
+  def output_size(self) -> int:
+    return 2
+
+  @property
+  def output_labels(self) -> typing.Tuple[str, str]:
+    return ["CPU", "GPU"]
+
+  @property
+  def output_ids(self) -> typing.Tuple[str, str]:
+    return [0, 1]
+
+  def __init__(self, name: str, cache_path: pathlib.Path, task_type: typing.Callable, random_seed: int, use_as_server: bool) -> None:
+    super(GreweAbstract, self).__init__(
+      name, cache_path, task_type, random_seed, use_as_server
+    )
+    return
+
+  def setup_server(self) -> None:
+    """
+    This is server mode.
+
+    In server mode, initialize the serving process.
+    """
+    if environment.WORLD_RANK == 0:
+      self.cl_proc, self.work_flag, self.read_queue, self.write_queues, self.reject_queues = http_server.start_server_process()
+    return
+
+  def TargetIDtoLabels(self, id: int) -> str:
+    """
+    Integer ID to label of predictive model.
+    """
+    return {
+      0: "CPU",
+      1: "GPU",
+    }[id]
+
+  def TargetLabeltoID(self, label: str) -> int:
+    """
+    Predictive label to ID.
+    """
+    return {
+      "CPU": 0,
+      "GPU": 1,
+    }[label]
+
+  def TargetLabeltoEncodedVector(self, label: str) -> typing.List[int]:
+    """
+    Label to target vector.
+    """
+    return {
+      "CPU": [1, 0],
+      "GPU": [0, 1],
+    }[label]
+
+  def saveCheckpoint(self) -> None:
+    """
+    Store data generator.
+    """
+    if environment.WORLD_RANK == 0:
+      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
+        pickle.dump(self.data_generator, outf)
+    return
+
+  def loadCheckpoint(self) -> 'torch.Dataset':
+    """
+    Load state of downstream task.
+    """
+    if (self.cache_path / "downstream_task_dg.pkl").exists():
+      distrib.lock()
+      with open(self.cache_path / "downstream_task_dg.pkl", 'rb') as infile:
+        data = pickle.load(infile)
+        infile.close()
+      while not infile.closed:
+        time.sleep(1)
+      if environment.WORLD_SIZE > 1:
+        time.sleep(30)
+      distrib.unlock()
+      return data
+    else:
+      return None
+
+class Grewe(GreweAbstract):
   """
   Specification class for Grewe et al. CGO 2013 predictive model.
   This class is responsible to fetch the raw data and act as a tokenizer
@@ -120,10 +210,6 @@ class Grewe(DownstreamTask):
     return len(grewe.KEYS)
 
   @property
-  def runtime_features_size(self) -> int:
-    return 2
-
-  @property
   def input_labels(self) -> typing.List[str]:
     return [
       "tr_bytes/(comp+mem)",
@@ -131,18 +217,6 @@ class Grewe(DownstreamTask):
       "localmem/(mem+wgsize)",
       "comp/mem"
     ]
-
-  @property
-  def output_size(self) -> int:
-    return 2
-
-  @property
-  def output_labels(self) -> typing.Tuple[str, str]:
-    return ["CPU", "GPU"]
-
-  @property
-  def output_ids(self) -> typing.Tuple[str, str]:
-    return [0, 1]
 
   @property
   def feature_space(self) -> str:
@@ -157,8 +231,8 @@ class Grewe(DownstreamTask):
     super(Grewe, self).__init__(
       "Grewe", cache_path, downstream_data.GreweInstance, random_seed, use_as_server
     )
-    self.corpus_path     = corpus_path
-    self.corpus_db       = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)))
+    self.corpus_path = corpus_path
+    self.corpus_db   = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)))
     if use_as_server:
       self.setup_server()
     else:
@@ -179,16 +253,6 @@ class Grewe(DownstreamTask):
 
   def __repr__(self) -> str:
     return "Grewe"
-
-  def setup_server(self) -> None:
-    """
-    This is server mode.
-
-    In server mode, initialize the serving process.
-    """
-    if environment.WORLD_RANK == 0:
-      self.cl_proc, self.work_flag, self.read_queue, self.write_queues, self.reject_queues = http_server.start_server_process()
-    return
 
   def setup_dataset(self, num_train_steps: int = None) -> None:
     """
@@ -555,67 +619,23 @@ class Grewe(DownstreamTask):
       i4 = 0.0
     return [i1, i2, i3, i4]
 
-  def TargetIDtoLabels(self, id: int) -> str:
-    """
-    Integer ID to label of predictive model.
-    """
-    return {
-      0: "CPU",
-      1: "GPU",
-    }[id]
-
-  def TargetLabeltoID(self, label: str) -> int:
-    """
-    Predictive label to ID.
-    """
-    return {
-      "CPU": 0,
-      "GPU": 1,
-    }[label]
-
-  def TargetLabeltoEncodedVector(self, label: str) -> typing.List[int]:
-    """
-    Label to target vector.
-    """
-    return {
-      "CPU": [1, 0],
-      "GPU": [0, 1],
-    }[label]
-
-  def saveCheckpoint(self) -> None:
-    """
-    Store data generator.
-    """
-    if environment.WORLD_RANK == 0:
-      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
-        pickle.dump(self.data_generator, outf)
-    return
-
-  def loadCheckpoint(self) -> 'torch.Dataset':
-    """
-    Load state of downstream task.
-    """
-    if (self.cache_path / "downstream_task_dg.pkl").exists():
-      distrib.lock()
-      with open(self.cache_path / "downstream_task_dg.pkl", 'rb') as infile:
-        data = pickle.load(infile)
-        infile.close()
-      while not infile.closed:
-        time.sleep(1)
-      if environment.WORLD_SIZE > 1:
-        time.sleep(30)
-      distrib.unlock()
-      return data
-    else:
-      return None
-
-class FeatureLessGrewe(DownstreamTask):
+class FeatureLessGrewe(GreweAbstract):
   """
   A feature-less implementation of Grewe's CPU vs GPU model.
 
   This task uses the language model's hidden outpus as features
   instead of manually selecting the compiler features.
   """
+  def __init__(self,
+               corpus_path   : pathlib.Path,
+               cache_path    : pathlib.Path,
+               random_seed   : int,
+               use_as_server : bool = False,
+               ) -> None:
+    super(FeatureLessGrewe, self).__init__(
+      corpus_path, cache_path, random_seed, use_as_server
+    )
+    return
 
 TASKS = {
   "Grewe"  : Grewe,
