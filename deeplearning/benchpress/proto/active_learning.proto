@@ -28,10 +28,10 @@ message ActiveLearner {
     QueryByCommittee       query_by_committee       = 1;
     ExpectedErrorReduction expected_error_reduction = 2;
   }
-  optional string    downstream_task = 3;
-  optional string    training_corpus = 4;
-  optional int32     num_train_steps = 5;
-  optional int32     random_seed     = 6;
+  optional string downstream_task = 3;
+  optional string training_corpus = 4;
+  optional int32  num_train_steps = 5;
+  optional int32  random_seed     = 6;
 }
 
 // Committee is a list of models.
