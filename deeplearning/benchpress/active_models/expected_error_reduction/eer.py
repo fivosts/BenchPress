@@ -117,6 +117,17 @@ class ExpectedErrorReduction(backends.BackendBase):
         num_train_steps  = self.model_config.num_train_steps,
       )
       cm = models.MLP.FromConfig(self.model_config)
+      if self.pytorch.num_nodes > 1:
+        distrib.barrier()
+        cm = self.torch.nn.parallel.DistributedDataParallel(
+          cm,
+          device_ids             = [self.pytorch.offset_device],
+          output_device          = self.pytorch.offset_device,
+          find_unused_parameters = True,
+        )
+      elif self.pytorch.num_gpus > 1:
+        cm = self.torch.nn.DataParallel(cm)
+
       if not is_sampling:
         opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
           model           = cm,
@@ -147,3 +158,150 @@ class ExpectedErrorReduction(backends.BackendBase):
       is_sampling = is_sampling,
     )
     return outputs
+
+  def Train(self, **kwargs) -> None:
+    """
+    Train the AL predictive model.
+    """
+    update_dataloader = kwargs.get('update_dataloader', None)
+
+    data_generator  = (
+      member.data_generator
+      if update_dataloader is None
+      else update_dataloader
+           # + member.data_generator.get_random_subset(
+               # max(0, abs(len(update_dataloader) - member.training_opts.num_train_steps)))
+    )
+    if len(data_generator) == 0:
+      return
+    optimizer       = member.optimizer
+    scheduler       = member.scheduler
+
+    # if self.pytorch.num_nodes > 1:
+    #   distrib.barrier()
+    #   model = self.torch.nn.parallel.DistributedDataParallel(
+    #     model,
+    #     device_ids    = [self.pytorch.offset_device],
+    #     output_device = self.pytorch.offset_device,
+    #   )
+    if self.pytorch.num_gpus > 1:
+      model = self.torch.nn.DataParallel(model)
+
+    current_step = self.loadCheckpoint(model, member_path, optimizer, scheduler)
+    if self.pytorch.num_gpus > 0:
+      self.torch.cuda.empty_cache()
+    if current_step >= 0:
+      l.logger().info("{}: Loaded checkpoint step {}".format(model_name, current_step))
+    current_step = max(0, current_step)
+    num_train_steps = min((len(data_generator) + member.training_opts.train_batch_size) // member.training_opts.train_batch_size, member.training_opts.num_train_steps) if update_dataloader is None else ((len(update_dataloader) + member.training_opts.train_batch_size) // member.training_opts.train_batch_size) + current_step
+
+    if current_step < num_train_steps:
+      model.zero_grad()
+
+      # if self.pytorch.num_nodes <= 1:
+      sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
+      # else:
+      #   sampler = self.torch.utils.data.DistributedSampler(
+      #     data_generator,
+      #     num_replicas = self.pytorch.num_nodes,
+      #     rank         = self.pytorch.torch.distributed.get_rank()
+      #   )
+      loader = self.torch.utils.data.dataloader.DataLoader(
+        dataset    = data_generator,
+        batch_size = member.training_opts.train_batch_size,
+        sampler    = (sampler
+          if not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
+          else self.torch.utils.data.distributed.DistributedSampler(
+            dataset      = data_generator,
+            num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
+            rank         = self.pytorch.torch.distributed.get_rank() if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.get_ordinal()
+          )
+        ),
+        num_workers = 0,
+        drop_last   = False # if environment.WORLD_SIZE == 1 else True,
+      )
+      # Set dataloader in case of TPU training.
+      if self.torch_tpu_available:
+        loader = self.pytorch.torch_ploader.ParallelLoader(
+                            data_generator, [self.pytorch.device]
+                          ).per_device_loader(self.pytorch.device)
+
+      # Get dataloader iterator and setup hooks.
+      batch_iterator = iter(loader)
+      if self.is_world_process_zero():
+        train_hook = hooks.tensorMonitorHook(
+          member_log_path, current_step, min((len(data_generator) + member.training_opts.train_batch_size) // member.training_opts.train_batch_size, member.training_opts.steps_per_epoch, 50)
+        )
+      try:
+        with self.torch.enable_grad():
+          model.train()
+          # epoch_iter = tqdm.auto.trange(member.training_opts.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(member.training_opts.num_epochs)
+          epoch = num_train_steps // member.training_opts.steps_per_epoch
+          # In distributed mode, calling the set_epoch() method at
+          # the beginning of each epoch before creating the DataLoader iterator
+          # is necessary to make shuffling work properly across multiple epochs.
+          # Otherwise, the same ordering will be always used.
+
+          # if self.pytorch.num_nodes > 1:
+          #   loader.sampler.set_epoch(epoch)
+
+          batch_iter = tqdm.tqdm(batch_iterator, desc="Batch", leave = False) if self.is_world_process_zero() else batch_iterator
+          for inputs in batch_iter:
+            if self.is_world_process_zero():
+              start = datetime.datetime.utcnow()
+
+            # Run model step on inputs
+            step_out = self.model_step(model, inputs)
+            # Backpropagate losses
+            total_loss = step_out['total_loss'].mean()
+            total_loss.backward()
+
+            self.torch.nn.utils.clip_grad_norm_(model.parameters(), member.training_opts.max_grad_norm)
+            if self.torch_tpu_available:
+              self.pytorch.torch_xla.optimizer_step(optimizer)
+            else:
+              optimizer.step()
+            scheduler.step()
+
+            ## Collect tensors for logging.
+            # if self.pytorch.num_nodes > 1:
+            #   total_loss = [self.torch.zeros(tuple(step_out['total_loss'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+            #   self.torch.distributed.all_gather(total_loss, step_out["total_loss"])
+            # else:
+            total_loss = step_out['total_loss'].unsqueeze(0).cpu()
+            if self.is_world_process_zero():
+              train_hook.step(
+                train_step = current_step,
+                total_loss = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
+              )
+            model.zero_grad()
+            if current_step == 0:
+              l.logger().info("{}: Starting Loss: {}".format(model_name, sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
+            current_step += 1
+          # End of epoch
+          self.saveCheckpoint(
+            model,
+            member_path,
+            optimizer = optimizer,
+            scheduler = scheduler,
+            step = current_step
+          )
+          # if self.pytorch.num_nodes > 1:
+          #   loader.sampler.set_epoch(epoch)
+
+          if self.is_world_process_zero():
+            try:
+              l.logger().info("{}: Epoch {} Loss: {}".format(model_name, current_step // member.training_opts.steps_per_epoch, train_hook.epoch_loss))
+            except ZeroDivisionError:
+              l.logger().error(
+                "Hook has crashed again: current_step: {}, step_freq: {}, flush_freq: {}, train_step: {}".format(
+                  train_hook.current_step, train_hook.step_freq, train_hook.flush_freq,
+                  current_step
+                )
+              )
+            train_hook.end_epoch()
+          if self.torch_tpu_available:
+            self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
+      except KeyboardInterrupt:
+        pass
+    return
