@@ -37,8 +37,8 @@ class MLP(torch.nn.Module):
   """
   A modular MLP model that supports Linear, Dropout, LayerNorm and activations.
   """
-  def __init__(self, id: int, config: config.ModelConfig):
-    super(MLP, self).__init__(id)
+  def __init__(self, config: config.ModelConfig):
+    super(MLP, self).__init__()
     self.config = config.layer_config
     self.layers = []
 
