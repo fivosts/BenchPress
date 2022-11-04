@@ -652,7 +652,7 @@ class FeatureLessGrewe(GreweAbstract):
                use_as_server : bool = False,
                ) -> None:
     super(FeatureLessGrewe, self).__init__(
-      corpus_path, cache_path, random_seed, use_as_server
+      "FeatureLessGrewe", corpus_path, cache_path, random_seed, use_as_server
     )
     return
 
