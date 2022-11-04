@@ -33,7 +33,7 @@ ACT2FN = {
   "softmax"  : torch.nn.Softmax
 }
 
-class MLP(CommitteeModels, torch.nn.Module):
+class MLP(torch.nn.Module):
   """
   A modular MLP model that supports Linear, Dropout, LayerNorm and activations.
   """
