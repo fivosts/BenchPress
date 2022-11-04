@@ -60,7 +60,7 @@ class ExpectedErrorReduction(backends.BackendBase):
 
   def __init__(self, *args, **kwargs):
 
-    super(ExpectedErrorReduction, self).__init__(*args, **kwargs):
+    super(ExpectedErrorReduction, self).__init__(*args, **kwargs)
     from deeplearning.benchpress.util import pytorch
     if not pytorch.initialized:
       pytorch.initPytorch()
