@@ -192,7 +192,13 @@ class GreweAbstract(DownstreamTask):
     """
     if environment.WORLD_RANK == 0:
       with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
-        pickle.dump(self.data_generator, outf)
+        pickle.dump(
+          {
+            'data_generator': self.data_generator,
+            'random_generator': self.rand_generator,
+          },
+          outf
+        )
     return
 
   def loadCheckpoint(self) -> 'torch.Dataset':
@@ -257,8 +263,7 @@ class Grewe(GreweAbstract):
       self.setup_server()
     else:
       ## Setup random seed np random stuff
-      self.rand_generator = np.random
-      self.rand_generator.seed(random_seed)
+      self.rand_generator = None
       self.gen_bounds = {
         'comp'             : (1, 300),
         'rational'         : (0, 50),
@@ -280,9 +285,12 @@ class Grewe(GreweAbstract):
     """
     checkpointed = self.loadCheckpoint()
     if checkpointed:
-      self.data_generator = checkpointed
+      self.data_generator = checkpointed['data_generator']
+      self.rand_generator = checkpointed['rand_generator']
       self.dataset = self.data_generator.dataset
     else:
+      self.rand_generator = np.random
+      self.rand_generator.seed(self.random_seed)
       self.dataset = []
       data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")] ## TODO: Here you must get original training dataset instead of random github benchmarks.
       pool = multiprocessing.Pool()
@@ -655,10 +663,14 @@ class FeatureLessGrewe(GreweAbstract):
     return self.hidden_state_size
 
   @property
-  def input_labels(self) -> typing.List[str]:
+  def static_features_labels(self) -> typing.List[str]:
     return [
-      str(r) for r in range(self.input_size)
+      "f{}".format(str(r)) for r in range(self.static_features_size)
     ]
+
+  @property
+  def input_labels(self) -> typing.List[str]:
+    self.static_features_labels + ["transferred_bytes", "local_size"]
 
   @property
   def feature_space(self) -> str:
@@ -677,6 +689,17 @@ class FeatureLessGrewe(GreweAbstract):
     super(FeatureLessGrewe, self).__init__(
       "FeatureLessGrewe", corpus_path, cache_path, random_seed, use_as_server
     )
+    self.corpus_path = corpus_path
+    self.corpus_db   = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)))
+    if use_as_server:
+      self.setup_server()
+    else:
+      ## Setup random seed np random stuff
+      self.rand_generator = None
+      self.gen_bounds = {
+        'transferred_bytes': (1, 31), # 2**pow,
+        'local_size'       : (1, 8),  # 2**pow,
+      }
     self.hidden_state_size = hidden_state_size
     return
 
@@ -695,14 +718,45 @@ class FeatureLessGrewe(GreweAbstract):
     """
     checkpointed = self.loadCheckpoint()
     if checkpointed:
-      self.data_generator = checkpointed
+      self.data_generator = checkpointed['data_generator']
+      self.rand_generator = checkpointed['rand_generator']
       self.dataset = self.data_generator.dataset
     else:
       self.data_generator = []
       self.dataset = []
+      self.rand_generator = np.random
+      self.rand_generator.seed(self.random_seed)
 
     # self.test_set = TODO
     return
+
+  def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
+    """
+    Go fetch the hidden state's feature space [1xhidden_state_size] where N~[0, 1] and
+    randomly return num_samples samples to evaluate. The predictive model samples are
+    mapped as a value to the static features as a key.
+    """
+    samples = []
+    samples_hash = set()
+    for x in range(num_samples):
+      fvec = {
+        k: self.rand_generator.random()
+        for k in self.static_features_labels
+      }
+      transferred_bytes = 2**self.rand_generator.randint(self.gen_bounds['transferred_bytes'][0], self.gen_bounds['transferred_bytes'][1])
+      local_size        = 2**self.rand_generator.randint(self.gen_bounds['local_size'][0], self.gen_bounds['local_size'][1])
+      inp_ids           = self.InputtoEncodedVector(fvec, transferred_bytes, local_size)
+      if str(inp_ids) not in samples_hash:
+        samples.append(
+          {
+            'static_features'  : self.StaticFeatDictToVec(fvec),
+            'runtime_features' : [transferred_bytes, local_size],
+            'input_ids'        : inp_ids,
+          }
+        )
+        samples_hash.add(str(inp_ids))
+    return data_generator.DictPredictionDataloader(samples)
+
 
 TASKS = {
   "Grewe" : Grewe,
