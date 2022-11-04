@@ -418,7 +418,11 @@ class Sampler(object):
             self.config.HasField("sample_corpus")
           )
 
-  def __init__(self, config: sampler_pb2.Sampler, sample_db_name = "samples.db", model_hash = None):
+  def __init__(self,
+               config            : sampler_pb2.Sampler,
+               sample_db_name    : str = "samples.db",
+               model_hash        : str = None,
+               hidden_state_size : int = None):
     """Instantiate a sampler.
 
     Args:
@@ -483,7 +487,9 @@ class Sampler(object):
 
     if self.has_active_learning:
       self.active_learner = active_models.Model(
-        config.sample_corpus.corpus_config.active.active_learner, self.cache.path
+        config.sample_corpus.corpus_config.active.active_learner,
+        self.cache.path,
+        hidden_state_size = hidden_state_size
       )
       if config.sample_corpus.corpus_config.active.feature_space != self.active_learner.downstream_task.feature_space:
         raise ValueError("Feature space {} does not match downstream task {}".format(
