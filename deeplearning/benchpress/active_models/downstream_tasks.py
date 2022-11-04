@@ -97,7 +97,7 @@ class DownstreamTask(object):
     return
 
   def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
-    return
+    raise NotImplementedError("Abstract Class")
 
   def saveCheckpoint(self) -> None:
     raise NotImplementedError("Abstract Class")
@@ -608,6 +608,14 @@ class Grewe(DownstreamTask):
       return data
     else:
       return None
+
+class FeatureLessGrewe(DownstreamTask):
+  """
+  A feature-less implementation of Grewe's CPU vs GPU model.
+
+  This task uses the language model's hidden outpus as features
+  instead of manually selecting the compiler features.
+  """
 
 TASKS = {
   "Grewe"  : Grewe,
