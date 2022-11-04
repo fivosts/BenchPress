@@ -659,6 +659,27 @@ class FeatureLessGrewe(GreweAbstract):
   def __repr__(self) -> str:
     return "FeatureLessGrewe"
 
+  def setup_dataset(self, **kwargs) -> None:
+    """
+    Function that initializes all initial data/data types needed for downstream task.
+
+    The predictive model will not be trained on initial data, therefore data generator
+    is initialized here as empty.
+
+    Test set is needed for this task, which will be the CSV file for the labelled
+    human written benchmarks. This is going to be the evaluator 
+    """
+    checkpointed = self.loadCheckpoint()
+    if checkpointed:
+      self.data_generator = checkpointed
+      self.dataset = self.data_generator.dataset
+    else:
+      self.data_generator = []
+      self.dataset = []
+
+    # self.test_set = TODO
+    return
+
 TASKS = {
   "Grewe" : Grewe,
   "FeatureLessGrewe" : FeatureLessGrewe,
