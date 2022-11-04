@@ -637,7 +637,7 @@ class FeatureLessGrewe(GreweAbstract):
   @property
   def input_labels(self) -> typing.List[str]:
     return [
-      str(r) for in range(self.input_size)
+      str(r) for r in range(self.input_size)
     ]
 
   @property
@@ -657,7 +657,7 @@ class FeatureLessGrewe(GreweAbstract):
     return
 
   def __repr__(self) -> str:
-    return "Grewe"
+    return "FeatureLessGrewe"
 
 TASKS = {
   "Grewe" : Grewe,
