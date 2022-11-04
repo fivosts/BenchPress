@@ -298,3 +298,15 @@ class ExpectedErrorReduction(backends.BackendBase):
     if self.pytorch.num_nodes > 1:
       self.torch.distributed.barrier()
     return
+
+  def Validate(self, **kwargs):
+    """
+    Run validation to measure accuracy on the downstream task's selected test set, if exists.
+    """
+    test_set = self.downstream_task.test_set
+    if test_set:
+      #1. load checkpoint.
+      #2. run model on test set
+      #3. get accuracy metrics.
+      pass
+    return
