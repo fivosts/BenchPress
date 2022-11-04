@@ -95,7 +95,7 @@ def AssertConfigIsValid(config: sampler_pb2.Sampler) -> sampler_pb2.Sampler:
             config.sample_corpus.corpus_config.active,
             "feature_space",
             lambda x : x in set(extractor.extractors.keys()),
-            "feature_space can only be one of {}".format(', '.join(list(extractor.extractors.keys())))
+            "feature_space can only be one of {}".format(', '.join(["FeatureLess"] + list(extractor.extractors.keys())))
           )
           if config.sample_corpus.corpus_config.active.HasField("target"):
             pbutil.AssertFieldConstraint(

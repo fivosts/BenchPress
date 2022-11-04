@@ -109,7 +109,7 @@ sampler {
         active_search_width: 32
         active_dropout_prob: 0.1
         batch_size_per_feed: 2
-        feature_space: "FeatureLessGrewe"
+        feature_space: "FeatureLess"
       }
       max_predictions_per_seq: 1
       masked_lm_prob: 0.6
