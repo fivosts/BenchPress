@@ -62,7 +62,7 @@ class ModelConfig(object):
                  downstream_task: downstream_tasks.DownstreamTask,
                  num_train_steps: int,
                  ) -> typing.List["ModelConfig"]:
-    return NNModelConfig(config.mlp, downstream_task, num_train_steps)
+    return NNModelConfig(config.head, downstream_task, num_train_steps)
 
   @property
   def num_labels(self) -> int:
