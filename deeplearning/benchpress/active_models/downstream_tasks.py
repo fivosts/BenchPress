@@ -81,10 +81,22 @@ class DownstreamTask(object):
   Downstream Task generic class.
   """
   @classmethod
-  def FromTask(cls, task: str, corpus_path: pathlib.Path, cache_path: pathlib.Path, random_seed: int, **kwargs) -> "DownstreamTask":
+  def FromTask(cls,
+               task        : str,
+               corpus_path : pathlib.Path,
+               cache_path  : pathlib.Path,
+               random_seed : int,
+               **kwargs
+               ) -> "DownstreamTask":
     return TASKS[task](corpus_path, cache_path, random_seed, kwargs)
 
-  def __init__(self, name: str, cache_path: pathlib.Path, task_type: typing.Callable, random_seed: int, use_as_server: bool) -> None:
+  def __init__(self,
+               name          : str,
+               cache_path    : pathlib.Path,
+               task_type     : typing.Callable,
+               random_seed   : int,
+               use_as_server : bool
+               ) -> None:
     self.name        = name
     self.random_seed = random_seed
     self.cache_path  = cache_path
@@ -125,7 +137,13 @@ class GreweAbstract(DownstreamTask):
   def output_ids(self) -> typing.Tuple[str, str]:
     return [0, 1]
 
-  def __init__(self, name: str, cache_path: pathlib.Path, task_type: typing.Callable, random_seed: int, use_as_server: bool) -> None:
+  def __init__(self,
+               name          : str,
+               cache_path    : pathlib.Path,
+               task_type     : typing.Callable,
+               random_seed   : int,
+               use_as_server : bool
+               ) -> None:
     super(GreweAbstract, self).__init__(
       name, cache_path, task_type, random_seed, use_as_server
     )
@@ -227,7 +245,9 @@ class Grewe(GreweAbstract):
                cache_path    : pathlib.Path,
                random_seed   : int,
                use_as_server : bool = False,
+               **unused_kwargs,
                ) -> None:
+    del unused_kwargs
     super(Grewe, self).__init__(
       "Grewe", cache_path, downstream_data.GreweInstance, random_seed, use_as_server
     )
@@ -646,14 +666,18 @@ class FeatureLessGrewe(GreweAbstract):
 
 
   def __init__(self,
-               corpus_path   : pathlib.Path,
-               cache_path    : pathlib.Path,
-               random_seed   : int,
-               use_as_server : bool = False,
+               corpus_path       : pathlib.Path,
+               cache_path        : pathlib.Path,
+               random_seed       : int,
+               hidden_state_size : int,
+               use_as_server     : bool = False,
+               **unused_kwargs,
                ) -> None:
+    del unused_kwargs
     super(FeatureLessGrewe, self).__init__(
       "FeatureLessGrewe", corpus_path, cache_path, random_seed, use_as_server
     )
+    self.hidden_state_size = hidden_state_size
     return
 
   def __repr__(self) -> str:
