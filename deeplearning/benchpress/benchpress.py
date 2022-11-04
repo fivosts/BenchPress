@@ -198,7 +198,11 @@ class Instance(object):
         distrib.init(lock_cache)
 
       if config.HasField("sampler"):
-        self.sampler: samplers.Sampler = samplers.Sampler(config.sampler, model_hash = self.model.hash)
+        self.sampler: samplers.Sampler = samplers.Sampler(
+          config.sampler,
+          model_hash = self.model.hash,
+          hidden_state_size = self.model.hidden_state_size,
+        )
 
     if environment.WORLD_RANK == 0:
       self.dashboard = dashboard.Launch()
