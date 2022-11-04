@@ -638,7 +638,7 @@ class FeatureLessGrewe(GreweAbstract):
     return
 
 TASKS = {
-  "Grewe"  : Grewe,
+  "Grewe" : Grewe,
   "FeatureLessGrewe" : FeatureLessGrewe,
 }
 
