@@ -965,14 +965,18 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       Starting input feed of sampling.
     """
     if not self.feed_queue:
+      # Initialize feed_queue if empty.
       if FLAGS.start_from_cached and target_features is not None:
+        # Get cached samples to start with an advantage for new benchmark.
         cached_samples = [[x.sample, {':'.join(f.split(':')[:-1]): float(f.split(':')[-1]) for f in x.output_features.split('\n')}, -1] for x in self.active_db.get_data]
         if len(cached_samples) == 0:
+          # If no cache, re-try without caching from target.
           return self.initOrGetQueue()
         else:
           for idx, cs in enumerate(cached_samples):
             cached_samples[idx][-1] = self.feat_sampler.calculate_distance(cs[1])
           sorted_cache_samples = sorted(cached_samples, key = lambda x: x[-1])
+          # The queue will be no longer than the beam search width specified.
           for scs in sorted_cache_samples[:self.sampler.config.sample_corpus.corpus_config.active.active_search_width]:
             tokenized = self.tokenizer.TokenizeString(scs[0])
             w_start_end = self._addStartEndToken(tokenized)
