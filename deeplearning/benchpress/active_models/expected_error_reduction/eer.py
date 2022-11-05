@@ -311,13 +311,60 @@ class ExpectedErrorReduction(backends.BackendBase):
       pass
     return
 
-  def Sample(self, sample_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
+  def Sample(self, unlabelled_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
     """
     Active learner sampling.
 
-    sample_set contains random datapoints provided by the downstream task.
+    unlabelled_set contains random datapoints provided by the downstream task.
     Expected Error Reduction algorithm is going to be applied for each datapoint for each label class.
     """
+
+    l.logger().error("Problem #1: With 1 _ConfigModelParams, you will have trouble resetting between data generators.")
+    l.logger().error("Problem #2: Check that for DDP, every one gets the chunk they must.")
+
+    self._ConfigModelParams()
+
+    current_step = self.loadCheckpoint(model, member_path)
+    if self.pytorch.num_gpus > 0:
+      self.torch.cuda.empty_cache()
+    if current_step < 0:
+      l.logger().warn("EER: You are trying to sample an untrained model.")
+    current_step = max(0, current_step)
+
+    if self.pytorch.num_nodes <= 1:
+      sampler = self.torch.utils.data.SequentialSampler(unlabelled_set)
+    else:
+      sampler = self.torch.utils.data.DistributedSampler(
+        unlabelled_set,
+        num_replicas = self.pytorch.num_nodes,
+        rank         = self.torch.distributed.get_rank(),
+        shuffle      = False,
+        drop_last    = False,
+      )
+    loader = self.torch.utils.data.dataloader.DataLoader(
+      dataset    = unlabelled_set,
+      batch_size = self.training_opts.train_batch_size,
+      sampler    = (sampler
+        if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
+        else self.torch.utils.data.distributed.DistributedSampler(
+          dataset      = unlabelled_set,
+          num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
+          rank         = self.torch.distributed.get_rank() if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.get_ordinal()
+        )
+      ),
+      num_workers = 0,
+      drop_last   = True if environment.WORLD_SIZE > 1 else False,
+    )
+    # Set dataloader in case of TPU training.
+    if self.torch_tpu_available:
+      loader = self.pytorch.torch_ploader.ParallelLoader(
+                          sample_set, [self.pytorch.device]
+                        ).per_device_loader(self.pytorch.device)
+    # Get dataloader iterator and setup hooks.
+    model.eval()
+    it = tqdm.tqdm(loader, desc="Sample Unlabelled set", leave = False) if self.is_world_process_zero() else loader
+    for batch in it:
+
     raise NotImplementedError
     return
 
