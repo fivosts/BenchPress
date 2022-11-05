@@ -687,7 +687,7 @@ class FeatureLessGrewe(GreweAbstract):
                ) -> None:
     del unused_kwargs
     super(FeatureLessGrewe, self).__init__(
-      "FeatureLessGrewe", corpus_path, cache_path, random_seed, use_as_server
+      "FeatureLessGrewe", cache_path, downstream_data.GreweInstance, random_seed, use_as_server
     )
     self.corpus_path = corpus_path
     self.corpus_db   = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)))
