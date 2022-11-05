@@ -657,12 +657,12 @@ class FeatureLessGrewe(GreweAbstract):
   """
   @property
   def input_size(self) -> int:
-    return self.static_features_size + self.runtime_features_size
+    return self.hidden_state_size + self.runtime_features_size
   
   @property
   def static_features_labels(self) -> typing.List[str]:
     return [
-      "f{}".format(str(r)) for r in range(self.static_features_size)
+      "f{}".format(str(r)) for r in range(self.hidden_state_size)
     ]
 
   @property
