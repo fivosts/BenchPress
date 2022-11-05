@@ -212,6 +212,14 @@ class GreweAbstract(DownstreamTask):
       'local_size'        : ls,
     }
 
+  def VecToInputFeatDict(self, input_values: typing.List[float]) -> typing.Dict[str, float]:
+    """
+    Convert to dictionary of predictive model input features.
+    """
+    return {
+      k: v for k, v in zip(self.input_labels, input_values)
+    }
+
   def saveCheckpoint(self) -> None:
     """
     Store data generator.
@@ -614,21 +622,10 @@ class Grewe(GreweAbstract):
       http_server.client_put_request(serialized)
     return
 
-  def VecToInputFeatDict(self, input_values: typing.List[float]) -> typing.Dict[str, float]:
-    """
-    Convert to dictionary of predictive model input features.
-    """
-    return {
-      "tr_bytes/(comp+mem)"   : input_values[0],
-      "coalesced/mem"         : input_values[1],
-      "localmem/(mem+wgsize)" : input_values[2],
-      "comp/mem"              : input_values[3],
-    }
-
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
                            transferred_bytes : int,
-                           local_size       : int,
+                           local_size        : int,
                            ) -> typing.List[float]:
     """
     Encode consistently raw features to Grewe's predictive model inputs.
@@ -763,22 +760,11 @@ class FeatureLessGrewe(GreweAbstract):
                            local_size        : int,
                            ) -> typing.List[float]:
     """
-    Encode consistently raw features to Grewe's predictive model inputs.
+    Encode consistently LM's hidden output features to Grewe's predictive model inputs.
     """
-    raise NotImplementedError
-    return
-
-  def VecToInputFeatDict(self, input_values: typing.List[float]) -> typing.Dict[str, float]:
-    """
-    Convert to dictionary of predictive model input features.
-    """
-    return {
-      "tr_bytes/(comp+mem)"   : input_values[0],
-      "coalesced/mem"         : input_values[1],
-      "localmem/(mem+wgsize)" : input_values[2],
-      "comp/mem"              : input_values[3],
-    }
-
+    return [
+      static_feats[l] for l in self.static_features_labels
+    ] + [transferred_bytes, local_size]
 
 TASKS = {
   "Grewe" : Grewe,
