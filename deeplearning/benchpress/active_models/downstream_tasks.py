@@ -126,6 +126,10 @@ class GreweAbstract(DownstreamTask):
     return 2
 
   @property
+  def static_features_size(self) -> int:
+    return len(self.static_features_labels)
+
+  @property
   def output_size(self) -> int:
     return 2
 
@@ -186,6 +190,28 @@ class GreweAbstract(DownstreamTask):
       "GPU": [0, 1],
     }[label]
 
+  def StaticFeatDictToVec(self, static_feats: typing.Dict[str, float]) -> typing.List[float]:
+    """
+    Process grewe static features dictionary into list of floats to be passed as tensor.
+    """
+    return [static_feats[key] for key in self.static_features_labels]
+
+  def VecToStaticFeatDict(self, feature_values: typing.List[float]) -> typing.Dict[str, float]:
+    """
+    Process float vector of feature values to dictionary of features.
+    """
+    return {key: val for key, val in zip(self.static_features_labels, feature_values)}
+
+  def VecToRuntimeFeatDict(self, runtime_values: typing.List[int]) -> typing.Dict[str, int]:
+    """
+    Process runtime int values to runtime features dictionary.
+    """
+    trb, ls = runtime_values
+    return {
+      'transferred_bytes' : trb,
+      'local_size'        : ls,
+    }
+
   def saveCheckpoint(self) -> None:
     """
     Store data generator.
@@ -228,11 +254,11 @@ class Grewe(GreweAbstract):
   @property
   def input_size(self) -> int:
     return 4
-  
-  @property
-  def static_features_size(self) -> int:
-    return len(grewe.KEYS)
 
+  @property
+  def static_features_labels(self) -> typing.List[str]:
+    return grewe.KEYS
+  
   @property
   def input_labels(self) -> typing.List[str]:
     return [
@@ -551,7 +577,7 @@ class Grewe(GreweAbstract):
     for x in range(num_samples):
       fvec = {
         k: self.rand_generator.randint(self.gen_bounds[k][0], self.gen_bounds[k][1])
-        for k in grewe.KEYS if k not in {"F2:coalesced/mem", "F4:comp/mem"}
+        for k in self.static_features_labels if k not in {"F2:coalesced/mem", "F4:comp/mem"}
       }
       try:
         fvec['F2:coalesced/mem'] = fvec['coalesced'] / fvec['mem']
@@ -587,28 +613,6 @@ class Grewe(GreweAbstract):
         )
       http_server.client_put_request(serialized)
     return
-
-  def StaticFeatDictToVec(self, static_feats: typing.Dict[str, float]) -> typing.List[float]:
-    """
-    Process grewe static features dictionary into list of floats to be passed as tensor.
-    """
-    return [static_feats[key] for key in grewe.KEYS]
-
-  def VecToStaticFeatDict(self, feature_values: typing.List[float]) -> typing.Dict[str, float]:
-    """
-    Process float vector of feature values to dictionary of features.
-    """
-    return {key: val for key, val in zip(grewe.KEYS, feature_values)}
-
-  def VecToRuntimeFeatDict(self, runtime_values: typing.List[int]) -> typing.Dict[str, int]:
-    """
-    Process runtime int values to runtime features dictionary.
-    """
-    trb, ls = runtime_values
-    return {
-      'transferred_bytes' : trb,
-      'local_size'        : ls,
-    }
 
   def VecToInputFeatDict(self, input_values: typing.List[float]) -> typing.Dict[str, float]:
     """
@@ -658,10 +662,6 @@ class FeatureLessGrewe(GreweAbstract):
   def input_size(self) -> int:
     return self.static_features_size + self.runtime_features_size
   
-  @property
-  def static_features_size(self) -> int:
-    return self.hidden_state_size
-
   @property
   def static_features_labels(self) -> typing.List[str]:
     return [
@@ -766,7 +766,18 @@ class FeatureLessGrewe(GreweAbstract):
     Encode consistently raw features to Grewe's predictive model inputs.
     """
     raise NotImplementedError
-    return 
+    return
+
+  def VecToInputFeatDict(self, input_values: typing.List[float]) -> typing.Dict[str, float]:
+    """
+    Convert to dictionary of predictive model input features.
+    """
+    return {
+      "tr_bytes/(comp+mem)"   : input_values[0],
+      "coalesced/mem"         : input_values[1],
+      "localmem/(mem+wgsize)" : input_values[2],
+      "comp/mem"              : input_values[3],
+    }
 
 
 TASKS = {
