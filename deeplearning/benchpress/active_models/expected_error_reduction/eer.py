@@ -363,8 +363,17 @@ class ExpectedErrorReduction(backends.BackendBase):
     # Get dataloader iterator and setup hooks.
     model.eval()
     it = tqdm.tqdm(loader, desc="Sample Unlabelled set", leave = False) if self.is_world_process_zero() else loader
+    avg_expected_loss = {}
     for batch in it:
+      for dp in batch:
+        # For a batch of unlabelled data points.
+        # 1. copy the model
+        for target_label in self.downstream_task.labels:
+          # 2. train the model on datapoint, target_label
+          # calculate expected loss formula on augmented labelled dataset.
+          # avg_expected_loss[dp] += (prob_target_label * expected_loss) / self.downstream_task.output_label_size
 
+    # Select to label that datapoint that has the smallest avg_expected_loss.
     raise NotImplementedError
     return
 
