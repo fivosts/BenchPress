@@ -719,7 +719,8 @@ class FeatureLessGrewe(GreweAbstract):
       self.rand_generator = checkpointed['rand_generator']
       self.dataset = self.data_generator.dataset
     else:
-      self.data_generator = []
+      ## For Expected Error Reduction, no human benchmarks are used for initial training.
+      self.data_generator = data_generator.ListTrainDataloader([])
       self.dataset = []
       self.rand_generator = np.random
       self.rand_generator.seed(self.random_seed)
