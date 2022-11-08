@@ -25,10 +25,10 @@ import math
 import pathlib
 import copy
 
-from deeplearning.benchpress.models.torch_bert import optimizer
 from deeplearning.benchpress.models.torch_bert import hooks
 from deeplearning.benchpress.active_models import backends
 from deeplearning.benchpress.active_models import data_generator
+from deeplearning.benchpress.active_models.expected_error_reduction import optimizer
 from deeplearning.benchpress.active_models.expected_error_reduction import model
 from deeplearning.benchpress.active_models.expected_error_reduction import config
 from deeplearning.benchpress.active_models.expected_error_reduction import eer_database
@@ -142,6 +142,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         num_train_steps = self.training_opts.num_train_steps,
         warmup_steps    = self.training_opts.num_warmup_steps,
         learning_rate   = self.training_opts.learning_rate,
+        weight_decay    = 0.0,
       )
       self.train = ExpectedErrorReduction.Estimator(
           model          = cm,
@@ -294,6 +295,7 @@ class ExpectedErrorReduction(backends.BackendBase):
                 start = datetime.datetime.utcnow()
 
               # Run model step on inputs
+              l.logger().error(inputs)
               step_out = self.model_step(train_estimator.model, inputs)
               # Backpropagate losses
               total_loss = step_out['total_loss'].mean()
@@ -301,10 +303,10 @@ class ExpectedErrorReduction(backends.BackendBase):
 
               self.torch.nn.utils.clip_grad_norm_(train_estimator.model.parameters(), self.training_opts.max_grad_norm)
               if self.torch_tpu_available:
-                self.pytorch.torch_xla.optimizer_step(optimizer)
+                self.pytorch.torch_xla.optimizer_step(train_estimator.optimizer)
               else:
-                optimizer.step()
-              scheduler.step()
+                train_estimator.optimizer.step()
+              train_estimator.scheduler.step()
 
               ## Collect tensors for logging.
               if self.pytorch.num_nodes > 1:
@@ -418,7 +420,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         extended_datapoint.dataset = [
           {
             'input_ids':  unl_train_point['input_ids'].squeeze(0),
-            'target_ids': self.torch.LongTensor(out_label),
+            'target_ids': self.torch.LongTensor([out_label]),
           }
         ]
         extended_dataset = self.downstream_task.data_generator + extended_datapoint
@@ -434,6 +436,7 @@ class ExpectedErrorReduction(backends.BackendBase):
           num_train_steps = len(extended_dataset),
           warmup_steps    = 0,
           learning_rate   = self.training_opts.learning_rate,
+          weight_decay    = 0.0,
         )
         dp_estimator = ExpectedErrorReduction.Estimator(
           model          = new_model,
