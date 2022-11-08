@@ -16,6 +16,7 @@
 Data generators for active learning committee.
 """
 import typing
+import copy
 import pathlib
 import numpy as np
 
@@ -104,7 +105,7 @@ class ListTrainDataloader(torch.utils.data.Dataset):
 
   def __add__(self, dl: 'ListTrainDataloader') -> 'ListTrainDataloader':
     ret = ListTrainDataloader([], lazy = True)
-    ret.dataset = self.dataset
+    ret.dataset = copy.copy(self.dataset)
     if dl:
       ret.dataset += dl.dataset
     return ret
@@ -193,7 +194,7 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
 
   def __add__(self, dl: 'DictPredictionDataloader') -> 'DictPredictionDataloader':
     ret = DictPredictionDataloader([], lazy = True)
-    ret.dataset = self.dataset
+    ret.dataset = copy.copy(self.dataset)
     if dl:
       ret.dataset += dl.dataset
     return ret
