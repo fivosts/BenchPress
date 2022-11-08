@@ -295,7 +295,6 @@ class ExpectedErrorReduction(backends.BackendBase):
                 start = datetime.datetime.utcnow()
 
               # Run model step on inputs
-              l.logger().error(inputs)
               step_out = self.model_step(train_estimator.model, inputs)
               # Backpropagate losses
               total_loss = step_out['total_loss'].mean()
@@ -456,17 +455,19 @@ class ExpectedErrorReduction(backends.BackendBase):
         )
         aggr_entropy = 0.0
         target_ids = self.torch.zeros(
-          [self.downstream_task, self.training_opts.train_batch_size], dtype = self.torch.int64
+          [self.downstream_task.output_size, self.training_opts.train_batch_size, 1], dtype = self.torch.int64
         )
         for tid in self.downstream_task.output_ids:
           target_ids[:,] = tid
         for unl_batch in iter(loader):
           for target_id_batch in target_ids:
-            out = self.model_step(unl_batch['input_ids'], target_id_batch, is_sampling = False)
+            l.logger().warn({'input_ids': unl_batch['input_ids'], 'target_ids': target_id_batch})
+            out = self.model_step(new_model, {'input_ids': unl_batch['input_ids'], 'target_ids': target_id_batch}, is_sampling = False)
             aggr_entropy += out['total_loss']
         node_losses['aggregated_entropy'][idx][out_label] = aggr_entropy
+
       node_losses['expected_error_rate'][idx] = sum(
-        [node_losses['posterior_probs'][L] * node_losses['aggregated_entropy'][L]
+        [node_losses['posterior_probs'][idx][L] * node_losses['aggregated_entropy'][idx][L]
          for L in self.downstream_task.output_ids]
       )
     if self.pytorch.num_nodes > 1:
