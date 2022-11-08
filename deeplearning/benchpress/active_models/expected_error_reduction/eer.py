@@ -375,38 +375,6 @@ class ExpectedErrorReduction(backends.BackendBase):
       l.logger().warn("EER: You are trying to sample an untrained model.")
     current_step = max(0, current_step)
 
-    # if self.pytorch.num_nodes <= 1:
-    #   sampler = self.torch.utils.data.SequentialSampler(unlabelled_set)
-    # else:
-    #   sampler = self.torch.utils.data.DistributedSampler(
-    #     unlabelled_set,
-    #     num_replicas = self.pytorch.num_nodes,
-    #     rank         = self.torch.distributed.get_rank(),
-    #     shuffle      = False,
-    #     drop_last    = False,
-    #   )
-    # loader = self.torch.utils.data.dataloader.DataLoader(
-    #   dataset    = unlabelled_set,
-    #   batch_size = self.training_opts.train_batch_size,
-    #   sampler    = (sampler
-    #     if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
-    #     else self.torch.utils.data.distributed.DistributedSampler(
-    #       dataset      = unlabelled_set,
-    #       num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
-    #       rank         = self.torch.distributed.get_rank() if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.get_ordinal()
-    #     )
-    #   ),
-    #   num_workers = 0,
-    #   drop_last   = True if environment.WORLD_SIZE > 1 else False,
-    # )
-    # # Set dataloader in case of TPU training.
-    # if self.torch_tpu_available:
-    #   loader = self.pytorch.torch_ploader.ParallelLoader(
-    #                       unlabelled_set, [self.pytorch.device]
-    #                     ).per_device_loader(self.pytorch.device)
-    # # Get dataloader iterator and setup hooks.
-    # it = tqdm.tqdm(loader, desc="Sample Unlabelled set", leave = False) if self.is_world_process_zero() else loader
-
     ## If DDP, each node will work separately on chunks of the unlabelled dataset.
     node_size = len(unlabelled_set) // self.torch.distributed.get_world_size()
     node_set  = unlabelled_set[environment.WORLD_RANK * node_size: (1 + environment.WORLD_RANK) * node_size]
@@ -432,6 +400,9 @@ class ExpectedErrorReduction(backends.BackendBase):
         extended_dataset = self.downstream_task.dataset + {'input_ids': unl_train_point, 'target_ids': out_label}
         ## Copy the model to a temp one.
         new_model = copy.deepcopy(self.sample.model)
+
+        if self.pytorch.num_nodes <= 1 and self.pytorch.num_gpus > 1:
+          new_model = self.torch.nn.DataParallel(new_model)
 
         ## Define optimizer, scheduler for training regime.
         opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
