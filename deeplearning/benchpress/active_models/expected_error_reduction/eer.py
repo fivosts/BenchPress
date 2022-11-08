@@ -81,7 +81,9 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     self.model_config  = None
     self.training_opts = None
-    self.estimator     = None
+
+    self.train  = None
+    self.sample = None
 
     self.is_validated = False
     self.is_trained   = False
@@ -94,11 +96,11 @@ class ExpectedErrorReduction(backends.BackendBase):
     l.logger().info("Active ExpectedErrorReduction config initialized in {}".format(self.cache_path))
     return
 
-  def _ConfigModelParams(self, data_generator: 'torch.utils.data.Dataset' = None) -> None:
+  def _ConfigTrainParams(self, data_generator: 'torch.utils.data.Dataset') -> None:
     """
     Model parameter initialization.
     """
-    if not self.estimator:
+    if not self.train:
       self.model_config = config.ModelConfig.FromConfig(
         self.config.expected_error_reduction, 
         self.downstream_task,
@@ -118,8 +120,8 @@ class ExpectedErrorReduction(backends.BackendBase):
         distrib.barrier()
         cm = self.torch.nn.parallel.DistributedDataParallel(
           cm,
-          device_ids             = [self.pytorch.offset_device],
-          output_device          = self.pytorch.offset_device,
+          device_ids    = [self.pytorch.offset_device],
+          output_device = self.pytorch.offset_device,
         )
       elif self.pytorch.num_gpus > 1:
         cm = self.torch.nn.DataParallel(cm)
@@ -129,14 +131,41 @@ class ExpectedErrorReduction(backends.BackendBase):
         warmup_steps    = self.training_opts.num_warmup_steps,
         learning_rate   = self.training_opts.learning_rate,
       )
-      self.estimator = ExpectedErrorReduction.Estimator(
+      self.train = ExpectedErrorReduction.Estimator(
           model          = cm,
           data_generator = data_generator,
           optimizer      = opt,
           scheduler      = lr_scheduler,
         )
-      (self.ckpt_path / self.model_config.sha256).mkdir(exist_ok = True, parents = True),
-      (self.logfile_path / self.model_config.sha256).mkdir(exist_ok = True, parents = True),
+      l.logger().info(self.GetShortSummary())
+    return
+
+  def _ConfigSampleParams(self, data_generator: 'torch.utils.data.Dataset' = None) -> None:
+    """
+    Model parameter initialization.
+    """
+    if not self.sample:
+      self.model_config = config.ModelConfig.FromConfig(
+        self.config.expected_error_reduction, 
+        self.downstream_task,
+        self.config.num_train_steps
+      )
+      cm = model.MLP(self.model_config)
+      if self.pytorch.num_nodes > 1:
+        distrib.barrier()
+        cm = self.torch.nn.parallel.DistributedDataParallel(
+          cm,
+          device_ids    = [self.pytorch.offset_device],
+          output_device = self.pytorch.offset_device,
+        )
+      elif self.pytorch.num_gpus > 1:
+        cm = self.torch.nn.DataParallel(cm)
+      self.sample = ExpectedErrorReduction.Estimator(
+          model          = cm,
+          data_generator = data_generator,
+          optimizer      = None,
+          scheduler      = None,
+        )
       l.logger().info(self.GetShortSummary())
     return
 
@@ -158,7 +187,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     update_dataloader = kwargs.get('update_dataloader', None)
     if update_dataloader is None:
       l.logger().info("Initial EER model training.")
-    self._ConfigModelParams(self.downstream_task.data_generator)
+    self._ConfigTrainParams(self.downstream_task.data_generator)
     if not self.is_trained or update_dataloader is not None:
 
       data_generator  = (
@@ -319,10 +348,9 @@ class ExpectedErrorReduction(backends.BackendBase):
     Expected Error Reduction algorithm is going to be applied for each datapoint for each label class.
     """
 
-    l.logger().error("Problem #1: With 1 _ConfigModelParams, you will have trouble resetting between data generators.")
     l.logger().error("Problem #2: Check that for DDP, every one gets the chunk they must.")
 
-    self._ConfigModelParams()
+    self._ConfigSampleParams()
 
     current_step = self.loadCheckpoint(model, member_path)
     if self.pytorch.num_gpus > 0:
