@@ -83,7 +83,6 @@ class ListTrainDataloader(torch.utils.data.Dataset):
     Implement slice operation of current List Dataset.
     """
     ret = ListTrainDataloader([], lazy = True)
-    assert l < len(self.dataset) or not l, "Slice indices, l: {}, r: {} out of bounds! Length: {}".format(l, r, len(self.dataset))
     if l is None:
       l = 0
     if r is None:
@@ -173,7 +172,6 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
     Implement slice operation of current List Dataset.
     """
     ret = DictPredictionDataloader([], lazy = True)
-    assert l < len(self.dataset) or not l, "Slice indices, l: {}, r: {} out of bounds! Length: {}".format(l, r, len(self.dataset))
     if l is None:
       l = 0
     if r is None:
