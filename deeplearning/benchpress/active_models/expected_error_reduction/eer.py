@@ -501,5 +501,111 @@ class ExpectedErrorReduction(backends.BackendBase):
     """
     return sorted(space_samples, key = lambda x: x['expected_error_rate'])
 
+  def saveCheckpoint(self,
+                     estimator    : ExpectedErrorReduction.Estimator,
+                     current_step : int
+                     ) -> None:
+    """
+    Saves model, scheduler, optimizer checkpoints per epoch.
+    """
+    if self.is_world_process_zero():
+      ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(, x, self.current_step)
+
+      if self.torch_tpu_available:
+        if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
+          self.pytorch.torch_xla_model.save(estimator.model, ckpt_comp("model"))
+        self.pytorch.torch_xla.rendezvous("saving_optimizer_states")
+        self.pytorch.torch_xla.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+        self.pytorch.torch_xla.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+      else:
+        if isinstance(estimator.model, self.torch.nn.DataParallel):
+          self.torch.save(estimator.model.module.state_dict(), ckpt_comp("model"))
+        else:
+          self.torch.save(estimator.model.state_dict(), ckpt_comp("model"))
+        self.torch.save(estimator.optimizer.state_dict(), ckpt_comp("optimizer"))
+        self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
+
+      with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
+        mf.write("train_step: {}\n".format(self.current_step))
+    return
+
+  def loadCheckpoint(self, estimator: ExpectedErrorReduction.Estimator) -> int:
+    """
+    Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
+    """
+    if not (self.ckpt_path / "checkpoint.meta").exists():
+      return -1
+
+    with open(self.ckpt_path / "checkpoint.meta", 'r') as mf:
+      key     = "train_step"
+      get_step  = lambda x: int(x.replace("\n", "").replace("{}: ".format(key), ""))
+
+      lines     = mf.readlines()
+      entries   = set({get_step(x) for x in lines if key in x})
+
+    if FLAGS.select_checkpoint_step == -1:
+      ckpt_step = max(entries)
+    else:
+      if FLAGS.select_checkpoint_step in entries:
+        ckpt_step = FLAGS.select_checkpoint_step
+      else:
+        raise ValueError("{} not found in checkpoint folder.".format(FLAGS.select_checkpoint_step))
+
+    ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, ckpt_step)
+
+    if isinstance(estimator.model, self.torch.nn.DataParallel):
+      try:
+        estimator.model.module.load_state_dict(
+          self.torch.load(ckpt_comp("model")),
+        )
+      except RuntimeError:
+        """
+        Pytorch doesn't love loading a DataParallel checkpoint
+        to a simple model. So, the following hack is needed
+        to remove the 'module.' prefix from state keys.
+
+        OR it might as well need the opposite. Transitioning from
+        single to multiple GPUs will mean that 'module.' prefix is missing
+        """
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("model")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        estimator.model.module.load_state_dict(new_state_dict)
+    else:
+      try:
+        estimator.model.load_state_dict(
+          self.torch.load(ckpt_comp("model")),
+        )
+      except RuntimeError:
+        """
+        Pytorch doesn't love loading a DataParallel checkpoint
+        to a simple model. So, the following hack is needed
+        to remove the 'module.' prefix from state keys.
+
+        OR it might as well need the opposite. Transitioning from
+        single to multiple GPUs will mean that 'module.' prefix is missing
+        """
+        new_state_dict = OrderedDict()
+        for k, v in self.torch.load(ckpt_comp("model")).items():
+          if k[:7] == 'module.':
+            name = k[7:] # remove `module.`
+          else:
+            name = 'module.' + k # Add 'module.'
+          new_state_dict[name] = v
+        estimator.model.load_state_dict(new_state_dict)
+    if estimator.optimizer is not None and estimator.scheduler is not None and ckpt_step > 0:
+      estimator.optimizer.load_state_dict(
+        self.torch.load(ckpt_comp("optimizer"), map_location=self.pytorch.device)
+      )
+      estimator.scheduler.load_state_dict(
+        self.torch.load(ckpt_comp("scheduler"), map_location=self.pytorch.device)
+      )
+    estimator.model.eval()
+    return ckpt_step
+
   def GetShortSummary(self) -> None:
     return "Short Summary TODO"
