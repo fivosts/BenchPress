@@ -406,7 +406,15 @@ class ExpectedErrorReduction(backends.BackendBase):
         node_losses['posterior_probs'][idx][out_label] = out['output_probs'].squeeze(0)[out_label]
 
         ## Extend Dataset D+: D + (x, y)
-        extended_dataset = self.downstream_task.dataset + {'input_ids': unl_train_point, 'target_ids': out_label}
+        # extended_dataset = self.downstream_task.dataset + {'input_ids': unl_train_point, 'target_ids': out_label}
+        extended_datapoint = data_generator.ListTrainDataloader([], lazy = True)
+        extended_datapoint.dataset = [
+          {
+            'input_ids':  unl_train_point['input_ids'].squeeze(0),
+            'target_ids': torch.LongTensor(out_label),
+          }
+        ]
+        extended_dataset = self.downstream_task.data_generator + extended_datapoint
         ## Copy the model to a temp one.
         new_model = copy.deepcopy(self.sample.model)
 
