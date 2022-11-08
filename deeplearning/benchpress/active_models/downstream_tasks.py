@@ -212,12 +212,12 @@ class GreweAbstract(DownstreamTask):
       'local_size'        : ls,
     }
 
-  def VecToInputFeatDict(self, input_values: typing.List[float]) -> typing.Dict[str, float]:
+  def VecToInputFeatDict(self, input_ids: typing.List[float]) -> typing.Dict[str, float]:
     """
     Convert to dictionary of predictive model input features.
     """
     return {
-      k: v for k, v in zip(self.input_labels, input_values)
+      k: v for k, v in zip(self.input_labels, input_ids)
     }
 
   def saveCheckpoint(self) -> None:
@@ -765,7 +765,17 @@ class FeatureLessGrewe(GreweAbstract):
     """
     return [
       static_feats[l] for l in self.static_features_labels
-    ] + [transferred_bytes, local_size]
+    ] + [math.log2(transferred_bytes), math.log2(local_size)]
+
+  def VecToRuntimeFeatDict(self, runtime_values: typing.List[int]) -> typing.Dict[str, int]:
+    """
+    Process runtime int values to runtime features dictionary.
+    """
+    trb, ls = runtime_values
+    return {
+      'transferred_bytes' : 2**trb,
+      'local_size'        : 2**ls,
+    }
 
 TASKS = {
   "Grewe" : Grewe,
