@@ -18,6 +18,8 @@ A neural architecture for CPU vs GPU device mapping prediction.
 This head is used for feature-less learning to target benchmarks.
 """
 import typing
+import heapq
+import math
 import pathlib
 
 from deeplearning.benchpress.models.torch_bert import optimizer
@@ -172,16 +174,19 @@ class ExpectedErrorReduction(backends.BackendBase):
       l.logger().info(self.GetShortSummary())
     return
 
-  def model_step(self, inputs: typing.Dict[str, 'torch.Tensor'], is_sampling: bool = False) -> float:
+  def model_step(self,
+                 model       : 'torch.nn.Module',
+                 inputs      : typing.Dict[str, 'torch.Tensor'],
+                 is_sampling : bool = False
+                 ) -> float:
     """
     Run forward function for member model.
     """
-    outputs = self.train.model(
+    return model(
       input_ids   = inputs['input_ids'].to(self.pytorch.device),
       target_ids  = inputs['target_ids'].to(self.pytorch.device) if not is_sampling else None,
       is_sampling = is_sampling,
     )
-    return outputs
 
   def Train(self, **kwargs) -> None:
     """
@@ -275,7 +280,7 @@ class ExpectedErrorReduction(backends.BackendBase):
                 start = datetime.datetime.utcnow()
 
               # Run model step on inputs
-              step_out = self.model_step(inputs)
+              step_out = self.model_step(self.train.model, inputs)
               # Backpropagate losses
               total_loss = step_out['total_loss'].mean()
               total_loss.backward()
@@ -340,7 +345,7 @@ class ExpectedErrorReduction(backends.BackendBase):
       #1. load checkpoint.
       #2. run model on test set
       #3. get accuracy metrics.
-      pass
+      raise NotImplementedError
     return
 
   def Sample(self, unlabelled_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
@@ -355,57 +360,157 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     self._ConfigSampleParams()
 
-    current_step = self.loadCheckpoint(model)
+    current_step = self.loadCheckpoint(self.sample)
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
     if current_step < 0:
       l.logger().warn("EER: You are trying to sample an untrained model.")
     current_step = max(0, current_step)
 
-    if self.pytorch.num_nodes <= 1:
-      sampler = self.torch.utils.data.SequentialSampler(unlabelled_set)
-    else:
-      sampler = self.torch.utils.data.DistributedSampler(
-        unlabelled_set,
-        num_replicas = self.pytorch.num_nodes,
-        rank         = self.torch.distributed.get_rank(),
-        shuffle      = False,
-        drop_last    = False,
-      )
-    loader = self.torch.utils.data.dataloader.DataLoader(
-      dataset    = unlabelled_set,
-      batch_size = self.training_opts.train_batch_size,
-      sampler    = (sampler
-        if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
-        else self.torch.utils.data.distributed.DistributedSampler(
-          dataset      = unlabelled_set,
-          num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
-          rank         = self.torch.distributed.get_rank() if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.get_ordinal()
-        )
-      ),
-      num_workers = 0,
-      drop_last   = True if environment.WORLD_SIZE > 1 else False,
-    )
-    # Set dataloader in case of TPU training.
-    if self.torch_tpu_available:
-      loader = self.pytorch.torch_ploader.ParallelLoader(
-                          sample_set, [self.pytorch.device]
-                        ).per_device_loader(self.pytorch.device)
-    # Get dataloader iterator and setup hooks.
-    model.eval()
-    it = tqdm.tqdm(loader, desc="Sample Unlabelled set", leave = False) if self.is_world_process_zero() else loader
-    avg_expected_loss = {}
-    for batch in it:
-      for dp in batch:
-        # For a batch of unlabelled data points.
-        # 1. copy the model
-        for target_label in self.downstream_task.labels:
-          # 2. train the model on datapoint, target_label
-          # calculate expected loss formula on augmented labelled dataset.
-          # avg_expected_loss[dp] += (prob_target_label * expected_loss) / self.downstream_task.output_label_size
+    # if self.pytorch.num_nodes <= 1:
+    #   sampler = self.torch.utils.data.SequentialSampler(unlabelled_set)
+    # else:
+    #   sampler = self.torch.utils.data.DistributedSampler(
+    #     unlabelled_set,
+    #     num_replicas = self.pytorch.num_nodes,
+    #     rank         = self.torch.distributed.get_rank(),
+    #     shuffle      = False,
+    #     drop_last    = False,
+    #   )
+    # loader = self.torch.utils.data.dataloader.DataLoader(
+    #   dataset    = unlabelled_set,
+    #   batch_size = self.training_opts.train_batch_size,
+    #   sampler    = (sampler
+    #     if self.pytorch.num_nodes <= 1 or not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
+    #     else self.torch.utils.data.distributed.DistributedSampler(
+    #       dataset      = unlabelled_set,
+    #       num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
+    #       rank         = self.torch.distributed.get_rank() if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.get_ordinal()
+    #     )
+    #   ),
+    #   num_workers = 0,
+    #   drop_last   = True if environment.WORLD_SIZE > 1 else False,
+    # )
+    # # Set dataloader in case of TPU training.
+    # if self.torch_tpu_available:
+    #   loader = self.pytorch.torch_ploader.ParallelLoader(
+    #                       unlabelled_set, [self.pytorch.device]
+    #                     ).per_device_loader(self.pytorch.device)
+    # # Get dataloader iterator and setup hooks.
+    # it = tqdm.tqdm(loader, desc="Sample Unlabelled set", leave = False) if self.is_world_process_zero() else loader
 
-    # Select to label that datapoint that has the smallest avg_expected_loss.
-    raise NotImplementedError
+    ## If DDP, each node will work separately on chunks of the unlabelled dataset.
+    node_size = len(unlabelled_set) // self.torch.distributed.get_world_size()
+    node_set  = unlabelled_set[environment.WORLD_RANK * node_size: (1 + environment.WORLD_RANK) * node_size]
+    if environment.WORLD_RANK == environment.WORLD_SIZE - 1:
+      node_set += unlabelled_set[(1 + environment.WORLD_RANK) * node_size:]
+
+    node_losses = {
+      'input_ids'           : self.torch.zeros([len(node_set), self.downstream_task.input_size], dtype = self.torch.float32),
+      'posterior_probs'     : self.torch.zeros([len(node_set), self.downstream_task.output_size], dtype = self.torch.float32),
+      'aggregated_entropy'  : self.torch.zeros([len(node_set), self.downstream_task.output_size], dtype = self.torch.float32),
+      'expected_error_rate' : self.torch.zeros([len(node_set), 1], dtype = self.torch.float32),
+    }
+    self.sample.model.eval()
+    for idx, unl_train_point in enumerate(node_set):
+      node_losses['input_ids'][idx] = unl_train_point['input_ids']
+      for out_label in self.downstream_task.output_ids:
+
+        ## For (x, y) run model inference to obtain p(x|y)
+        out = self.model_step(self.sample.model, unl_train_point, is_sampling = True)
+        node_losses['posterior_probs'][idx][out_label] = out['probs']
+
+        ## Extend Dataset D+: D + (x, y)
+        extended_dataset = self.downstream_task.dataset + {'input_ids': unl_train_point, 'target_ids': out_label}
+        ## Copy the model to a temp one.
+        new_model = copy.deepcopy(self.sample.model)
+
+        ## Define optimizer, scheduler for training regime.
+        opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
+          model           = new_model,
+          num_train_steps = len(extended_dataset),
+          warmup_steps    = 0,
+          learning_rate   = self.training_opts.learning_rate,
+        )
+        dp_estimator = ExpectedErrorReduction.Estimator(
+          model          = new_model,
+          data_generator = extended_dataset,
+          optimizer      = opt,
+          scheduler      = lr_scheduler,
+        )
+        ## Train the new model here.
+        self.Train(eer_estimator = dp_estimator)
+        ## Run the new model on the unlabelled dataset to estimate future errors.
+        loader = self.torch.utils.data.dataloader.DataLoader(
+          dataset     = node_set,
+          batch_size  = self.training_opts.train_batch_size,
+          sampler     = self.torch.utils.SequentialSampler(node_set),
+          num_workers = 0,
+          drop_last   = False,
+        )
+        aggr_entropy = 0.0
+        target_ids = self.torch.zeros(
+          [self.downstream_task, self.training_opts.train_batch_size], dtype = self.torch.int64
+        )
+        for tid in self.downstream_task.output_ids:
+          target_ids[:,] = tid
+        for unl_batch in iter(loader):
+          for target_id_batch in target_ids:
+            out = self.model_step(unl_batch['input_ids'], target_id_batch, is_sampling = False)
+            aggr_entropy += out['loss']
+        node_losses['aggregated_entropy'][idx][out_label] = aggr_entropy
+      node_losses['expected_error_rate'][idx] = sum(
+        [node_losses['posterior_probs'][L] * node_losses['aggregated_entropy'][L]
+         for L in self.downstream_task.output_ids]
+      )
+    if self.pytorch.num_nodes > 1:
+      self.torch.distributed.barrier()
+      input_ids           = [self.torch.zeros(tuple(node_losses['input_ids'          ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      posterior_probs     = [self.torch.zeros(tuple(node_losses['posterior_probs'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      aggregated_entropy  = [self.torch.zeros(tuple(node_losses['aggregated_entropy' ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      expected_error_rate = [self.torch.zeros(tuple(node_losses['expected_error_rate'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+
+      self.torch.distributed.all_gather(input_ids,           node_losses['input_ids'          ])
+      self.torch.distributed.all_gather(posterior_probs,     node_losses['posterior_probs'    ])
+      self.torch.distributed.all_gather(aggregated_entropy,  node_losses['aggregated_entropy' ])
+      self.torch.distributed.all_gather(expected_error_rate, node_losses['expected_error_rate'])
+
+      input_ids           = self.torch.reshape(input_ids,           (-1, input_ids.shape[-1]))
+      posterior_probs     = self.torch.reshape(posterior_probs,     (-1, posterior_probs.shape[-1]))
+      aggregated_entropy  = self.torch.reshape(aggregated_entropy,  (-1, aggregated_entropy.shape[-1]))
+      expected_error_rate = self.torch.reshape(expected_error_rate, (-1, expected_error_rate.shape[-1]))
+
+      expected_losses = {
+        'input_ids'           : input_ids,
+        'posterior_probs'     : posterior_probs,
+        'aggregated_entropy'  : aggregated_entropy,
+        'expected_error_rate' : expected_error_rate,
+      }
+    else:
+      expected_losses = node_losses
+
+    """
+    for datapoint in unlabelled:
+      avg_expected_loss['input_ids'] = datapoint['input_ids']
+
+      for target in self.downstream_task.target_labels:
+        out = model(datapoint['input_ids'])
+        p(y|x) = out['probs'][target]
+
+        new_dataset = self.downstream_task.labelled_dataset + (datappoint['target_ids'] = target)
+        
+        new_model = copy.deepcopy(model)
+        new_model.Train(new_dataset)
+
+        aggr_loss = 0.0
+        for other_dp in unlabelled:
+          for other_label in self.downstream_task.target_labels:
+            out = new_model(other_dp['input_ids'])
+            aggr_loss += LL[other_dp, other_label] = out['loss'][other_label]
+        expected_losses[datapoint] = aggr_loss * p(y|x)
+
+    to_be_labelled = keymin(expected_losses.values()) # Key with lowest value.
+    """
     return
 
   def GetShortSummary(self) -> None:
