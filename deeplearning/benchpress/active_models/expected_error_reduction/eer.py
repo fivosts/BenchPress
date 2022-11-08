@@ -377,8 +377,9 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     ## If DDP, each node will work separately on chunks of the unlabelled dataset.
     node_size = len(sample_set) // self.torch.distributed.get_world_size()
+    node_rem  = len(sample_set) % self.torch.distributed.get_world_size()
     node_set  = sample_set.get_sliced_subset(environment.WORLD_RANK * node_size, (1 + environment.WORLD_RANK) * node_size)
-    if environment.WORLD_RANK == environment.WORLD_SIZE - 1:
+    if environment.WORLD_RANK == environment.WORLD_SIZE - 1 and node_rem > 0:
       node_set += sample_set.get_sliced_subset((1 + environment.WORLD_RANK) * node_size)
 
     node_losses = {
