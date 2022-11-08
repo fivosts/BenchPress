@@ -140,7 +140,7 @@ class ExpectedErrorReduction(backends.BackendBase):
       l.logger().info(self.GetShortSummary())
     return
 
-  def _ConfigSampleParams(self, data_generator: 'torch.utils.data.Dataset' = None) -> None:
+  def _ConfigSampleParams(self) -> None:
     """
     Model parameter initialization.
     """
@@ -162,7 +162,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         cm = self.torch.nn.DataParallel(cm)
       self.sample = ExpectedErrorReduction.Estimator(
           model          = cm,
-          data_generator = data_generator,
+          data_generator = None,
           optimizer      = None,
           scheduler      = None,
         )
