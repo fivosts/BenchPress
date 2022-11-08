@@ -385,7 +385,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     node_loader = self.torch.utils.data.dataloader.DataLoader(
       dataset     = node_set,
       batch_size  = 1,
-      sampler     = self.torch.utils.SequentialSampler(node_set),
+      sampler     = self.torch.utils.data.SequentialSampler(node_set),
       num_workers = 0,
       drop_last   = False,
     )
@@ -433,7 +433,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         loader = self.torch.utils.data.dataloader.DataLoader(
           dataset     = node_set,
           batch_size  = self.training_opts.train_batch_size,
-          sampler     = self.torch.utils.SequentialSampler(node_set),
+          sampler     = self.torch.utils.data.SequentialSampler(node_set),
           num_workers = 0,
           drop_last   = False,
         )
