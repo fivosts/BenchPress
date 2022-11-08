@@ -193,22 +193,27 @@ class ExpectedErrorReduction(backends.BackendBase):
     Train the AL predictive model.
     """
     update_dataloader = kwargs.get('update_dataloader', None)
+    update_estimator  = kwargs.get('eer_estimator', None)
+
+    train_estimator = update_estimator if update_estimator else self.train
+
     if update_dataloader is None:
       l.logger().info("Initial EER model training.")
     self._ConfigTrainParams(self.downstream_task.data_generator)
-    if not self.is_trained or update_dataloader is not None:
+    if not self.is_trained or update_dataloader is not None or update_estimator:
 
       data_generator  = (
-        self.train.data_generator
+        train_estimator.data_generator
         if update_dataloader is None
         else update_dataloader
-             # + self.train.data_generator.get_random_subset(
+             # + train_estimator.data_generator.get_random_subset(
                  # max(0, abs(len(update_dataloader) - self.training_opts.num_train_steps)))
       )
       if len(data_generator) == 0:
         return
 
-      current_step = self.loadCheckpoint(self.train)
+      if not update_estimator:
+        current_step = self.loadCheckpoint(self.train)
       if self.pytorch.num_gpus > 0:
         self.torch.cuda.empty_cache()
       if current_step >= 0:
@@ -220,7 +225,7 @@ class ExpectedErrorReduction(backends.BackendBase):
       ) if update_dataloader is None else ((len(update_dataloader) + self.training_opts.train_batch_size) // self.training_opts.train_batch_size) + current_step
 
       if current_step < num_train_steps:
-        self.train.model.zero_grad()
+        train_estimator.model.zero_grad()
 
         if self.pytorch.num_nodes <= 1:
           sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
@@ -263,7 +268,7 @@ class ExpectedErrorReduction(backends.BackendBase):
           )
         try:
           with self.torch.enable_grad():
-            self.train.model.train()
+            train_estimator.model.train()
             # epoch_iter = tqdm.auto.trange(self.training_opts.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(self.training_opts.num_epochs)
             epoch = num_train_steps // self.training_opts.steps_per_epoch
             # In distributed mode, calling the set_epoch() method at
@@ -280,12 +285,12 @@ class ExpectedErrorReduction(backends.BackendBase):
                 start = datetime.datetime.utcnow()
 
               # Run model step on inputs
-              step_out = self.model_step(self.train.model, inputs)
+              step_out = self.model_step(train_estimator.model, inputs)
               # Backpropagate losses
               total_loss = step_out['total_loss'].mean()
               total_loss.backward()
 
-              self.torch.nn.utils.clip_grad_norm_(self.train.model.parameters(), self.training_opts.max_grad_norm)
+              self.torch.nn.utils.clip_grad_norm_(train_estimator.model.parameters(), self.training_opts.max_grad_norm)
               if self.torch_tpu_available:
                 self.pytorch.torch_xla.optimizer_step(optimizer)
               else:
@@ -306,12 +311,13 @@ class ExpectedErrorReduction(backends.BackendBase):
                   train_step = current_step,
                   total_loss = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
                 )
-              self.train.model.zero_grad()
+              train_estimator.model.zero_grad()
               if current_step == 0:
                 l.logger().info("EER: Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
               current_step += 1
             # End of epoch
-            self.saveCheckpoint(self.train, step = current_step)
+            if not update_estimator:
+              self.saveCheckpoint(train_estimator, step = current_step)
             if self.is_world_process_zero():
               try:
                 l.logger().info(
