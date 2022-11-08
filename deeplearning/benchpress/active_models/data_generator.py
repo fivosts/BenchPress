@@ -78,6 +78,15 @@ class ListTrainDataloader(torch.utils.data.Dataset):
     ret.dataset = [x for idx, x in enumerate(self.dataset) if idx in rand]
     return ret
 
+  def get_sliced_subset(self, l: int, r: int) -> 'ListTrainDataloader':
+    """
+    Implement slice operation of current List Dataset.
+    """
+    ret = ListTrainDataloader([], lazy = True)
+    assert l < len(self.dataset) and r < len(self.dataset), "Slice indices, l: {}, r: {} out of bounds! Length: {}".format(l, r, len(self.dataset))
+    ret.dataset = self.dataset[l:r]
+    return ret
+
   def __len__(self) -> int:
     return len(self.dataset)
 
@@ -155,6 +164,14 @@ class DictPredictionDataloader(torch.utils.data.Dataset):
     ret.dataset = [x for idx, x in enumerate(self.dataset) if idx in rand]
     return ret
 
+  def get_sliced_subset(self, l: int, r: int) -> 'DictPredictionDataloader':
+    """
+    Implement slice operation of current List Dataset.
+    """
+    ret = DictPredictionDataloader([], lazy = True)
+    assert l < len(self.dataset) and r < len(self.dataset), "Slice indices, l: {}, r: {} out of bounds! Length: {}".format(l, r, len(self.dataset))
+    ret.dataset = self.dataset[l:r]
+    return ret
 
   def __len__(self) -> int:
     return len(self.dataset)
