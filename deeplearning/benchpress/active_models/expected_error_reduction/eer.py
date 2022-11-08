@@ -204,7 +204,7 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     train_estimator = update_estimator if update_estimator else self.train
 
-    if update_dataloader is None:
+    if update_dataloader is None and update_estimator is None:
       l.logger().info("Initial EER model training.")
     if not self.is_trained or update_dataloader is not None or update_estimator:
 
@@ -322,7 +322,7 @@ class ExpectedErrorReduction(backends.BackendBase):
                   total_loss = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
                 )
               train_estimator.model.zero_grad()
-              if current_step == 0:
+              if current_step == 0 and update_estimator is None:
                 l.logger().info("EER: Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
               current_step += 1
             # End of epoch
