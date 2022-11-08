@@ -402,9 +402,8 @@ class ExpectedErrorReduction(backends.BackendBase):
       for out_label in self.downstream_task.output_ids:
 
         ## For (x, y) run model inference to obtain p(x|y)
-        l.logger().info(unl_train_point)
         out = self.model_step(self.sample.model, unl_train_point, is_sampling = True)
-        node_losses['posterior_probs'][idx][out_label] = out['output_probs']
+        node_losses['posterior_probs'][idx][out_label] = out['output_probs'].squeeze(0)[out_label]
 
         ## Extend Dataset D+: D + (x, y)
         extended_dataset = self.downstream_task.dataset + {'input_ids': unl_train_point, 'target_ids': out_label}
@@ -470,13 +469,18 @@ class ExpectedErrorReduction(backends.BackendBase):
       expected_error_rate = self.torch.reshape(expected_error_rate, (-1, expected_error_rate.shape[-1]))
 
       expected_losses = {
-        'input_ids'           : input_ids,
-        'posterior_probs'     : posterior_probs,
-        'aggregated_entropy'  : aggregated_entropy,
-        'expected_error_rate' : expected_error_rate,
+        'input_ids'           : input_ids.cpu(),
+        'posterior_probs'     : posterior_probs.cpu(),
+        'aggregated_entropy'  : aggregated_entropy.cpu(),
+        'expected_error_rate' : expected_error_rate.cpu(),
       }
     else:
       expected_losses = node_losses
+
+    expected_losses['input_ids']           = expected_losses['input_ids'          ].cpu()
+    expected_losses['posterior_probs']     = expected_losses['posterior_probs'    ].cpu()
+    expected_losses['aggregated_entropy']  = expected_losses['aggregated_entropy' ].cpu()
+    expected_losses['expected_error_rate'] = expected_losses['expected_error_rate'].cpu()
 
     space_samples = []
     for idx in range(len(expected_losses['input_ids'])):
