@@ -394,8 +394,9 @@ class ExpectedErrorReduction(backends.BackendBase):
       for out_label in self.downstream_task.output_ids:
 
         ## For (x, y) run model inference to obtain p(x|y)
+        l.logger().info(unl_train_point)
         out = self.model_step(self.sample.model, unl_train_point, is_sampling = True)
-        node_losses['posterior_probs'][idx][out_label] = out['probs']
+        node_losses['posterior_probs'][idx][out_label] = out['output_probs']
 
         ## Extend Dataset D+: D + (x, y)
         extended_dataset = self.downstream_task.dataset + {'input_ids': unl_train_point, 'target_ids': out_label}
@@ -437,7 +438,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         for unl_batch in iter(loader):
           for target_id_batch in target_ids:
             out = self.model_step(unl_batch['input_ids'], target_id_batch, is_sampling = False)
-            aggr_entropy += out['loss']
+            aggr_entropy += out['total_loss']
         node_losses['aggregated_entropy'][idx][out_label] = aggr_entropy
       node_losses['expected_error_rate'][idx] = sum(
         [node_losses['posterior_probs'][L] * node_losses['aggregated_entropy'][L]
