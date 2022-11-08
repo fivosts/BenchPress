@@ -264,9 +264,9 @@ class ExpectedErrorReduction(backends.BackendBase):
 
         # Get dataloader iterator and setup hooks.
         batch_iterator = iter(loader)
-        if self.is_world_process_zero():
+        if self.is_world_process_zero() and not update_estimator:
           train_hook = hooks.tensorMonitorHook(
-            member_log_path,
+            self.logfile_path,
             current_step,
             min(
               (len(data_generator) + self.training_opts.train_batch_size) // self.training_opts.train_batch_size,
