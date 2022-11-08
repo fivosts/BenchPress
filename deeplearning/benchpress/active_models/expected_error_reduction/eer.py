@@ -215,17 +215,21 @@ class ExpectedErrorReduction(backends.BackendBase):
       if len(data_generator) == 0:
         return
 
-      if not update_estimator:
-        current_step = self.loadCheckpoint(self.train)
       if self.pytorch.num_gpus > 0:
         self.torch.cuda.empty_cache()
-      if current_step >= 0:
-        l.logger().info("EER: Loaded checkpoint step {}".format(current_step))
-      current_step = max(0, current_step)
-      num_train_steps = min(
-        (len(data_generator) + self.training_opts.train_batch_size) // self.training_opts.train_batch_size,
-        self.training_opts.num_train_steps
-      ) if update_dataloader is None else ((len(update_dataloader) + self.training_opts.train_batch_size) // self.training_opts.train_batch_size) + current_step
+
+      if not update_estimator:
+        current_step = self.loadCheckpoint(self.train)
+        if current_step >= 0:
+          l.logger().info("EER: Loaded checkpoint step {}".format(current_step))
+        current_step = max(0, current_step)
+        num_train_steps = min(
+          (len(data_generator) + self.training_opts.train_batch_size) // self.training_opts.train_batch_size,
+          self.training_opts.num_train_steps
+        ) if update_dataloader is None else ((len(update_dataloader) + self.training_opts.train_batch_size) // self.training_opts.train_batch_size) + current_step
+      else:
+        current_step = 0
+        num_train_steps = len(data_generator)
 
       if current_step < num_train_steps:
         train_estimator.model.zero_grad()
