@@ -509,7 +509,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     Saves model, scheduler, optimizer checkpoints per epoch.
     """
     if self.is_world_process_zero():
-      ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(, x, self.current_step)
+      ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, self.current_step)
 
       if self.torch_tpu_available:
         if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
