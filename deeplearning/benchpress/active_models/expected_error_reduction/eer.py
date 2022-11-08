@@ -489,6 +489,15 @@ class ExpectedErrorReduction(backends.BackendBase):
     else:
       expected_losses = node_losses
 
+    space_samples = []
+    for idx in range(len(expected_losses['input_ids'])):
+      space_samples.append(
+        'input_ids'           : expected_losses['input_ids'          ][idx],
+        'posterior_probs'     : expected_losses['posterior_probs'    ][idx],
+        'aggregated_entropy'  : expected_losses['aggregated_entropy' ][idx],
+        'expected_error_rate' : expected_losses['expected_error_rate'][idx],
+      )
+
     """
     for datapoint in unlabelled:
       avg_expected_loss['input_ids'] = datapoint['input_ids']
@@ -511,7 +520,7 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     to_be_labelled = keymin(expected_losses.values()) # Key with lowest value.
     """
-    return
+    return sorted(space_samples, key = lambda x: x['expected_error_rate'])
 
   def GetShortSummary(self) -> None:
     return "Short Summary TODO"
