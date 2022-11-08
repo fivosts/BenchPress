@@ -411,7 +411,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         extended_datapoint.dataset = [
           {
             'input_ids':  unl_train_point['input_ids'].squeeze(0),
-            'target_ids': torch.LongTensor(out_label),
+            'target_ids': self.torch.LongTensor(out_label),
           }
         ]
         extended_dataset = self.downstream_task.data_generator + extended_datapoint
