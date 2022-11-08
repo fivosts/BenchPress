@@ -94,11 +94,11 @@ class MLP(torch.nn.Module):
       return {
         'total_loss'   : total_loss,
         'accuracy'     : batch_accuracy.to(device),
-        'output_probs' : out,
+        'output_probs' : torch.softmax(out, dim = -1, dtype = torch.float32),
         'output_label' : torch.argmax(out)
       }
     else:
       return {
-        'output_probs' : out,
+        'output_probs' : torch.softmax(out, dim = -1, dtype = torch.float32),
         'output_label' : torch.argmax(out, dim = 1),
       }
