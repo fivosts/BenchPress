@@ -195,11 +195,13 @@ class ExpectedErrorReduction(backends.BackendBase):
     update_dataloader = kwargs.get('update_dataloader', None)
     update_estimator  = kwargs.get('eer_estimator', None)
 
+    if not update_estimator:
+      self._ConfigTrainParams(self.downstream_task.data_generator)
+
     train_estimator = update_estimator if update_estimator else self.train
 
     if update_dataloader is None:
       l.logger().info("Initial EER model training.")
-    self._ConfigTrainParams(self.downstream_task.data_generator)
     if not self.is_trained or update_dataloader is not None or update_estimator:
 
       data_generator  = (
