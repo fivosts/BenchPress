@@ -405,12 +405,13 @@ class ExpectedErrorReduction(backends.BackendBase):
       'expected_error_rate' : self.torch.zeros([len(node_set), 1], dtype = self.torch.float32),
     }
     self.sample.model.eval()
-    for idx, unl_train_point in enumerate(iter(node_loader)):
+    for idx, unl_train_point in tqdm.tqdm(enumerate(iter(node_loader)), total = len(node_loader), desc = "D + (x, y)"):
       node_losses['input_ids'][idx] = unl_train_point['input_ids']
       for out_label in self.downstream_task.output_ids:
 
         ## For (x, y) run model inference to obtain p(x|y)
-        out = self.model_step(self.sample.model, unl_train_point, is_sampling = True)
+        with self.torch.no_grad():
+          out = self.model_step(self.sample.model, unl_train_point, is_sampling = True)
         node_losses['posterior_probs'][idx][out_label] = out['output_probs'].squeeze(0)[out_label]
 
         ## Extend Dataset D+: D + (x, y)
@@ -422,9 +423,11 @@ class ExpectedErrorReduction(backends.BackendBase):
             'target_ids': self.torch.LongTensor([out_label]),
           }
         ]
+
         extended_dataset = self.downstream_task.data_generator + extended_datapoint
         ## Copy the model to a temp one.
-        new_model = copy.deepcopy(self.sample.model)
+        new_model = model.MLP(self.model_config)
+        new_model.load_state_dict(self.sample.model.state_dict())
 
         if self.pytorch.num_nodes <= 1 and self.pytorch.num_gpus > 1:
           new_model = self.torch.nn.DataParallel(new_model)
@@ -457,13 +460,13 @@ class ExpectedErrorReduction(backends.BackendBase):
         target_ids = self.torch.zeros(
           [self.downstream_task.output_size, self.training_opts.train_batch_size, 1], dtype = self.torch.int64
         )
-        for tid in self.downstream_task.output_ids:
-          target_ids[:,] = tid
-        for unl_batch in iter(loader):
-          for target_id_batch in target_ids:
-            l.logger().warn({'input_ids': unl_batch['input_ids'], 'target_ids': target_id_batch})
-            out = self.model_step(new_model, {'input_ids': unl_batch['input_ids'], 'target_ids': target_id_batch}, is_sampling = False)
-            aggr_entropy += out['total_loss']
+        with self.torch.no_grad():
+          for tid in self.downstream_task.output_ids:
+            target_ids[tid,:] = tid
+          for unl_batch in iter(loader):
+            for target_id_batch in target_ids:
+              out = self.model_step(new_model, {'input_ids': unl_batch['input_ids'], 'target_ids': target_id_batch}, is_sampling = False)
+              aggr_entropy += out['total_loss']
         node_losses['aggregated_entropy'][idx][out_label] = aggr_entropy
 
       node_losses['expected_error_rate'][idx] = sum(
