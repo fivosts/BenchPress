@@ -497,12 +497,12 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     space_samples = []
     for idx in range(len(expected_losses['input_ids'])):
-      space_samples.append(
+      space_samples.append({
         'input_ids'           : expected_losses['input_ids'          ][idx],
         'posterior_probs'     : expected_losses['posterior_probs'    ][idx],
         'aggregated_entropy'  : expected_losses['aggregated_entropy' ][idx],
         'expected_error_rate' : expected_losses['expected_error_rate'][idx],
-      )
+      })
 
     """
     for datapoint in unlabelled:
