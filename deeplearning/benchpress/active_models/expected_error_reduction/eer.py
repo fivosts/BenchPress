@@ -356,11 +356,11 @@ class ExpectedErrorReduction(backends.BackendBase):
       raise NotImplementedError
     return
 
-  def Sample(self, unlabelled_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
+  def Sample(self, sample_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
     """
     Active learner sampling.
 
-    unlabelled_set contains random datapoints provided by the downstream task.
+    sample_set contains random datapoints provided by the downstream task.
     Expected Error Reduction algorithm is going to be applied for each datapoint for each label class.
     """
 
@@ -376,10 +376,10 @@ class ExpectedErrorReduction(backends.BackendBase):
     current_step = max(0, current_step)
 
     ## If DDP, each node will work separately on chunks of the unlabelled dataset.
-    node_size = len(unlabelled_set) // self.torch.distributed.get_world_size()
-    node_set  = unlabelled_set[environment.WORLD_RANK * node_size: (1 + environment.WORLD_RANK) * node_size]
+    node_size = len(sample_set) // self.torch.distributed.get_world_size()
+    node_set  = sample_set[environment.WORLD_RANK * node_size: (1 + environment.WORLD_RANK) * node_size]
     if environment.WORLD_RANK == environment.WORLD_SIZE - 1:
-      node_set += unlabelled_set[(1 + environment.WORLD_RANK) * node_size:]
+      node_set += sample_set[(1 + environment.WORLD_RANK) * node_size:]
 
     node_losses = {
       'input_ids'           : self.torch.zeros([len(node_set), self.downstream_task.input_size], dtype = self.torch.float32),
