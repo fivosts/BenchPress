@@ -50,6 +50,7 @@ class MLP(torch.nn.Module):
     }
     layers.update(ACT2FN)
     self.layers = torch.nn.ModuleList([layers[layer[0]](**layer[1]) for layer in self.config])
+    self.softmax = torch.nn.Softmax(dim = 1)
     return
 
   def calculate_loss(self,
@@ -63,12 +64,15 @@ class MLP(torch.nn.Module):
     loss_fn = torch.nn.CrossEntropyLoss()
     label_loss = loss_fn(outputs.to(torch.float32), target_ids.squeeze(1))
 
+    ## Calculate probs
+    probs = self.softmax(outputs.clone().detach())
+
     ## Calculate top-1 accuracy of predictions across batch.
     hits, total = 0, int(outputs.size(0))
     for out, target in zip(torch.argmax(outputs, dim = 1), target_ids):
       if out == target:
         hits += 1
-    return label_loss, torch.FloatTensor([hits / total])
+    return label_loss, probs, torch.FloatTensor([hits / total])
 
   def forward(self,
               input_ids   : torch.Tensor,
@@ -90,15 +94,15 @@ class MLP(torch.nn.Module):
       out = layer(out)
 
     if not is_sampling:
-      total_loss, batch_accuracy = self.calculate_loss(out, target_ids)
+      total_loss, probs, batch_accuracy = self.calculate_loss(out, target_ids)
       return {
         'total_loss'   : total_loss,
         'accuracy'     : batch_accuracy.to(device),
-        'output_probs' : torch.softmax(out, dim = -1, dtype = torch.float32),
+        'output_probs' : probs,
         'output_label' : torch.argmax(out)
       }
     else:
       return {
-        'output_probs' : torch.softmax(out, dim = -1, dtype = torch.float32),
+        'output_probs' : self.softmax(out.clone().detach()),
         'output_label' : torch.argmax(out, dim = 1),
       }
