@@ -634,5 +634,17 @@ class ExpectedErrorReduction(backends.BackendBase):
     estimator.model.eval()
     return ckpt_step
 
+  def is_world_process_zero(self) -> bool:
+    """
+    Whether or not this process is the global main process (when training in a distributed fashion on
+    several machines, this is only going to be :obj:`True` for one process).
+    """
+    if self.torch_tpu_available:
+      return self.pytorch.torch_xla_model.is_master_ordinal(local=False)
+    elif self.pytorch.num_nodes > 1:
+      return self.torch.distributed.get_rank() == 0
+    else:
+      return True
+
   def GetShortSummary(self) -> None:
     return "Short Summary TODO"
