@@ -382,6 +382,14 @@ class ExpectedErrorReduction(backends.BackendBase):
     if environment.WORLD_RANK == environment.WORLD_SIZE - 1 and node_rem > 0:
       node_set += sample_set.get_sliced_subset((1 + environment.WORLD_RANK) * node_size)
 
+    node_loader = self.torch.utils.data.dataloader.DataLoader(
+      dataset     = node_set,
+      batch_size  = 1,
+      sampler     = self.torch.utils.SequentialSampler(node_set),
+      num_workers = 0,
+      drop_last   = False,
+    )
+
     node_losses = {
       'input_ids'           : self.torch.zeros([len(node_set), self.downstream_task.input_size], dtype = self.torch.float32),
       'posterior_probs'     : self.torch.zeros([len(node_set), self.downstream_task.output_size], dtype = self.torch.float32),
@@ -389,7 +397,7 @@ class ExpectedErrorReduction(backends.BackendBase):
       'expected_error_rate' : self.torch.zeros([len(node_set), 1], dtype = self.torch.float32),
     }
     self.sample.model.eval()
-    for idx, unl_train_point in enumerate(node_set):
+    for idx, unl_train_point in enumerate(iter(node_loader)):
       node_losses['input_ids'][idx] = unl_train_point['input_ids']
       for out_label in self.downstream_task.output_ids:
 
