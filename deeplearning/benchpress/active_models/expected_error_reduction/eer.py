@@ -19,6 +19,8 @@ This head is used for feature-less learning to target benchmarks.
 """
 import typing
 import heapq
+import tqdm
+import datetime
 import math
 import pathlib
 import copy
@@ -313,7 +315,7 @@ class ExpectedErrorReduction(backends.BackendBase):
                 self.torch.distributed.all_gather(total_loss, step_out["total_loss"])
               else:
                 total_loss = step_out['total_loss'].unsqueeze(0).cpu()
-              if self.is_world_process_zero():
+              if self.is_world_process_zero() and not update_estimator:
                 train_hook.step(
                   train_step = current_step,
                   total_loss = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
@@ -325,7 +327,7 @@ class ExpectedErrorReduction(backends.BackendBase):
             # End of epoch
             if not update_estimator:
               self.saveCheckpoint(train_estimator, step = current_step)
-            if self.is_world_process_zero():
+            if self.is_world_process_zero() and not update_estimator:
               try:
                 l.logger().info(
                   "EER: Epoch {} Loss: {}".format(
