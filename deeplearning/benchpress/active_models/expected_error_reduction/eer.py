@@ -96,25 +96,32 @@ class ExpectedErrorReduction(backends.BackendBase):
     l.logger().info("Active ExpectedErrorReduction config initialized in {}".format(self.cache_path))
     return
 
+  def _ConfigModelParams(self) -> None:
+    """
+    Generic initialization.
+    """
+    self.model_config = config.ModelConfig.FromConfig(
+      self.config.expected_error_reduction, 
+      self.downstream_task,
+      self.config.num_train_steps
+    )
+    self.training_opts = ExpectedErrorReduction.TrainingOpts(
+      train_batch_size = self.model_config.batch_size,
+      learning_rate    = self.model_config.learning_rate,
+      num_warmup_steps = self.model_config.num_warmup_steps,
+      max_grad_norm    = self.model_config.max_grad_norm,
+      steps_per_epoch  = self.model_config.steps_per_epoch,
+      num_epochs       = self.model_config.num_epochs,
+      num_train_steps  = self.model_config.num_train_steps,
+    )
+    return
+
   def _ConfigTrainParams(self, data_generator: 'torch.utils.data.Dataset') -> None:
     """
     Model parameter initialization.
     """
     if not self.train:
-      self.model_config = config.ModelConfig.FromConfig(
-        self.config.expected_error_reduction, 
-        self.downstream_task,
-        self.config.num_train_steps
-      )
-      self.training_opts = ExpectedErrorReduction.TrainingOpts(
-        train_batch_size = self.model_config.batch_size,
-        learning_rate    = self.model_config.learning_rate,
-        num_warmup_steps = self.model_config.num_warmup_steps,
-        max_grad_norm    = self.model_config.max_grad_norm,
-        steps_per_epoch  = self.model_config.steps_per_epoch,
-        num_epochs       = self.model_config.num_epochs,
-        num_train_steps  = self.model_config.num_train_steps,
-      )
+      self._ConfigModelParams()
       cm = model.MLP(self.model_config)
       if self.pytorch.num_nodes > 1:
         distrib.barrier()
@@ -145,11 +152,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     Model parameter initialization.
     """
     if not self.sample:
-      self.model_config = config.ModelConfig.FromConfig(
-        self.config.expected_error_reduction, 
-        self.downstream_task,
-        self.config.num_train_steps
-      )
+      self._ConfigModelParams()
       cm = model.MLP(self.model_config)
       if self.pytorch.num_nodes > 1:
         distrib.barrier()
@@ -173,7 +176,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     """
     Run forward function for member model.
     """
-    outputs = self.estimator.model(
+    outputs = self.train.model(
       input_ids   = inputs['input_ids'].to(self.pytorch.device),
       target_ids  = inputs['target_ids'].to(self.pytorch.device) if not is_sampling else None,
       is_sampling = is_sampling,
@@ -191,16 +194,16 @@ class ExpectedErrorReduction(backends.BackendBase):
     if not self.is_trained or update_dataloader is not None:
 
       data_generator  = (
-        self.estimator.data_generator
+        self.train.data_generator
         if update_dataloader is None
         else update_dataloader
-             # + self.estimator.data_generator.get_random_subset(
+             # + self.train.data_generator.get_random_subset(
                  # max(0, abs(len(update_dataloader) - self.training_opts.num_train_steps)))
       )
       if len(data_generator) == 0:
         return
 
-      current_step = self.loadCheckpoint(self.estimator)
+      current_step = self.loadCheckpoint(self.train)
       if self.pytorch.num_gpus > 0:
         self.torch.cuda.empty_cache()
       if current_step >= 0:
@@ -212,7 +215,7 @@ class ExpectedErrorReduction(backends.BackendBase):
       ) if update_dataloader is None else ((len(update_dataloader) + self.training_opts.train_batch_size) // self.training_opts.train_batch_size) + current_step
 
       if current_step < num_train_steps:
-        self.estimator.model.zero_grad()
+        self.train.model.zero_grad()
 
         if self.pytorch.num_nodes <= 1:
           sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
@@ -255,7 +258,7 @@ class ExpectedErrorReduction(backends.BackendBase):
           )
         try:
           with self.torch.enable_grad():
-            self.estimator.model.train()
+            self.train.model.train()
             # epoch_iter = tqdm.auto.trange(self.training_opts.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(self.training_opts.num_epochs)
             epoch = num_train_steps // self.training_opts.steps_per_epoch
             # In distributed mode, calling the set_epoch() method at
@@ -277,7 +280,7 @@ class ExpectedErrorReduction(backends.BackendBase):
               total_loss = step_out['total_loss'].mean()
               total_loss.backward()
 
-              self.torch.nn.utils.clip_grad_norm_(self.estimator.model.parameters(), self.training_opts.max_grad_norm)
+              self.torch.nn.utils.clip_grad_norm_(self.train.model.parameters(), self.training_opts.max_grad_norm)
               if self.torch_tpu_available:
                 self.pytorch.torch_xla.optimizer_step(optimizer)
               else:
@@ -298,12 +301,12 @@ class ExpectedErrorReduction(backends.BackendBase):
                   train_step = current_step,
                   total_loss = sum([tl.mean().item() for tl in total_loss]) / len(total_loss),
                 )
-              self.estimator.model.zero_grad()
+              self.train.model.zero_grad()
               if current_step == 0:
                 l.logger().info("EER: Starting Loss: {}".format(sum([tl.mean().item() for tl in total_loss]) / len(total_loss)))
               current_step += 1
             # End of epoch
-            self.saveCheckpoint(self.estimator, member_path,step = current_step)
+            self.saveCheckpoint(self.train, step = current_step)
             if self.is_world_process_zero():
               try:
                 l.logger().info(
@@ -352,7 +355,7 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     self._ConfigSampleParams()
 
-    current_step = self.loadCheckpoint(model, member_path)
+    current_step = self.loadCheckpoint(model)
     if self.pytorch.num_gpus > 0:
       self.torch.cuda.empty_cache()
     if current_step < 0:
