@@ -21,6 +21,7 @@ import typing
 import heapq
 import math
 import pathlib
+import copy
 
 from deeplearning.benchpress.models.torch_bert import optimizer
 from deeplearning.benchpress.models.torch_bert import hooks
