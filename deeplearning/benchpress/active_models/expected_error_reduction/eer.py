@@ -502,7 +502,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     return sorted(space_samples, key = lambda x: x['expected_error_rate'])
 
   def saveCheckpoint(self,
-                     estimator    : ExpectedErrorReduction.Estimator,
+                     estimator    : 'ExpectedErrorReduction.Estimator',
                      current_step : int
                      ) -> None:
     """
@@ -529,7 +529,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         mf.write("train_step: {}\n".format(self.current_step))
     return
 
-  def loadCheckpoint(self, estimator: ExpectedErrorReduction.Estimator) -> int:
+  def loadCheckpoint(self, estimator: 'ExpectedErrorReduction.Estimator') -> int:
     """
     Load model checkpoint. Loads either most recent epoch, or selected checkpoint through FLAGS.
     """
