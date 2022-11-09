@@ -90,10 +90,14 @@ def ExtractIRRawFeatures(bytecode: str,
     raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
   return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractIRRawFeatures(bytecode)) for xt in ext])
 
-def RawToDictFeats(str_feats: str) -> typing.Dict[str, typing.Dict[str, float]]:
+def RawToDictFeats(str_feats: str, ext: typing.List[str] = None) -> typing.Dict[str, typing.Dict[str, float]]:
   """
   Wrapper method for core feature functions.
   Returns a mapping between extractor type(string format) and feature data collected.
   """
+  if not ext:
+    ext = list(extractors.keys())
+  if ext and not isinstance(ext, list):
+    raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
   feats = {b.split(":\n")[0]: ''.join(b.split(':\n')[1:]) for b in str_feats.split('\n\n') if b.split(':\n')[1:]}
   return {xt: extractors[xt].RawToDictFeats(feat) for xt, feat in feats.items()}
