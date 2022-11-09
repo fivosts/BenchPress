@@ -19,7 +19,7 @@ import subprocess
 import tempfile
 import typing
 
-from deeplearning.benchpress.language_models import backends
+from deeplearning.benchpress.models import backends
 
 from absl import flags
 
