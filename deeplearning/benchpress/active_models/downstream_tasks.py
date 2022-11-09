@@ -667,7 +667,7 @@ class FeatureLessGrewe(GreweAbstract):
 
   @property
   def input_labels(self) -> typing.List[str]:
-    self.static_features_labels + ["transferred_bytes", "local_size"]
+    return self.static_features_labels + ["transferred_bytes", "local_size"]
 
   @property
   def feature_space(self) -> str:
