@@ -456,14 +456,18 @@ class ExpectedErrorReduction(backends.BackendBase):
     )
 
     node_losses = {
-      'input_ids'           : self.torch.zeros([len(node_set), self.downstream_task.input_size], dtype = self.torch.float32),
-      'posterior_probs'     : self.torch.zeros([len(node_set), self.downstream_task.output_size], dtype = self.torch.float32),
-      'aggregated_entropy'  : self.torch.zeros([len(node_set), self.downstream_task.output_size], dtype = self.torch.float32),
-      'expected_error_rate' : self.torch.zeros([len(node_set), 1], dtype = self.torch.float32),
+      'input_ids'           : self.torch.zeros([len(node_set), self.downstream_task.input_size],            dtype = self.torch.float32),
+      'static_features'     : self.torch.zeros([len(node_set), self.downstream_task.static_features_size],  dtype = self.torch.int64),
+      'runtime_features'    : self.torch.zeros([len(node_set), self.downstream_task.runtime_features_size], dtype = self.torch.int64),
+      'posterior_probs'     : self.torch.zeros([len(node_set), self.downstream_task.output_size],           dtype = self.torch.float32),
+      'aggregated_entropy'  : self.torch.zeros([len(node_set), self.downstream_task.output_size],           dtype = self.torch.float32),
+      'expected_error_rate' : self.torch.zeros([len(node_set), 1],                                          dtype = self.torch.float32),
     }
     self.sample.model.eval()
     for idx, unl_train_point in tqdm.tqdm(enumerate(iter(node_loader)), total = len(node_loader), desc = "D + (x, y)"):
-      node_losses['input_ids'][idx] = unl_train_point['input_ids']
+      node_losses['input_ids'][idx]        = unl_train_point['input_ids']
+      node_losses['static_features'][idx]  = unl_train_point['static_features']
+      node_losses['runtime_features'][idx] = unl_train_point['runtime_features']
       for out_label in self.downstream_task.output_ids:
 
         ## For (x, y) run model inference to obtain p(x|y)
@@ -533,38 +537,50 @@ class ExpectedErrorReduction(backends.BackendBase):
     if self.pytorch.num_nodes > 1:
       self.torch.distributed.barrier()
       input_ids           = [self.torch.zeros(tuple(node_losses['input_ids'          ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      static_features     = [self.torch.zeros(tuple(node_losses['static_features'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
+      runtime_features    = [self.torch.zeros(tuple(node_losses['runtime_features'   ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       posterior_probs     = [self.torch.zeros(tuple(node_losses['posterior_probs'    ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       aggregated_entropy  = [self.torch.zeros(tuple(node_losses['aggregated_entropy' ].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
       expected_error_rate = [self.torch.zeros(tuple(node_losses['expected_error_rate'].shape), dtype = self.torch.float32).to(self.pytorch.device) for _ in range(self.torch.distributed.get_world_size())]
 
       self.torch.distributed.all_gather(input_ids,           node_losses['input_ids'          ])
+      self.torch.distributed.all_gather(static_features,     node_losses['static_features'    ])
+      self.torch.distributed.all_gather(runtime_features,    node_losses['runtime_features'   ])
       self.torch.distributed.all_gather(posterior_probs,     node_losses['posterior_probs'    ])
       self.torch.distributed.all_gather(aggregated_entropy,  node_losses['aggregated_entropy' ])
       self.torch.distributed.all_gather(expected_error_rate, node_losses['expected_error_rate'])
 
       input_ids           = self.torch.reshape(input_ids,           (-1, input_ids.shape[-1]))
+      static_features     = self.torch.reshape(static_features,     (-1, static_features.shape[-1]))
+      runtime_features    = self.torch.reshape(runtime_features,     (-1, runtime_features.shape[-1]))
       posterior_probs     = self.torch.reshape(posterior_probs,     (-1, posterior_probs.shape[-1]))
       aggregated_entropy  = self.torch.reshape(aggregated_entropy,  (-1, aggregated_entropy.shape[-1]))
       expected_error_rate = self.torch.reshape(expected_error_rate, (-1, expected_error_rate.shape[-1]))
 
       expected_losses = {
-        'input_ids'           : input_ids.cpu(),
-        'posterior_probs'     : posterior_probs.cpu(),
-        'aggregated_entropy'  : aggregated_entropy.cpu(),
-        'expected_error_rate' : expected_error_rate.cpu(),
+        'input_ids'           : input_ids,
+        'static_features'     : static_features,
+        'runtime_features'    : runtime_features,
+        'posterior_probs'     : posterior_probs,
+        'aggregated_entropy'  : aggregated_entropy,
+        'expected_error_rate' : expected_error_rate,
       }
     else:
       expected_losses = node_losses
 
-    expected_losses['input_ids']           = expected_losses['input_ids'          ].cpu()
-    expected_losses['posterior_probs']     = expected_losses['posterior_probs'    ].cpu()
-    expected_losses['aggregated_entropy']  = expected_losses['aggregated_entropy' ].cpu()
-    expected_losses['expected_error_rate'] = expected_losses['expected_error_rate'].cpu()
+    expected_losses['input_ids']           = expected_losses['input_ids'          ].cpu().numpy()
+    expected_losses['static_features']     = expected_losses['static_features'    ].cpu().numpy()
+    expected_losses['runtime_features']    = expected_losses['runtime_features'   ].cpu().numpy()
+    expected_losses['posterior_probs']     = expected_losses['posterior_probs'    ].cpu().numpy()
+    expected_losses['aggregated_entropy']  = expected_losses['aggregated_entropy' ].cpu().numpy()
+    expected_losses['expected_error_rate'] = expected_losses['expected_error_rate'].cpu().numpy()
 
     space_samples = []
     for idx in range(len(expected_losses['input_ids'])):
       space_samples.append({
         'input_ids'           : expected_losses['input_ids'          ][idx],
+        'static_features'     : expected_losses['static_features'    ][idx],
+        'runtime_features'    : expected_losses['runtime_features'   ][idx],
         'posterior_probs'     : expected_losses['posterior_probs'    ][idx],
         'aggregated_entropy'  : expected_losses['aggregated_entropy' ][idx],
         'expected_error_rate' : expected_losses['expected_error_rate'][idx],
