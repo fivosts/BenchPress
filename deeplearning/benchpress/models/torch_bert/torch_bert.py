@@ -412,9 +412,9 @@ class torchBert(backends.BackendBase):
     return outputs
 
   def sample_model_step(self,
-                        model     : typing.List['torch.nn.Module'],
-                        inputs    : typing.Dict[str, 'torch.Tensor'],
-                        iteration : int = None,
+                        model                : typing.List['torch.nn.Module'],
+                        inputs               : typing.Dict[str, 'torch.Tensor'],
+                        iteration            : int = None,
                         extract_hidden_state : bool = False,
                         ) -> typing.Dict[str, typing.List[typing.List[int]]]:
     """
