@@ -396,6 +396,7 @@ class torchBert(backends.BackendBase):
                  inputs        : typing.Dict[str, 'torch.Tensor'],
                  is_validation : bool = False,
                  step          : int  = -1,
+                 extract_hidden_state: bool = False,
                  ) -> typing.Dict[str, 'torch.Tensor']:
     """
     Perform a training step on a batch of inputs.
@@ -408,6 +409,7 @@ class torchBert(backends.BackendBase):
                 masked_lm_labels     = inputs['mask_labels'],
                 is_validation        = is_validation,
                 step                 = step,
+                extract_hidden_state = extract_hidden_state,
               )
     return outputs
 
