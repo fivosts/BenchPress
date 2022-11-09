@@ -285,6 +285,7 @@ class Model(object):
       shutil.copyfile(self.corpus.tokenizer_path, self.cache.path / "checkpoints" / "backup_tokenizer.pkl")
 
     self.backend.Create(tokenizer = self.corpus.tokenizer)
+    hidden_state.setup_lm(self.backend)
     return
 
   def PreTrain(self, **kwargs) -> "Model":
@@ -337,7 +338,6 @@ class Model(object):
           telemetry_logs[-1].loss if FLAGS.select_checkpoint_step == -1 else telemetry_logs[FLAGS.select_checkpoint_step-1].loss,
           )
     )
-    hidden_state.setup_lm(self.backend)
     return self
 
   def Sample(
