@@ -840,6 +840,7 @@ class BertForPreTraining(BertPreTrainedModel):
     device = device if device >= 0 else 'cpu'
 
     ## If there is a sampling workload, load it directly to the compiler.
+    extract_hidden_state = kwargs.get('extract_hidden_state', False)
     if workload is not None:
       if self.cls is None:
         raise ValueError("This mode requires a classification head.")
@@ -847,7 +848,6 @@ class BertForPreTraining(BertPreTrainedModel):
         input_ids[0], attention_mask[0], position_ids[0], input_features[0] if input_features is not None else None,
       )
       bar = kwargs.get('bar', None)
-      extract_hidden_state = kwargs.get('extract_hidden_state', False)
       return self.compile_sampler.generateSampleWorkload(
         self,
         device,
@@ -909,9 +909,9 @@ class BertForPreTraining(BertPreTrainedModel):
         'generated_samples': samples,
         'sample_indices'   : sample_indices,
       }
-    ## Training mode.
+    ## Training mode or Validation mode.
     else:
-      if masked_lm_labels is not None:
+      if masked_lm_labels is not None and extract_hidden_state is False:
         loss_fct = torch.nn.CrossEntropyLoss()
         masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
         total_loss = masked_lm_loss
