@@ -347,6 +347,8 @@ class ExpectedErrorReduction(backends.BackendBase):
               self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
         except KeyboardInterrupt:
           pass
+      if update_estimator is None:
+        self.Validate()
     self.is_trained = True
     if self.pytorch.num_nodes > 1:
       self.torch.distributed.barrier()
