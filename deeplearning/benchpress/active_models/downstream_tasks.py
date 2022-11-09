@@ -728,7 +728,7 @@ class FeatureLessGrewe(GreweAbstract):
     # self.test_set = TODO
     return
 
-  def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
+  def sample_space(self, num_samples: int = 128) -> data_generator.DictPredictionDataloader:
     """
     Go fetch the hidden state's feature space [1xhidden_state_size] where N~[0, 1] and
     randomly return num_samples samples to evaluate. The predictive model samples are
