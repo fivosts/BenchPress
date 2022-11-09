@@ -19,8 +19,6 @@ import subprocess
 import tempfile
 import typing
 
-from deeplearning.benchpress.models import backends
-
 from absl import flags
 
 FLAGS = flags.FLAGS
@@ -28,7 +26,7 @@ FLAGS = flags.FLAGS
 KEYS = None
 LANGUAGE_MODEL = None
 
-def setup_lm(lm: backends.BackendBase) -> None:
+def setup_lm(lm: 'backends.BackendBase') -> None:
   global LANGUAGE_MODEL
   global KEYS
   KEYS = ["f{}".format(x) for x in range(lm.hidden_state_size)]
