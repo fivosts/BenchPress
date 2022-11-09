@@ -419,12 +419,13 @@ class CompilationSampler(object):
         dtype = torch.float32,
       ).to(device)
       for widx in range(wload_size):
-        _, _, hidden_state, _ = model.get_output(
+        prediction_scores, _, _, _ = model.get_output(
           queue[widx*batch_size: (widx+1)*batch_size],
           (queue[widx*batch_size: (widx+1)*batch_size] != self.tokenizer.padToken),
           position_ids[:batch_size],
           None,
         ) ## Feature directed model will not work here.
+        final_hidden_state[widx*batch_size: (widx+1)*batch_size] = torch.argmax(prediction_scores, dim = -1).squeeze(-1)
 
     return queue, sample_indices, final_hidden_state
 
