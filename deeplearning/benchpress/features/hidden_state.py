@@ -21,6 +21,8 @@ import typing
 
 from absl import flags
 
+from deeplearning.benchpress.util import logging as l
+
 FLAGS = flags.FLAGS
 
 KEYS = None
@@ -76,25 +78,25 @@ class HiddenStateFeatures(object):
     Returns:
       Feature vector and diagnostics in str format.
     """
-    encoded = LANGUAGE_MODEL.train.data_generator._padToMaxPosition(
-      LANGUAGE_MODEL.train.data_generator._addStartEndToken(
-        [int(x) for x in tokenized]
+    encoded = LANGUAGE_MODEL.sample.data_generator._padToMaxPosition(
+      LANGUAGE_MODEL.sample.data_generator._addStartEndToken(
+        [int(x) for x in LANGUAGE_MODEL.tokenizer.TokenizeString(src)]
       )
-    )[:LANGUAGE_MODEL.train.data_generator.sampler.sequence_length]
-    input_ids = torch.LongTensor(encoded).unsqueeze(0).unsqueeze(0)
+    )[:LANGUAGE_MODEL.sample.data_generator.sampler.sequence_length]
+    input_ids = LANGUAGE_MODEL.torch.LongTensor(encoded).unsqueeze(0).unsqueeze(0)
     workload = {
       'input_ids'         : input_ids,
       'input_mask'        : (input_ids != LANGUAGE_MODEL.tokenizer.padToken),
-      'position_ids'      : torch.arange(len(encoded), dtype = torch.int64).unsqueeze(0).unsqueeze(0),
-      'mask_labels'       : torch.full(tuple(input_ids.shape), -100, dtype = torch.int64),
-      'masked_lm_lengths' : torch.full(tuple(1,1,1), -1, dtype = torch.int64)
+      'position_ids'      : LANGUAGE_MODEL.torch.arange(len(encoded), dtype = LANGUAGE_MODEL.torch.int64).unsqueeze(0).unsqueeze(0),
+      'mask_labels'       : LANGUAGE_MODEL.torch.full(tuple(input_ids.shape), -100, dtype = LANGUAGE_MODEL.torch.int64),
+      'masked_lm_lengths' : LANGUAGE_MODEL.torch.full([1, 1, 1], -1, dtype = LANGUAGE_MODEL.torch.int64)
 
     }
     return LANGUAGE_MODEL.sample_model_step(
       LANGUAGE_MODEL.sample.model,
       workload,
       iteration = 0,
-      extract_hidden_states = True,
+      extract_hidden_state = True,
     )['hidden_state']
 
   @classmethod
