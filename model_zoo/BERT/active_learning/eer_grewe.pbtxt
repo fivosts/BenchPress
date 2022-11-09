@@ -104,6 +104,7 @@ sampler {
           num_train_steps: 0
           downstream_task: "FeatureLessGrewe"
           training_corpus: "/home/fivosts/PhD/Code/BenchPress/cldrive_cache.db"
+          test_db: "/home/foivos/PhD/Code/BenchPress/cc3_gpgpu.db"
         }
         active_search_depth: 60
         active_search_width: 32
