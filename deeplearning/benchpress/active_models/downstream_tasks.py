@@ -799,8 +799,8 @@ class FeatureLessGrewe(GreweAbstract):
     """
     trb, ls = runtime_values
     return {
-      'transferred_bytes' : 2**trb,
-      'local_size'        : 2**ls,
+      'transferred_bytes' : trb,
+      'local_size'        : ls,
     }
 
 TASKS = {
