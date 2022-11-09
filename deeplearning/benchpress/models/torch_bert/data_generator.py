@@ -256,6 +256,47 @@ def text_candidate_worker(sample           : np.array,
     score            = math.inf,
   ))
 
+def hidden_state_candidate_worker(sample           : np.array,
+                                  feature_space    : str,
+                                  target_benchmark : feature_sampler.Benchmark,
+                                  tokenizer        : tokenizers.TokenizerBase,
+                                  ) -> ActiveSample:
+  """
+  Provided hidden states by the language model, choose those that compile and create ActiveSamples.
+  """
+  sample, sample_indices, input_ids, mlm_lengths, hidden_state, feed = sample
+  assert sample[0] != tokenizer.padToken, sample
+  try:
+    code = tokenizer.ArrayToCode(sample, with_formatting = False)
+    _ = opencl.Compile(code)
+    features = extractor.RawToDictFeats(code, [feature_space])[feature_space]
+    return (True, ActiveSample(
+      sample_feed = feed,
+      sample      = sample,
+      sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
+      input_ids      = [x for x in input_ids if x != tokenizer.padToken],
+      hole_lengths   = mlm_lengths,
+      sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
+      features         = features,
+      runtime_features = target_benchmark.runtime_features,
+      score            = feature_sampler.calculate_distance(features, target_benchmark.features, feature_space),
+    ))
+  except ValueError:
+    pass
+  except Exception as e:
+    raise e
+  return (False, ActiveSample(
+    sample_feed = feed,
+    sample      = sample,
+    sample_indices = [x for x in sample_indices if x != tokenizer.padToken],
+    input_ids      = [x for x in input_ids if x != tokenizer.padToken],
+    hole_lengths   = mlm_lengths,
+    sample_indices_size = len([x for x in sample_indices if x != tokenizer.padToken]),
+    features         = {},
+    runtime_features = target_benchmark.runtime_features,
+    score            = math.inf,
+  ))
+
 def dataload_worker(x              : int,
                     feed           : typing.List[np.array],
                     func           : typing.Union[
@@ -763,6 +804,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             estimator.model,
             inputs,
             iteration = it,
+            extract_hidden_state = True,
           )
           ## Post-process outputs.
           # Keep step_candidates and evaluate them. Keep rejected candidates only for eval_cand database.
@@ -1132,24 +1174,38 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
     cm_rate[1] += len(outputs['generated_samples'])
     better_found = None
     try:
-      it = zip(
-        outputs['generated_samples'], outputs['sample_indices'],
-        outputs['input_ids'], outputs['masked_lm_lengths'],
-        feeds
-      )
-      if self.feat_sampler.feature_space != "GreweFeatures":
+      if self.feat_sampler.feature_space == "HiddenState":
+        it = zip(
+          outputs['generated_samples'], outputs['sample_indices'],
+          outputs['input_ids'], outputs['masked_lm_lengths'],
+          outputs['hidden_state'], feeds
+        )
+      else:
+        it = zip(
+          outputs['generated_samples'], outputs['sample_indices'],
+          outputs['input_ids'], outputs['masked_lm_lengths'],
+          feeds
+        )
+      if self.feat_sampler.feature_space == "GreweFeatures":
         candidate_worker = functools.partial(
-          IR_candidate_worker,
-          tokenizer               = self.tokenizer,
-          feature_space           = self.feat_sampler.feature_space,
-          target_benchmark        = self.feat_sampler.target_benchmark,
+          text_candidate_worker,
+          tokenizer        = self.tokenizer,
+          feature_space    = self.feat_sampler.feature_space,
+          target_benchmark = self.feat_sampler.target_benchmark,
+        )
+      elif self.feat_sampler.feature_space == "HiddenState":
+        candidate_worker = functools.partial(
+          hidden_state_candidate_worker,
+          tokenizer        = self.tokenizer,
+          feature_space    = self.feat_sampler.feature_space,
+          target_benchmark = self.feat_sampler.target_benchmark,
         )
       else:
         candidate_worker = functools.partial(
-          text_candidate_worker,
-          tokenizer               = self.tokenizer,
-          feature_space           = self.feat_sampler.feature_space,
-          target_benchmark        = self.feat_sampler.target_benchmark,
+          IR_candidate_worker,
+          tokenizer        = self.tokenizer,
+          feature_space    = self.feat_sampler.feature_space,
+          target_benchmark = self.feat_sampler.target_benchmark,
         )
       t = 0
       for idx, batch in tqdm.tqdm((enumerate(pool.map(candidate_worker, it))), total = len(outputs['generated_samples']), desc = "Register Output Data", leave = False):
