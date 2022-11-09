@@ -457,7 +457,7 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     node_losses = {
       'input_ids'           : self.torch.zeros([len(node_set), self.downstream_task.input_size],            dtype = self.torch.float32),
-      'static_features'     : self.torch.zeros([len(node_set), self.downstream_task.static_features_size],  dtype = self.torch.int64),
+      'static_features'     : self.torch.zeros([len(node_set), self.downstream_task.static_features_size],  dtype = self.torch.float32),
       'runtime_features'    : self.torch.zeros([len(node_set), self.downstream_task.runtime_features_size], dtype = self.torch.int64),
       'posterior_probs'     : self.torch.zeros([len(node_set), self.downstream_task.output_size],           dtype = self.torch.float32),
       'aggregated_entropy'  : self.torch.zeros([len(node_set), self.downstream_task.output_size],           dtype = self.torch.float32),
