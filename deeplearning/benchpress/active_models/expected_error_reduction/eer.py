@@ -552,7 +552,7 @@ class ExpectedErrorReduction(backends.BackendBase):
 
       input_ids           = self.torch.reshape(input_ids,           (-1, input_ids.shape[-1]))
       static_features     = self.torch.reshape(static_features,     (-1, static_features.shape[-1]))
-      runtime_features    = self.torch.reshape(runtime_features,     (-1, runtime_features.shape[-1]))
+      runtime_features    = self.torch.reshape(runtime_features,    (-1, runtime_features.shape[-1]))
       posterior_probs     = self.torch.reshape(posterior_probs,     (-1, posterior_probs.shape[-1]))
       aggregated_entropy  = self.torch.reshape(aggregated_entropy,  (-1, aggregated_entropy.shape[-1]))
       expected_error_rate = self.torch.reshape(expected_error_rate, (-1, expected_error_rate.shape[-1]))
