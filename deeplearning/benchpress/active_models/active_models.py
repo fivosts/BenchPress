@@ -122,6 +122,7 @@ class Model(object):
       self.cache_path / "downstream_task",
       self.config.random_seed,
       hidden_state_size = hidden_state_size,
+      test_db = pathlib.Path(self.config.downstream_task.test_db).resolve() if self.config.downstream_task.HasField("test_set") else None
     )
 
     if environment.WORLD_RANK == 0:
