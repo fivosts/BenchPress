@@ -415,6 +415,7 @@ class torchBert(backends.BackendBase):
                         model     : typing.List['torch.nn.Module'],
                         inputs    : typing.Dict[str, 'torch.Tensor'],
                         iteration : int = None,
+                        extract_hidden_state : bool = False,
                         ) -> typing.Dict[str, typing.List[typing.List[int]]]:
     """
     Specialized forward function.
@@ -428,6 +429,9 @@ class torchBert(backends.BackendBase):
       'generated_samples': [], 'sample_indices': [],
       'input_ids': [], 'masked_lm_lengths': []
     }
+    if extract_hidden_state:
+      outputs['hidden_state'] = []
+
     if iteration is not None:
       desc = "Sampling iteration: {}".format(iteration)
     else:
@@ -437,7 +441,7 @@ class torchBert(backends.BackendBase):
     inputs = self.to_device(inputs)
     if environment.WORLD_RANK == 0:
       bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
-    samples, sample_indices = model(
+    samples, sample_indices, hidden_state = model(
       workload = (
         inputs['input_ids'],
         inputs['input_mask'],
@@ -445,17 +449,22 @@ class torchBert(backends.BackendBase):
         inputs['input_features'],
       ),
       bar = bar if environment.WORLD_RANK == 0 else None,
+      extract_hidden_state = extract_hidden_state,
     )
 
     outputs['generated_samples'] = samples.detach()
     outputs['sample_indices']    = sample_indices.detach()
     outputs['input_ids']         = self.torch.reshape(inputs['input_ids'], tuple(samples.shape))
     outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'].to(self.pytorch.device), (samples.shape[0], -1))
+    if extract_hidden_state:
+      outputs['extract_hidden_state'] = hidden_state.detach()
 
     outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
     outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
     outputs['input_ids']         = list(outputs['input_ids'].cpu().numpy())
     outputs['masked_lm_lengths'] = list(outputs['masked_lm_lengths'].cpu().numpy())
+    if extract_hidden_state:
+      outputs['hidden_state'] = list(outputs['hidden_state'].cpu().numpy())
 
     end = time.time()
     return outputs, end-start
