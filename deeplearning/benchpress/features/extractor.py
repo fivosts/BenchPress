@@ -20,6 +20,7 @@ import typing
 from deeplearning.benchpress.features import grewe
 from deeplearning.benchpress.features import instcount
 from deeplearning.benchpress.features import autophase
+from deeplearning.benchpress.features import hidden_state
 from deeplearning.benchpress.util import crypto
 
 from eupy.hermes import client
@@ -27,7 +28,8 @@ from eupy.hermes import client
 extractors = {
   'GreweFeatures'     : grewe.GreweFeatures,
   'InstCountFeatures' : instcount.InstCountFeatures,
-  'AutophaseFeatures' : autophase.AutophaseFeatures
+  'AutophaseFeatures' : autophase.AutophaseFeatures,
+  "HiddenState"       : hidden_state.HiddenStateFeatures,
 }
 
 def ExtractFeatures(src: str,
