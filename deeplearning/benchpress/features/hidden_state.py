@@ -78,7 +78,26 @@ class HiddenStateFeatures(object):
     Returns:
       Feature vector and diagnostics in str format.
     """
-    return LANGUAGE_MODEL.extract_hidden_state(src)
+    encoded = LANGUAGE_MODEL.train.data_generator._padToMaxPosition(
+      LANGUAGE_MODEL.train.data_generator._addStartEndToken(
+        [int(x) for x in tokenized]
+      )
+    )[:LANGUAGE_MODEL.train.data_generator.sampler.sequence_length]
+    input_ids = torch.LongTensor(encoded).unsqueeze(0).unsqueeze(0)
+    workload = {
+      'input_ids'         : input_ids,
+      'input_mask'        : (input_ids != LANGUAGE_MODEL.tokenizer.padToken),
+      'position_ids'      : torch.arange(len(encoded), dtype = torch.int64).unsqueeze(0).unsqueeze(0),
+      'mask_labels'       : torch.full(tuple(input_ids.shape), -100, dtype = torch.int64),
+      'masked_lm_lengths' : torch.full(tuple(1,1,1), -1, dtype = torch.int64)
+
+    }
+    return LANGUAGE_MODEL.sample_model_step(
+      LANGUAGE_MODEL.sample.model,
+      workload,
+      iteration = 0,
+      extract_hidden_states = True,
+    )['hidden_state']
 
   @classmethod
   def ExtractIRRawFeatures(cls, bytecode: str) -> str:
