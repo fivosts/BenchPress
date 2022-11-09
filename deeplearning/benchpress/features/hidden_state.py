@@ -71,33 +71,36 @@ class HiddenStateFeatures(object):
   @classmethod
   def ExtractRawFeatures(cls, src: str) -> typing.List[float]:
     """
-    Invokes clgen_features extractor on a single kernel.
+    Invokes BenchPress to collect hidden softmax activations.
 
     Params:
       src: (str) Kernel in string format.
     Returns:
       Feature vector and diagnostics in str format.
     """
-    encoded = LANGUAGE_MODEL.sample.data_generator._padToMaxPosition(
-      LANGUAGE_MODEL.sample.data_generator._addStartEndToken(
-        [int(x) for x in LANGUAGE_MODEL.tokenizer.TokenizeString(src)]
-      )
-    )[:LANGUAGE_MODEL.sample.data_generator.sampler.sequence_length]
-    input_ids = LANGUAGE_MODEL.torch.LongTensor(encoded).unsqueeze(0).unsqueeze(0)
-    workload = {
-      'input_ids'         : input_ids,
-      'input_mask'        : (input_ids != LANGUAGE_MODEL.tokenizer.padToken),
-      'position_ids'      : LANGUAGE_MODEL.torch.arange(len(encoded), dtype = LANGUAGE_MODEL.torch.int64).unsqueeze(0).unsqueeze(0),
-      'mask_labels'       : LANGUAGE_MODEL.torch.full(tuple(input_ids.shape), -100, dtype = LANGUAGE_MODEL.torch.int64),
-      'masked_lm_lengths' : LANGUAGE_MODEL.torch.full([1, 1, 1], -1, dtype = LANGUAGE_MODEL.torch.int64)
-
-    }
-    return LANGUAGE_MODEL.sample_model_step(
-      LANGUAGE_MODEL.sample.model,
-      workload,
-      iteration = 0,
-      extract_hidden_state = True,
-    )['hidden_state']
+    with LANGUAGE_MODEL.torch.no_grad():
+      encoded = LANGUAGE_MODEL.sample.data_generator._padToMaxPosition(
+        LANGUAGE_MODEL.sample.data_generator._addStartEndToken(
+          [int(x) for x in LANGUAGE_MODEL.tokenizer.TokenizeString(src)]
+        )
+      )[:LANGUAGE_MODEL.sample.data_generator.sampler.sequence_length]
+      input_ids = LANGUAGE_MODEL.torch.LongTensor(encoded).unsqueeze(0)
+      inputs = {
+        'input_ids'         : input_ids,
+        'input_mask'        : (input_ids != LANGUAGE_MODEL.tokenizer.padToken),
+        'position_ids'      : LANGUAGE_MODEL.torch.arange(len(encoded), dtype = LANGUAGE_MODEL.torch.int64).unsqueeze(0),
+        'mask_labels'       : LANGUAGE_MODEL.torch.full(tuple(input_ids.shape), -100, dtype = LANGUAGE_MODEL.torch.int64),
+        'masked_lm_lengths' : LANGUAGE_MODEL.torch.full([1, 1], -1, dtype = LANGUAGE_MODEL.torch.int64),
+        'input_features'    : None, ## TODO!
+      }
+      token_probs = LANGUAGE_MODEL.torch.sigmoid(LANGUAGE_MODEL.model_step(
+           LANGUAGE_MODEL.sample.model,
+           inputs,
+           is_validation = True,
+           extract_hidden_state = True,
+         )['prediction_logits'])
+      input_id_probs = token_probs[(0, range(inputs['input_ids'].shape[-1]), inputs['input_ids'].squeeze(0))]
+      return [float(x) for x in input_id_probs]
 
   @classmethod
   def ExtractIRRawFeatures(cls, bytecode: str) -> str:
