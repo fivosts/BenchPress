@@ -127,7 +127,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     """
     if not self.train:
       self._ConfigModelParams()
-      cm = model.MLP(self.model_config)
+      cm = model.MLP(self.model_config).to(self.pytorch.device)
       if self.pytorch.num_nodes > 1:
         distrib.barrier()
         cm = self.torch.nn.parallel.DistributedDataParallel(
@@ -159,7 +159,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     """
     if not self.sample:
       self._ConfigModelParams()
-      cm = model.MLP(self.model_config)
+      cm = model.MLP(self.model_config).to(self.pytorch.device)
       if self.pytorch.num_nodes > 1:
         distrib.barrier()
         cm = self.torch.nn.parallel.DistributedDataParallel(
@@ -222,7 +222,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         self.torch.cuda.empty_cache()
 
       if not update_estimator:
-        current_step = self.loadCheckpoint(self.train)
+        current_step = self.loadCheckpoint(train_estimator)
         if current_step >= 0:
           l.logger().info("EER: Loaded checkpoint step {}".format(current_step))
         current_step = max(0, current_step)
@@ -291,8 +291,6 @@ class ExpectedErrorReduction(backends.BackendBase):
 
             batch_iter = tqdm.tqdm(batch_iterator, desc="Batch", leave = False) if self.is_world_process_zero() else batch_iterator
             for inputs in batch_iter:
-              if self.is_world_process_zero():
-                start = datetime.datetime.utcnow()
 
               # Run model step on inputs
               step_out = self.model_step(train_estimator.model, inputs)
@@ -342,29 +340,86 @@ class ExpectedErrorReduction(backends.BackendBase):
                     current_step
                   )
                 )
-              train_hook.end_epoch()
+              epoch_accuracy = self.Validate()
+              train_hook.end_epoch(
+                val_test_set_accuracy = epoch_accuracy,
+              )
             if self.torch_tpu_available:
               self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
         except KeyboardInterrupt:
           pass
-      if update_estimator is None:
-        self.Validate()
     self.is_trained = True
     if self.pytorch.num_nodes > 1:
       self.torch.distributed.barrier()
     return
 
-  def Validate(self, **kwargs):
+  def Validate(self, **kwargs) -> int:
     """
     Run validation to measure accuracy on the downstream task's selected test set, if exists.
     """
     test_set = self.downstream_task.test_set
     if test_set:
-      #1. load checkpoint.
-      #2. run model on test set
-      #3. get accuracy metrics.
-      raise NotImplementedError
-    return
+      _ = self.loadCheckpoint(self.train)
+      self.train.model.zero_grad()
+
+      if self.pytorch.num_nodes <= 1:
+        sampler = self.torch.utils.data.SequentialSampler(test_set)
+      else:
+        sampler = self.torch.utils.data.DistributedSampler(
+          test_set,
+          num_replicas = self.pytorch.num_nodes,
+          rank         = self.pytorch.torch.distributed.get_rank()
+        )
+      loader = self.torch.utils.data.dataloader.DataLoader(
+        dataset    = test_set,
+        batch_size = self.training_opts.train_batch_size,
+        sampler    = (sampler
+          if not self.pytorch.torch_tpu_available or self.pytorch.torch_xla.xrt_world_size() <= 1
+          else self.torch.utils.data.distributed.DistributedSampler(
+            dataset      = test_set,
+            num_replicas = self.pytorch.num_nodes if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.xrt_world_size(),
+            rank         = self.pytorch.torch.distributed.get_rank() if not self.pytorch.torch_tpu_available else self.pytorch.torch_xla.get_ordinal()
+          )
+        ),
+        num_workers = 0,
+        drop_last   = False,
+      )
+      # Set dataloader in case of TPU training.
+      if self.torch_tpu_available:
+        loader = self.pytorch.torch_ploader.ParallelLoader(
+                            data_generator, [self.pytorch.device]
+                          ).per_device_loader(self.pytorch.device)
+      batch_iter = tqdm.tqdm(iter(loader), desc = "Test Set", leave = False if self.is_world_process_zero() else iter(loader))
+      accuracy = [0, 0]
+      with self.torch.no_grad():
+        self.train.model.eval()
+        loader.sampler.set_epoch(0)
+        for inputs in batch_iter:
+
+          step_out = self.model_step(self.train.model, inputs)
+
+          ## Collect tensors for logging.
+          if self.pytorch.num_nodes > 1:
+            output_label = [
+              self.torch.zeros(tuple(step_out['output_label'].shape), dtype = self.torch.int64).to(self.pytorch.device)
+              for _ in range(self.torch.distributed.get_world_size())
+            ]
+            target_ids = [
+              self.torch.zeros(tuple(inputs['target_ids'].shape), dtype = self.torch.int64).to(self.pytorch.device)
+              for _ in range(self.torch.distributed.get_world_size())
+            ]
+            self.torch.distributed.all_gather(output_label, step_out['output_label'])
+            self.torch.distributed.all_gather(target_ids, inputs['target_ids'].to(self.pytorch.device))
+          else:
+            output_label = step_out['output_label'].unsqueeze(0)
+            target_ids   = inputs  ['target_ids'].unsqueeze(0).to(self.pytorch.device)
+
+          accuracy[0] += int(self.torch.sum(output_label == target_ids).cpu())
+          accuracy[1] += int(output_label.shape[0])
+
+      epoch_accuracy = accuracy[0] / accuracy[1]
+      distrib.barrier()
+    return epoch_accuracy
 
   def Sample(self, sample_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
     """
