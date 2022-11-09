@@ -31,6 +31,7 @@ from deeplearning.benchpress.util import commit
 from deeplearning.benchpress.util import environment
 from deeplearning.benchpress.util import distrib
 from deeplearning.benchpress.features import extractor
+from deeplearning.benchpress.features import hidden_state
 from deeplearning.benchpress.corpuses import tokenizers
 from deeplearning.benchpress.corpuses import corpuses
 from deeplearning.benchpress.models import builders
