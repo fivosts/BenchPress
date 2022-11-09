@@ -735,22 +735,23 @@ class FeatureLessGrewe(GreweAbstract):
       self.rand_generator = np.random
       self.rand_generator.seed(self.random_seed)
 
-      data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU")]
-      test_data = []
-      pool = multiprocessing.Pool()
-      it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = self.feature_space), data)
+      if self.test_db:
+        data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU")]
+        test_data = []
+        pool = multiprocessing.Pool()
+        it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = self.feature_space), data)
 
-      for dp in data:
-        out = ExtractorWorker(dp, fspace = self.feature_space)
-        if out:
-          feats, entry = out
-          test_data.append(
-            (
-              self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
-              [self.TargetLabeltoID(entry.status)]
+        for dp in data:
+          out = ExtractorWorker(dp, fspace = self.feature_space)
+          if out:
+            feats, entry = out
+            test_data.append(
+              (
+                self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
+                [self.TargetLabeltoID(entry.status)]
+              )
             )
-          )
-      self.test_set = data_generator.ListTrainDataloader(test_data)
+        self.test_set = data_generator.ListTrainDataloader(test_data)
     return
 
   def sample_space(self, num_samples: int = 128) -> data_generator.DictPredictionDataloader:
