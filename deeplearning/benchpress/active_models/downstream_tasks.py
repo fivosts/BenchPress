@@ -328,7 +328,7 @@ class Grewe(GreweAbstract):
       self.dataset = []
       data = [x for x in self.corpus_db.get_valid_data(dataset = "GitHub")] ## TODO: Here you must get original training dataset instead of random github benchmarks.
       pool = multiprocessing.Pool()
-      it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = "GreweFeatures"), data)
+      it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = self.feature_space), data)
       idx = 0
       try:
         loop = tqdm.tqdm(it, total = len(data), desc = "Grewe corpus setup", leave = False) if environment.WORLD_RANK == 0 else it
@@ -680,6 +680,7 @@ class FeatureLessGrewe(GreweAbstract):
                random_seed       : int,
                hidden_state_size : int  = None,
                use_as_server     : bool = False,
+               test_db           : pathlib.Path = None,
                **unused_kwargs,
                ) -> None:
     del unused_kwargs
@@ -692,11 +693,20 @@ class FeatureLessGrewe(GreweAbstract):
       self.setup_server()
     else:
       ## Setup random seed np random stuff
+      self.dataset        = None
+      self.data_generator = None
       self.rand_generator = None
       self.gen_bounds = {
         'transferred_bytes': (1, 31), # 2**pow,
         'local_size'       : (1, 8),  # 2**pow,
       }
+      if test_db:
+        if test_db.exists():
+          self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)))
+        else:
+          raise FileNotFoundError(test_db)
+      else:
+        self.test_db = None
     self.hidden_state_size = hidden_state_size
     return
 
@@ -725,7 +735,22 @@ class FeatureLessGrewe(GreweAbstract):
       self.rand_generator = np.random
       self.rand_generator.seed(self.random_seed)
 
-    # self.test_set = TODO
+      data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU")]
+      test_data = []
+      pool = multiprocessing.Pool()
+      it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = self.feature_space), data)
+
+      for dp in data:
+        out = ExtractorWorker(dp, fspace = self.feature_space)
+        if out:
+          feats, entry = out
+          test_data.append(
+            (
+              self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
+              [self.TargetLabeltoID(entry.status)]
+            )
+          )
+      self.test_set = data_generator.ListTrainDataloader(test_data)
     return
 
   def sample_space(self, num_samples: int = 128) -> data_generator.DictPredictionDataloader:
