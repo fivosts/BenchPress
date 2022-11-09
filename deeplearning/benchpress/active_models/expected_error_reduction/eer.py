@@ -512,29 +512,6 @@ class ExpectedErrorReduction(backends.BackendBase):
         'aggregated_entropy'  : expected_losses['aggregated_entropy' ][idx],
         'expected_error_rate' : expected_losses['expected_error_rate'][idx],
       })
-
-    """
-    for datapoint in unlabelled:
-      avg_expected_loss['input_ids'] = datapoint['input_ids']
-
-      for target in self.downstream_task.target_labels:
-        out = model(datapoint['input_ids'])
-        p(y|x) = out['probs'][target]
-
-        new_dataset = self.downstream_task.labelled_dataset + (datappoint['target_ids'] = target)
-        
-        new_model = copy.deepcopy(model)
-        new_model.Train(new_dataset)
-
-        aggr_loss = 0.0
-        for other_dp in unlabelled:
-          for other_label in self.downstream_task.target_labels:
-            out = new_model(other_dp['input_ids'])
-            aggr_loss += LL[other_dp, other_label] = out['loss'][other_label]
-        expected_losses[datapoint] = aggr_loss * p(y|x)
-
-    to_be_labelled = keymin(expected_losses.values()) # Key with lowest value.
-    """
     return sorted(space_samples, key = lambda x: x['expected_error_rate'])
 
   def saveCheckpoint(self,
