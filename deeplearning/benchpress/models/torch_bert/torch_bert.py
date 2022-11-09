@@ -965,24 +965,23 @@ class torchBert(backends.BackendBase):
               else:
                 val = int(prompt)
               input_features[k] = val
-          if feat_space == "":
-            feat_space = "GreweFeatures"
-            input_features = {
-              k: -1 for k in extractor.extractors.KEYS[feat_space]
-            }
-            for k in input_features.keys():
-              if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
-                input_features[k] = int(np.random.poisson(8))
-            print(input_features)
-          if feat_space == "GreweFeatures":
-            try:
-              input_features["F2:coalesced/mem"] = input_features["coalesced"] / input_features["mem"]
-            except ZeroDivisionError:
-              input_features["F2:coalesced/mem"] = 0
-            try:
-              input_features["F4:comp/mem"] = input_features["comp"] / input_features["mem"]
-            except ZeroDivisionError:
-              input_features["F4:comp/mem"] = 0
+        elif self.feature_encoder and 'input_features' not in self.step_inputs:
+          feat_space = "GreweFeatures"
+          input_features = {
+            k: -1 for k in extractor.extractors.KEYS[feat_space]
+          }
+          for k in input_features.keys():
+            if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
+              input_features[k] = int(np.random.poisson(8))
+          print(input_features)
+          try:
+            input_features["F2:coalesced/mem"] = input_features["coalesced"] / input_features["mem"]
+          except ZeroDivisionError:
+            input_features["F2:coalesced/mem"] = 0
+          try:
+            input_features["F4:comp/mem"] = input_features["comp"] / input_features["mem"]
+          except ZeroDivisionError:
+            input_features["F4:comp/mem"] = 0
           self.step_inputs['input_features'] = self.feature_tokenizer.TokenizeFeatureVector(input_features, feat_space, self.feature_sequence_length)
         l.logger().warn(self.step_inputs)
         step_out, time = self.sample_model_step(
