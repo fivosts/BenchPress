@@ -847,6 +847,7 @@ class BertForPreTraining(BertPreTrainedModel):
         input_ids[0], attention_mask[0], position_ids[0], input_features[0] if input_features is not None else None,
       )
       bar = kwargs.get('bar', None)
+      extract_hidden_state = kwargs.get('extract_hidden_state', False)
       return self.compile_sampler.generateSampleWorkload(
         self,
         device,
@@ -856,6 +857,7 @@ class BertForPreTraining(BertPreTrainedModel):
         prediction_scores,
         position_ids[0],
         bar = bar,
+        extract_hidden_state = extract_hidden_state,
       )
 
     ## Otherwise select one other mode.
