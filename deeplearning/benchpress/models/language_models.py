@@ -81,6 +81,14 @@ class Model(object):
   can lead to bad things happening.
   """
   @property
+  def tokenizer(self) -> tokenizers.TokenizerBase:
+    return self.corpus.tokenizer
+
+  @property
+  def is_trained(self) -> bool:
+    return self.backend.is_trained
+
+  @property
   def hidden_state_size(self) -> int:
     return self.backend.hidden_state_size
 
@@ -328,6 +336,7 @@ class Model(object):
           telemetry_logs[-1].loss if FLAGS.select_checkpoint_step == -1 else telemetry_logs[FLAGS.select_checkpoint_step-1].loss,
           )
     )
+    hidden_state.setup_lm(self.backend)
     return self
 
   def Sample(
@@ -616,14 +625,6 @@ class Model(object):
       [self.cache.path / "tokenizer", self.cache.path / "META.pbtxt",]
       + self.backend.InferenceManifest()
     )
-
-  @property
-  def tokenizer(self) -> tokenizers.TokenizerBase:
-    return self.corpus.tokenizer
-
-  @property
-  def is_trained(self) -> bool:
-    return self.backend.is_trained
 
   def __repr__(self) -> str:
     """String representation."""
