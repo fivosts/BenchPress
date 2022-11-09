@@ -29,7 +29,7 @@ extractors = {
   'GreweFeatures'     : grewe.GreweFeatures,
   'InstCountFeatures' : instcount.InstCountFeatures,
   'AutophaseFeatures' : autophase.AutophaseFeatures,
-  "HiddenState"       : hidden_state.HiddenStateFeatures,
+  'HiddenState'       : hidden_state.HiddenStateFeatures,
 }
 
 def ExtractFeatures(src: str,
@@ -43,7 +43,7 @@ def ExtractFeatures(src: str,
   Returns a mapping between extractor type(string format) and feature data collected.
   """
   if not ext:
-    ext = list(extractors.keys())
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
   return {xt: extractors[xt].ExtractFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args) for xt in ext}
 
 def ExtractIRFeatures(bytecode: str,
@@ -56,7 +56,7 @@ def ExtractIRFeatures(bytecode: str,
   Works for LLVM-IR as an input.
   """
   if not ext:
-    ext = list(extractors.keys())
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
   return {xt: extractors[xt].ExtractIRFeatures(bytecode) for xt in ext}
 
 def ExtractRawFeatures(src: str,
@@ -70,7 +70,7 @@ def ExtractRawFeatures(src: str,
   Returns a mapping between extractor type(string format) and feature data collected.
   """
   if not ext:
-    ext = list(extractors.keys())
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
   if ext and not isinstance(ext, list):
     raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
   return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args)) for xt in ext])
@@ -85,7 +85,7 @@ def ExtractIRRawFeatures(bytecode: str,
   Works for LLVM-IR as an input.
   """
   if not ext:
-    ext = list(extractors.keys())
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
   if ext and not isinstance(ext, list):
     raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
   return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractIRRawFeatures(bytecode)) for xt in ext])
@@ -96,7 +96,7 @@ def RawToDictFeats(str_feats: str, ext: typing.List[str] = None) -> typing.Dict[
   Returns a mapping between extractor type(string format) and feature data collected.
   """
   if not ext:
-    ext = list(extractors.keys())
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
   if ext and not isinstance(ext, list):
     raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
   feats = {b.split(":\n")[0]: ''.join(b.split(':\n')[1:]) for b in str_feats.split('\n\n') if b.split(':\n')[1:]}
