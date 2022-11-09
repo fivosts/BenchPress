@@ -30,8 +30,9 @@ message ActiveLearner {
   }
   optional string downstream_task = 3;
   optional string training_corpus = 4;
-  optional int32  num_train_steps = 5;
-  optional int32  random_seed     = 6;
+  optional string test_db         = 5;
+  optional int32  num_train_steps = 6;
+  optional int32  random_seed     = 7;
 }
 
 // Committee is a list of models.
