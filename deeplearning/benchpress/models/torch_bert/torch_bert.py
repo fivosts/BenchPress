@@ -955,7 +955,7 @@ class torchBert(backends.BackendBase):
             elif feat_space == "i":
               feat_space = "InstCountFeatures"
           input_features = {
-            k: -1 for k in extractor.extractors.KEYS[feat_space]
+            k: -1 for k in extractor.extractors[feat_space].KEYS
           }
           for k in input_features.keys():
             if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
@@ -968,7 +968,7 @@ class torchBert(backends.BackendBase):
         elif self.feature_encoder and 'input_features' not in self.step_inputs:
           feat_space = "GreweFeatures"
           input_features = {
-            k: -1 for k in extractor.extractors.KEYS[feat_space]
+            k: -1 for k in extractor.extractors[feat_space].KEYS
           }
           for k in input_features.keys():
             if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
