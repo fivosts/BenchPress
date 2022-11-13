@@ -45,6 +45,10 @@ class GreweFeatures(object):
   "Portable Mapping of Data Parallel Programs to OpenCL for Heterogeneous Systems"
   by D.Grewe, Z.Wang and M.O'Boyle.
   """
+  @classmethod
+  def KEYS(cls: 'GreweFeatures') -> typing.List[str]:
+    return KEYS
+  
   def __init__(self):
     return
 
