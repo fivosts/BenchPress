@@ -945,44 +945,55 @@ class torchBert(backends.BackendBase):
           raise StopIteration
       else:
         if self.sampler.is_live and self.feature_encoder:
-          feat_space = ""
-          while feat_space not in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
-            feat_space = input("Select feature space: [g/a/i]/[GreweFeatures/AutophaseFeatures/InstCountFeatures]: ")
-            if feat_space == "a":
-              feat_space = "AutophaseFeatures"
-            elif feat_space == "g":
-              feat_space = "GreweFeatures"
-            elif feat_space == "i":
-              feat_space = "InstCountFeatures"
-          input_features = {
-            k: -1 for k in extractor.extractors[feat_space].KEYS()
-          }
-          for k in input_features.keys():
-            if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
-              prompt = input("{}: ".format(k))
-              if prompt == 0:
-                val = 0
-              else:
-                val = int(prompt)
-              input_features[k] = val
+          batch_features = []
+          for _ in range(self.sampler.batch_size):
+            feat_space = ""
+            while feat_space not in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
+              feat_space = input("Select feature space: [g/a/i]/[GreweFeatures/AutophaseFeatures/InstCountFeatures]: ")
+              if feat_space == "a":
+                feat_space = "AutophaseFeatures"
+              elif feat_space == "g":
+                feat_space = "GreweFeatures"
+              elif feat_space == "i":
+                feat_space = "InstCountFeatures"
+            input_features = {
+              k: -1 for k in extractor.extractors[feat_space].KEYS()
+            }
+            for k in input_features.keys():
+              if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
+                prompt = input("{}: ".format(k))
+                if prompt == 0:
+                  val = 0
+                else:
+                  val = int(prompt)
+                input_features[k] = val
+            batch_features.append(
+              self.feature_tokenizer.TokenizeFeatureVector(input_features, feat_space, self.feature_sequence_length)
+            )
+          self.step_inputs['input_features'] = self.torch.LongTensor(batch_features).unsqueeze(0)
         elif self.feature_encoder and 'input_features' not in self.step_inputs:
           feat_space = "GreweFeatures"
-          input_features = {
-            k: -1 for k in extractor.extractors[feat_space].KEYS()
-          }
-          for k in input_features.keys():
-            if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
-              input_features[k] = int(np.random.poisson(8))
-          print(input_features)
-          try:
-            input_features["F2:coalesced/mem"] = input_features["coalesced"] / input_features["mem"]
-          except ZeroDivisionError:
-            input_features["F2:coalesced/mem"] = 0
-          try:
-            input_features["F4:comp/mem"] = input_features["comp"] / input_features["mem"]
-          except ZeroDivisionError:
-            input_features["F4:comp/mem"] = 0
-          self.step_inputs['input_features'] = self.torch.LongTensor(self.feature_tokenizer.TokenizeFeatureVector(input_features, feat_space, self.feature_sequence_length))
+          batch_features = []
+          for _ in range(self.sampler.batch_size):
+            input_features = {
+              k: -1 for k in extractor.extractors[feat_space].KEYS()
+            }
+            for k in input_features.keys():
+              if k not in {"F2:coalesced/mem", "F4:comp/mem"}:
+                input_features[k] = int(np.random.poisson(8))
+            print(input_features)
+            try:
+              input_features["F2:coalesced/mem"] = input_features["coalesced"] / input_features["mem"]
+            except ZeroDivisionError:
+              input_features["F2:coalesced/mem"] = 0
+            try:
+              input_features["F4:comp/mem"] = input_features["comp"] / input_features["mem"]
+            except ZeroDivisionError:
+              input_features["F4:comp/mem"] = 0
+            batch_features.append(
+              self.feature_tokenizer.TokenizeFeatureVector(input_features, feat_space, self.feature_sequence_length)
+            )
+          self.step_inputs['input_features'] = self.torch.LongTensor(batch_features).unsqueeze(0)
         l.logger().warn(self.step_inputs)
         step_out, time = self.sample_model_step(
             self.sample.model,
