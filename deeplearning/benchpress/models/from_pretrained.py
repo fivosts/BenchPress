@@ -116,7 +116,8 @@ class PreTrainedModel(object):
       if not (self.language_model.cache.path / "checkpoints" / "checkpoint.meta").exists():
         with open(self.language_model.cache.path / "checkpoints" / "checkpoint.meta", 'w') as outf:
           outf.write("train_step: 0")
-    distrib.barrier()
+    if environment.WORLD_SIZE > 1:
+      distrib.barrier()
     return
 
   def Sample(self,
