@@ -1126,13 +1126,13 @@ class torchBert(backends.BackendBase):
       try:
         if without_label_head:
           new_state_dict = OrderedDict()
-          for k, v in self.torch.load(ckpt_comp("model")).items():
+          for k, v in self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
           estimator.model.module.load_state_dict(new_state_dict, strict = False)
         else:
           estimator.model.module.load_state_dict(
-            self.torch.load(ckpt_comp("model")),
+            self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device),
             strict = False if is_decoder else True,
           )
       except RuntimeError:
@@ -1145,7 +1145,7 @@ class torchBert(backends.BackendBase):
         single to multiple GPUs will mean that 'module.' prefix is missing
         """
         new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("model")).items():
+        for k, v in self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
@@ -1157,13 +1157,13 @@ class torchBert(backends.BackendBase):
       try:
         if without_label_head:
           new_state_dict = OrderedDict()
-          for k, v in self.torch.load(ckpt_comp("model")).items():
+          for k, v in self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
           estimator.model.load_state_dict(new_state_dict, strict = False)
         else:
           estimator.model.load_state_dict(
-            self.torch.load(ckpt_comp("model")),
+            self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device),
             strict = False if is_decoder else True,
           )
       except RuntimeError:
@@ -1176,7 +1176,7 @@ class torchBert(backends.BackendBase):
         single to multiple GPUs will mean that 'module.' prefix is missing
         """
         new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("model")).items():
+        for k, v in self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
