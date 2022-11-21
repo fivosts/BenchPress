@@ -152,6 +152,8 @@ class PreTrainedModel(object):
       FLAGS.sample_indices_limit = sample_indices_limit
 
     self.language_model.Create()
+    if pretrained.language_model.backend.pytorch.num_gpus == 0:
+      l.logger().warn("No GPUs detected. This process is going to be *very* slow on the CPU.")
     if "[START]" in prompt or "[END]" in prompt:
       l.logger().error("Do not add [START] and [END] manually. They will be added automatically by the tokenizer.")
       return ""
