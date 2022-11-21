@@ -903,14 +903,14 @@ class torchBert(backends.BackendBase):
         ## I think this dictionary holds tensors of the following size:
         ## [num_gpus x batch_size x seq_len] if only one node works.
         ## Otherwise, [1 x batch_size x seq_len] since each process manages its own GPU.
-        padded_wsize = self.pytorch.num_gpus if environment.WORLD_SIZE == 1 else 1
+        padded_wsize = self.pytorch.num_gpus if environment.WORLD_SIZE == 1 and self.pytorch.num_gpus > 1 else 1
       else:
         ## If a workload is specified, then after you pad to the dimension of GPU or num processes
         ## Divide the size by GPU size or num processes size.
         padded_wsize = (
           (max(1, workload_size // (self.pytorch.num_gpus * sampler.batch_size))) * self.pytorch.num_gpus
-          if environment.WORLD_SIZE == 1
-          else (workload_size // (self.pytorch.num_nodes * sampler.batch_size)) * self.pytorch.num_nodes)
+          if environment.WORLD_SIZE == 1 and self.pytorch.num_gpus > 1
+          else max(1, (workload_size // (self.pytorch.num_nodes * sampler.batch_size)) * self.pytorch.num_nodes))
       self.step_inputs = {
         x: inputs[x].unsqueeze(0).repeat(padded_wsize, 1, 1)
         for x in inputs
@@ -994,7 +994,6 @@ class torchBert(backends.BackendBase):
               self.feature_tokenizer.TokenizeFeatureVector(input_features, feat_space, self.feature_sequence_length)
             )
           self.step_inputs['input_features'] = self.torch.LongTensor(batch_features).unsqueeze(0)
-        l.logger().warn(self.step_inputs)
         step_out, time = self.sample_model_step(
             self.sample.model,
             self.step_inputs,
@@ -1126,13 +1125,13 @@ class torchBert(backends.BackendBase):
       try:
         if without_label_head:
           new_state_dict = OrderedDict()
-          for k, v in self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device).items():
+          for k, v in self.torch.load(ckpt_comp("model")).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
           estimator.model.module.load_state_dict(new_state_dict, strict = False)
         else:
           estimator.model.module.load_state_dict(
-            self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device),
+            self.torch.load(ckpt_comp("model")),
             strict = False if is_decoder else True,
           )
       except RuntimeError:
@@ -1145,7 +1144,7 @@ class torchBert(backends.BackendBase):
         single to multiple GPUs will mean that 'module.' prefix is missing
         """
         new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device).items():
+        for k, v in self.torch.load(ckpt_comp("model")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
@@ -1157,13 +1156,13 @@ class torchBert(backends.BackendBase):
       try:
         if without_label_head:
           new_state_dict = OrderedDict()
-          for k, v in self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device).items():
+          for k, v in self.torch.load(ckpt_comp("model")).items():
             if "cls.predictions." not in k:
               new_state_dict[k] = v
           estimator.model.load_state_dict(new_state_dict, strict = False)
         else:
           estimator.model.load_state_dict(
-            self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device),
+            self.torch.load(ckpt_comp("model")),
             strict = False if is_decoder else True,
           )
       except RuntimeError:
@@ -1176,7 +1175,7 @@ class torchBert(backends.BackendBase):
         single to multiple GPUs will mean that 'module.' prefix is missing
         """
         new_state_dict = OrderedDict()
-        for k, v in self.torch.load(ckpt_comp("model"), map_location = self.pytorch.device).items():
+        for k, v in self.torch.load(ckpt_comp("model"), map_location = lambda storage, loc: storage).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
           else:
