@@ -72,8 +72,8 @@ def GetPreprocessorFunction(name: str) -> public.PreprocessorFunction:
   and returns a str. The name is in the form <module>:<name>, where <name> is
   the name of a python function, and <module> is either a fully qualified module
   name, or an absolute path to the module file. For example, the name
-  'deeplearning.clgen.preprocessors.cxx:Compile' will return the function
-  'Compile' in the module 'deeplearning.clgen.preprocessors.cxx'. The name
+  'deeplearning.benchpress.preprocessors.cxx:Compile' will return the function
+  'Compile' in the module 'deeplearning.benchpress.preprocessors.cxx'. The name
   '/tmp/my_preprocessors.py:Transform' will return the function Transform() in
   the module defined at '/tmp/my_preprocessors.py'.
 

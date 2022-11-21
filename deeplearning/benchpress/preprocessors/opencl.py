@@ -241,9 +241,9 @@ def RunCLDrive(src: str,
   except Exception:
     tdir = None
 
-  with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_cldrive", suffix = '.cl', dir = tdir) as f:
+  with tempfile.NamedTemporaryFile("w", prefix="benchpress_opencl_cldrive", suffix = '.cl', dir = tdir) as f:
     if header_file:
-      with tempfile.NamedTemporaryFile("w", prefix="clgen_opencl_clheader", suffix = '.h', dir = tdir) as hf:
+      with tempfile.NamedTemporaryFile("w", prefix="benchpress_opencl_clheader", suffix = '.h', dir = tdir) as hf:
         f.write("#include \"{}\"\n{}".format(pathlib.Path(hf.name).resolve().name, src))
         f.flush()
         hf.write(header_file)

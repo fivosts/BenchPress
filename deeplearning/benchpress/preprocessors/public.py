@@ -20,7 +20,7 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
-# Type hint for a preprocessor function. See @clgen_preprocess for details.
+# Type hint for a preprocessor function. See @benchpress_preprocess for details.
 PreprocessorFunction = typing.Callable[[str], str]
 
 
