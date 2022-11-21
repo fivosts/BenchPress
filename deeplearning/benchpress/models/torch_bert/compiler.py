@@ -324,11 +324,11 @@ class CompilationSampler(object):
 
     # Workload of input_ids and attention_mask pairs.
     # queue input_idxs ensure direct ordering from inputs -> outputs.
-    queue_input_ids      = torch.reshape(workload_input_ids, (1, nseq, sequence_length)).squeeze()
+    queue_input_ids      = torch.reshape(workload_input_ids, (1, nseq, sequence_length)).squeeze(0)
     queue_input_idxs     = torch.arange(nseq).to(device)
-    queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze()
+    queue_attention_mask = torch.reshape(workload_attention_mask, (1, nseq, sequence_length)).squeeze(0)
     if workload_input_features is not None:
-      queue_input_features = torch.reshape(workload_input_features, (1, nseq, feature_sequence_length)).squeeze()
+      queue_input_features = torch.reshape(workload_input_features, (1, nseq, feature_sequence_length)).squeeze(0)
 
     #! This is the return queue [nseq x sequence_length].
     queue = torch.zeros(tuple(queue_input_ids.shape), dtype = torch.int64).to(device)
