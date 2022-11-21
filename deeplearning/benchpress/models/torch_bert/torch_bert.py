@@ -916,6 +916,9 @@ class torchBert(backends.BackendBase):
         for x in inputs
       }
 
+      l.logger().error(workload_size)
+      l.logger().error([x.shape for y, x in self.step_inputs.items()])
+
       # This loop below is purely for proper printing reasons:
       sample_text = set(
         [self.tokenizer.tokensToString(
