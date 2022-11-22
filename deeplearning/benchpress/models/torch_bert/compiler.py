@@ -419,6 +419,7 @@ class CompilationSampler(object):
         dtype = torch.float32,
       ).to(device)
       for widx in range(wload_size):
+        raise NotImplementedError
         prediction_scores, _, _, _ = model.get_output(
           queue[widx*batch_size: (widx+1)*batch_size],
           (queue[widx*batch_size: (widx+1)*batch_size] != self.tokenizer.padToken),

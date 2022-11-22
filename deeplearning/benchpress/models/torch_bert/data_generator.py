@@ -804,7 +804,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
             estimator.model,
             inputs,
             iteration = it,
-            extract_hidden_state = True,
+            extract_hidden_state = True if self.feat_sampler.feature_space == "HiddenState" else False,
           )
           ## Post-process outputs.
           # Keep step_candidates and evaluate them. Keep rejected candidates only for eval_cand database.
