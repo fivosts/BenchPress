@@ -37,6 +37,7 @@ from deeplearning.benchpress.proto import benchpress_pb2
 from deeplearning.benchpress.util import environment
 from deeplearning.benchpress.util import distrib
 from deeplearning.benchpress.util import pbutil
+from deeplearning.benchpress.util import pytorch
 from deeplearning.benchpress.util import logging as l
 
 from absl import app, flags
@@ -116,7 +117,10 @@ class PreTrainedModel(object):
       if not (self.language_model.cache.path / "checkpoints" / "checkpoint.meta").exists():
         with open(self.language_model.cache.path / "checkpoints" / "checkpoint.meta", 'w') as outf:
           outf.write("train_step: 0")
-    distrib.barrier()
+    if environment.WORLD_SIZE > 1:
+      distrib.barrier()
+    if pytorch.num_gpus == 0:
+      l.logger().warn("No GPUs detected. This process is going to be *very* slow on the CPU.")
     return
 
   def Sample(self,
