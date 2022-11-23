@@ -57,6 +57,8 @@ message Sampler {
   // would like to have symmetrical token depth counters for two pairs of
   // tokens.
   repeated SampleTerminationCriterion termination_criteria = 10;
+  // A message describing the experiment of this sampler.
+  optional string description = 11;
 }
 
 // Specification of a new sample corpus to get feeds from.
