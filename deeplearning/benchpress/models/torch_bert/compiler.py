@@ -415,7 +415,7 @@ class CompilationSampler(object):
     final_hidden_state = None
     if extract_hidden_state:
       final_hidden_state = torch.zeros(
-        [queue.shape[0], model.config.hidden_size],
+        [queue.shape[0], model.config.max_position_embeddings],
         dtype = torch.float32,
       ).to(device)
       for widx in range(wload_size):
