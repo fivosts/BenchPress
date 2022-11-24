@@ -138,6 +138,7 @@ def DriveSource(src        : str,
                 feats      : typing.Dict[str, float],
                 cldrive_db : cldrive.CLDriveExecutions,
                 name       : str = None,
+                no_cache   : bool = False,
                 extra_args : typing.List[str] = [],
                 ) -> typing.Generator:
   """
@@ -167,7 +168,26 @@ def DriveSource(src        : str,
 
       sha = crypto.sha256_str(include + src + group_name + str(gsize) + str(lsize))
       if sha in cldrive_db.status_cache:
-        cached = cldrive_db.get_entry(src, group_name, gsize, lsize, include = include)
+        if no_cache:
+          cached = cldrive_db.update_and_get(
+            src,
+            feats,
+            group_name,
+            gsize,
+            lsize,
+            num_runs = 10000,
+            timeout = 60,
+            include = include,
+            extra_args = extra_args
+          )
+        else:
+          cached = cldrive_db.get_entry(
+            src,
+            group_name,
+            gsize,
+            lsize,
+            include = include
+          )
         if cached.status in {"CPU", "GPU"}:
           yield ToDataFrameRow(
             name                 = "{}.cl".format(sha) if name is None else name,
@@ -184,8 +204,25 @@ def DriveSource(src        : str,
         else:
           yield None
       else:
-        df, label = opencl.CLDriveDataFrame(src, header_file = include, num_runs = 1000, gsize = gsize, lsize = lsize, extra_args = extra_args, timeout = 60)
-        cldrive_db.add_entry(src, feats, group_name, label, gsize, lsize, df, include = include)
+        df, label = opencl.CLDriveDataFrame(
+          src,
+          header_file = include,
+          num_runs = 10000,
+          gsize = gsize,
+          lsize = lsize,
+          extra_args = extra_args,
+          timeout = 60
+        )
+        cldrive_db.add_entry(
+          src,
+          feats,
+          group_name,
+          label,
+          gsize,
+          lsize,
+          df,
+          include = include
+        )
         if label not in {"CPU", "GPU"}:
           yield None
         else:
@@ -579,7 +616,7 @@ def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathl
   cldrive_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(pathlib.Path(cldrive_path).resolve()), must_exist = False)
   for k in gpgpu_benchmarks:
     name = '-'.join(str(k.path).split("gpgpu/")[-1].split('/'))
-    for row in DriveSource(k.contents, "", "GPGPU_benchmarks", k.features, cldrive_db, name = name):
+    for row in DriveSource(k.contents, "", "GPGPU_benchmarks", k.features, cldrive_db, name = name, no_cache = True):
       if row:
         datapoints.append(row)
   frame = pd.DataFrame(datapoints, columns = DataFrameSchema())
