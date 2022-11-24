@@ -256,7 +256,7 @@ class CLDriveExecutions(sqlutil.Database):
           return None
     except Exception as e:
       l.logger().error(e)
-    return
+    return None
 
   def update_and_get(self,
                      src            : str,
