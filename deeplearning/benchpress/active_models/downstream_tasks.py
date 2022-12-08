@@ -639,7 +639,7 @@ class Grewe(GreweAbstract):
     except ZeroDivisionError:
       i2 = 0.0
     try:
-      i3 = static_feats['localmem'] / (static_feats['mem'] * local_size)
+      i3 = (static_feats['localmem'] / static_feats['mem']) * local_size
     except ZeroDivisionError:
       i3 = 0.0
     try:
