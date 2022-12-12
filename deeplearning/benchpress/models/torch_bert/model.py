@@ -913,7 +913,7 @@ class BertForPreTraining(BertPreTrainedModel):
     else:
       if masked_lm_labels is not None and extract_hidden_state is False:
         loss_fct = torch.nn.CrossEntropyLoss()
-        masked_lm_loss     = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
+        masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
         total_loss = masked_lm_loss
       else:
         masked_lm_loss, total_loss = None, None
