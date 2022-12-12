@@ -427,9 +427,9 @@ class CompilationSampler(object):
         ) ## Feature directed model will not work here.
         final_hidden_state[widx*batch_size: (widx+1)*batch_size] = prediction_scores[
           :,
-          sequence_length,
+          range(sequence_length),
           queue[widx*batch_size: (widx+1)*batch_size]
-        ][sequence_length, sequence_length]
+        ][range(batch_size), range(batch_size)]
     return queue, sample_indices, final_hidden_state
 
   def StepHoleSeq(self,
