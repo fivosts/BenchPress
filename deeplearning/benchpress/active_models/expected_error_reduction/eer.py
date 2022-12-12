@@ -257,7 +257,7 @@ class ExpectedErrorReduction(backends.BackendBase):
             )
           ),
           num_workers = 0,
-          drop_last   = False if self.torch.distributed.get_world_size() == 1 else True,
+          drop_last   = False if environment.WORLD_SIZE == 1 else True,
         )
         # Set dataloader in case of TPU training.
         if self.torch_tpu_available:
@@ -441,8 +441,8 @@ class ExpectedErrorReduction(backends.BackendBase):
     current_step = max(0, current_step)
 
     ## If DDP, each node will work separately on chunks of the unlabelled dataset.
-    node_size = len(sample_set) // self.torch.distributed.get_world_size()
-    node_rem  = len(sample_set) % self.torch.distributed.get_world_size()
+    node_size = len(sample_set) // environment.WORLD_SIZE
+    node_rem  = len(sample_set) % environment.WORLD_SIZE
     node_set  = sample_set.get_sliced_subset(environment.WORLD_RANK * node_size, (1 + environment.WORLD_RANK) * node_size)
     if environment.WORLD_RANK == environment.WORLD_SIZE - 1 and node_rem > 0:
       node_set += sample_set.get_sliced_subset((1 + environment.WORLD_RANK) * node_size)
