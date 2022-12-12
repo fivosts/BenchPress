@@ -21,6 +21,8 @@ import typing
 
 from absl import flags
 
+from deeplearning.benchpress.util import pytorch
+from deeplearning.benchpress.util.pytorch import torch
 from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
@@ -66,6 +68,7 @@ class HiddenStateFeatures(object):
     """
     Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
     """
+    raise NotImplementedError("I must not be called.")
     return {}
 
   @classmethod
@@ -107,14 +110,16 @@ class HiddenStateFeatures(object):
     """
     Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
     """
+    raise NotImplementedError("I must not be called.")
     return ""
 
   @classmethod
-  def RawToDictFeats(cls, raw_feats: typing.List[float]) -> typing.Dict[str, float]:
+  def RawToDictFeats(cls, hidden_states: typing.List[float]) -> typing.Dict[str, float]:
     """
     Converts clgen_features subprocess output from raw string
     to a mapped dictionary of feature -> value.
     """
+    normalized = torch.sigmoid(torch.FloatTensor(hidden_states))
     return {
-      "f{}".format(k): v for k, v in zip(KEYS, raw_feats)
+      "f{}".format(k): v for k, v in zip(KEYS, normalized)
     }
