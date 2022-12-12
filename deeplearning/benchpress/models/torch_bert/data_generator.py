@@ -269,7 +269,7 @@ def hidden_state_candidate_worker(sample           : np.array,
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     _ = opencl.Compile(code)
-    features = extractor.RawToDictFeats(code, [feature_space])[feature_space]
+    features = extractor.RawToDictFeats(hidden_state, [feature_space])[feature_space]
     return (True, ActiveSample(
       sample_feed = feed,
       sample      = sample,
