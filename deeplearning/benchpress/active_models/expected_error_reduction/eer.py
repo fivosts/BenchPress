@@ -487,7 +487,16 @@ class ExpectedErrorReduction(backends.BackendBase):
 
         extended_dataset = self.downstream_task.data_generator + extended_datapoint
         ## Copy the model to a temp one.
-        new_model = model.MLP(self.model_config)
+        new_model = model.MLP(self.model_config).to(self.pytorch.device)
+        if self.pytorch.num_nodes > 1:
+          distrib.barrier()
+          new_model = self.torch.nn.parallel.DistributedDataParallel(
+            new_model,
+            device_ids    = [self.pytorch.offset_device],
+            output_device = self.pytorch.offset_device,
+          )
+        elif self.pytorch.num_gpus > 1:
+          new_model = self.torch.nn.DataParallel(new_model)
         new_model.load_state_dict(self.sample.model.state_dict())
 
         if self.pytorch.num_nodes <= 1 and self.pytorch.num_gpus > 1:
