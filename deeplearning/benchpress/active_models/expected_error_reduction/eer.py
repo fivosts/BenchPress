@@ -536,7 +536,7 @@ class ExpectedErrorReduction(backends.BackendBase):
           for unl_batch in iter(loader):
             for target_id_batch in target_ids:
               out = self.model_step(new_model, {'input_ids': unl_batch['input_ids'], 'target_ids': target_id_batch}, is_sampling = False)
-              aggr_entropy += out['total_loss']
+              aggr_entropy += out['total_loss'].mean()
         node_losses['aggregated_entropy'][idx][out_label] = aggr_entropy
 
       node_losses['expected_error_rate'][idx] = sum(
