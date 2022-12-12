@@ -459,7 +459,7 @@ class torchBert(backends.BackendBase):
     outputs['input_ids']         = self.torch.reshape(inputs['input_ids'], tuple(samples.shape))
     outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'].to(self.pytorch.device), (samples.shape[0], -1))
     if extract_hidden_state:
-      outputs['extract_hidden_state'] = hidden_state.detach()
+      outputs['hidden_state'] = hidden_state.detach()
 
     outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
     outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
