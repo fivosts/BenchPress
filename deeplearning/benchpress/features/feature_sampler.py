@@ -341,7 +341,7 @@ class ActiveSampler(FeatureSampler):
 
   def sample_active_learner(self,
                             keep_top_k  : int = 1,
-                            num_samples : int = 16384,
+                            num_samples : int = None,
                             ) -> typing.List[Benchmark]:
     """
     Sample active learner for num_samples and sort by highest entropy.
