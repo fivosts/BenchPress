@@ -425,8 +425,11 @@ class CompilationSampler(object):
           position_ids[:batch_size],
           None,
         ) ## Feature directed model will not work here.
-        final_hidden_state[widx*batch_size: (widx+1)*batch_size] = torch.argmax(prediction_scores, dim = -1).squeeze(-1)
-
+        final_hidden_state[widx*batch_size: (widx+1)*batch_size] = prediction_scores[
+          :,
+          sequence_length,
+          queue[widx*batch_size: (widx+1)*batch_size]
+        ][sequence_length, sequence_length]
     return queue, sample_indices, final_hidden_state
 
   def StepHoleSeq(self,
