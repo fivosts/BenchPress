@@ -751,6 +751,7 @@ class FeatureLessGrewe(GreweAbstract):
                 [self.TargetLabeltoID(entry.status)]
               )
             )
+        pool.close()
         self.test_set = data_generator.ListTrainDataloader(test_data)
     return
 
