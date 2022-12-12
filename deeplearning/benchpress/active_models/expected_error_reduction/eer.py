@@ -490,17 +490,17 @@ class ExpectedErrorReduction(backends.BackendBase):
         new_model = model.MLP(self.model_config).to(self.pytorch.device)
         if self.pytorch.num_nodes > 1:
           distrib.barrier()
+          new_model.load_state_dict(self.sample.model.module.state_dict())
           new_model = self.torch.nn.parallel.DistributedDataParallel(
             new_model,
             device_ids    = [self.pytorch.offset_device],
             output_device = self.pytorch.offset_device,
           )
         elif self.pytorch.num_gpus > 1:
+          new_model.load_state_dict(self.sample.model.module.state_dict())
           new_model = self.torch.nn.DataParallel(new_model)
-        new_model.load_state_dict(self.sample.model.state_dict())
-
-        if self.pytorch.num_nodes <= 1 and self.pytorch.num_gpus > 1:
-          new_model = self.torch.nn.DataParallel(new_model)
+        else:
+          new_model.load_state_dict(self.sample.model.state_dict())
 
         ## Define optimizer, scheduler for training regime.
         opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
