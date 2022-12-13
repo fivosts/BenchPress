@@ -99,7 +99,7 @@ def RawToDictFeats(str_feats: typing.Union[str, typing.List[float]], ext: typing
     ext = [k for k in extractors.keys() if k != 'HiddenState']
   if ext and not isinstance(ext, list):
     raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
-  if ext != 'HiddenState':
+  if ext != ['HiddenState']:
     feats = {b.split(":\n")[0]: ''.join(b.split(':\n')[1:]) for b in str_feats.split('\n\n') if b.split(':\n')[1:]}
   else:
     feats = {ext: str_feats}
