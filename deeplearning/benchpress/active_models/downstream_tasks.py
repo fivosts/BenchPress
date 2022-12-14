@@ -220,6 +220,19 @@ class GreweAbstract(DownstreamTask):
       k: v for k, v in zip(self.input_labels, input_ids)
     }
 
+  def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
+    """
+    End of LM generation's epoch hook.
+    """
+    if FLAGS.use_http_server:
+      serialized = []
+      for cand in candidates:
+        serialized.append(
+          ActiveSample_to_JSON(cand)
+        )
+      http_server.client_put_request(serialized)
+    return
+
   def saveCheckpoint(self) -> None:
     """
     Store data generator.
@@ -608,19 +621,6 @@ class Grewe(GreweAbstract):
         )
         samples_hash.add(str(inp_ids))
     return data_generator.DictPredictionDataloader(samples)
-
-  def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
-    """
-    End of LM generation's epoch hook.
-    """
-    if FLAGS.use_http_server:
-      serialized = []
-      for cand in candidates:
-        serialized.append(
-          ActiveSample_to_JSON(cand)
-        )
-      http_server.client_put_request(serialized)
-    return
 
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
