@@ -410,7 +410,7 @@ class TSNEMonitor(Monitor):
       # Nothing to plot.
       return
     tsne = sklearn.manifold.TSNE(
-      perplexity = min(30, len(self.features)),
+      perplexity = min(30, len(self.features) - 1),
     )
     embeddings = tsne.fit_transform(np.array(self.features))
     groupped_data = {}
