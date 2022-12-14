@@ -121,5 +121,5 @@ class HiddenStateFeatures(object):
     """
     normalized = torch.sigmoid(torch.FloatTensor(hidden_states))
     return {
-      "f{}".format(k): v for k, v in zip(KEYS, normalized)
+      "{}".format(k): float(v) for k, v in zip(KEYS, normalized)
     }
