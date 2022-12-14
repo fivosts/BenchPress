@@ -102,6 +102,6 @@ def RawToDictFeats(str_feats: typing.Union[str, typing.List[float]], ext: typing
   if ext != ['HiddenState']:
     feats = {b.split(":\n")[0]: ''.join(b.split(':\n')[1:]) for b in str_feats.split('\n\n') if b.split(':\n')[1:]}
   else:
-    feats = {ext: str_feats}
+    feats = {ext[0]: str_feats}
   return {xt: extractors[xt].RawToDictFeats(feat) for xt, feat in feats.items()}
 
