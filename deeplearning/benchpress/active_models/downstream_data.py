@@ -218,7 +218,7 @@ class GreweInstance(Base, sqlutil.ProtoBackedMixin):
                 sampling_epoch  : int,
                 target_features : typing.Dict[str, float],
                 tokenizer       : 'tokenizers.TokenizerBase',
-                ) -> typing.List[GreweInstance]:
+                ) -> typing.List['GreweInstance']:
     instances = []
     for sample in batch:
       src = tokenizer.ArrayToCode(sample.sample)
@@ -386,7 +386,7 @@ class FeatureLessGreweInstance(Base, sqlutil.ProtoBackedMixin):
                 sampling_epoch  : int,
                 target_features : typing.Dict[str, float],
                 tokenizer       : 'tokenizers.TokenizerBase',
-                ) -> typing.List[FeatureLessGreweInstance]:
+                ) -> typing.List['FeatureLessGreweInstance']:
     instances = []
     for sample, grewe_feats in batch.items():
       src = tokenizer.ArrayToCode(sample.sample)
