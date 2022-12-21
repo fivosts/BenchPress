@@ -449,7 +449,7 @@ class DownstreamData(sqlutil.Database):
     """
     instances = self.task_type.add_epoch(batch, sampling_epoch, target_features, tokenizer)
     with self.Session(commit = True) as ses:
-      for ent in instances:
+      for instance in instances:
         entry = ses.query(self.task_type).filter_by(sha256 = instance.sha256).first()
         if entry is None:
           ses.add(instance)
