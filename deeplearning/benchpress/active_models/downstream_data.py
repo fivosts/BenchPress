@@ -344,7 +344,7 @@ class FeatureLessGreweInstance(Base, sqlutil.ProtoBackedMixin):
       + str(global_size)
       + str(oracle)
     )
-    return GreweInstance(**{
+    return FeatureLessGreweInstance(**{
       "src"                : src,
       "sampling_epoch"     : sampling_epoch,
       "sha256"             : sha,
