@@ -797,7 +797,8 @@ class FeatureLessGrewe(GreweAbstract):
       for sample in new_samples:
         key = ','.join([str(x) for x in sample.sample])
         if key not in memo:
-          memo[key] = extractor.ExtractFeatures(sample.sample, ["GreweFeatures"])["GreweFeatures"]
+          src = tokenizer.ArrayToCode(sample.sample)
+          memo[key] = extractor.ExtractFeatures(src, ["GreweFeatures"])["GreweFeatures"]
         extended_samples.append(sample, memo[key])
       self.downstream_data.add_epoch(
         extended_samples, cur_sample_ep, target_features, tokenizer
