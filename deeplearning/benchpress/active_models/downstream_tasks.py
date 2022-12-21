@@ -701,7 +701,8 @@ class FeatureLessGrewe(GreweAbstract):
       }
       if test_db:
         if test_db.exists():
-          self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)))
+          # self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)))
+          self.test_db = None
         else:
           raise FileNotFoundError(test_db)
       else:
