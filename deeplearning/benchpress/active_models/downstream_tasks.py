@@ -366,22 +366,6 @@ class GreweAbstract(DownstreamTask):
             return new_samples
       return new_samples
 
-  def UpdateDownstreamDatabase(self,
-                               new_samples     : typing.List[typing.Dict[str, typing.Any]],
-                               target_features : typing.Dict[str, float],
-                               tokenizer       : 'tokenizers.TokenizerBase',
-                               ) -> None:
-    """
-    Update exported database of downstream task.
-    """
-    if environment.WORLD_RANK == 0:
-      cur_sample_ep = self.downstream_data.sampling_epoch
-      self.downstream_data.add_epoch(
-        new_samples, cur_sample_ep, target_features, tokenizer
-      )
-    distrib.barrier()
-    return
-
   def UpdateDataGenerator(self,
                           new_samples     : typing.List['ActiveSample'],
                           target_features : typing.Dict[str, float],
@@ -586,6 +570,22 @@ class Grewe(GreweAbstract):
       self.saveCheckpoint()
     return
 
+  def UpdateDownstreamDatabase(self,
+                               new_samples     : typing.List[typing.Dict[str, typing.Any]],
+                               target_features : typing.Dict[str, float],
+                               tokenizer       : 'tokenizers.TokenizerBase',
+                               ) -> None:
+    """
+    Update exported database of downstream task.
+    """
+    if environment.WORLD_RANK == 0:
+      cur_sample_ep = self.downstream_data.sampling_epoch
+      self.downstream_data.add_epoch(
+        new_samples, cur_sample_ep, target_features, tokenizer
+      )
+    distrib.barrier()
+    return
+
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
     """
     Go fetch Grewe Predictive model's feature space and randomly return num_samples samples
@@ -780,6 +780,28 @@ class FeatureLessGrewe(GreweAbstract):
         )
         samples_hash.add(str(inp_ids))
     return data_generator.DictPredictionDataloader(samples)
+
+  def UpdateDownstreamDatabase(self,
+                               new_samples     : typing.List[typing.Dict[str, typing.Any]],
+                               target_features : typing.Dict[str, float],
+                               tokenizer       : 'tokenizers.TokenizerBase',
+                               ) -> None:
+    """
+    Update exported database of downstream task.
+    """
+    if environment.WORLD_RANK == 0:
+      cur_sample_ep = self.downstream_data.sampling_epoch
+      extended_samples = []
+      memo = {}
+      for sample in new_samples:
+        if sample.sample not in memo:
+          memo[sample.sample] = extractor.ExtractFeatures(sample.sample, ["GreweFeatures"])["GreweFeatures"]
+        extended_samples.append(sample, memo[sample.sample])
+      self.downstream_data.add_epoch(
+        extended_samples, cur_sample_ep, target_features, tokenizer
+      )
+    distrib.barrier()
+    return
 
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
