@@ -439,7 +439,7 @@ class DownstreamData(sqlutil.Database):
     return
 
   def add_epoch(self,
-                batch           : typing.List[typing.Dict],
+                batch           : typing.List[typing.Union[typing.Tuple, typing.Dict]],
                 sampling_epoch  : int,
                 target_features : typing.Dict[str, float],
                 tokenizer       : 'tokenizers.TokenizerBase',
