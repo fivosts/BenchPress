@@ -34,6 +34,7 @@ import sqlalchemy as sql
 from sqlalchemy.ext import declarative
 
 from deeplearning.benchpress.util import sqlutil
+from deeplearning.benchpress.util import crypto
 
 from absl import app, flags
 
