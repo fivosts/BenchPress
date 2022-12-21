@@ -168,13 +168,13 @@ class GreweInstance(Base, sqlutil.ProtoBackedMixin):
                kernel_size        : int,
                ) -> typing.Dict[str, typing.Any]:
     sha = crypto.sha256_str(
-      src,
-      + str(grewe_feats),
-      + str(target_features),
-      + str(transferred_bytes),
-      + str(local_size),
-      + str(global_size),
-      + str(oracle),
+      src
+      + str(grewe_feats)
+      + str(target_features)
+      + str(transferred_bytes)
+      + str(local_size)
+      + str(global_size)
+      + str(oracle)
     )
     return GreweInstance(**{
       "src"                : src,
