@@ -81,6 +81,11 @@ class ExpectedErrorReduction(backends.BackendBase):
     self.sample_path  = self.cache_path / "samples"
     self.logfile_path = self.cache_path / "logs"
 
+    if environment.WORLD_RANK == 0:
+      self.ckpt_path.mkdir(exists_ok = True, parents = True)
+      self.sample_path.mkdir(exists_ok = True, parents = True)
+      self.logfile_path.mkdir(exists_ok = True, parents = True)
+
     self.validation_results_file = "val_results.txt"
     self.validation_results_path = self.logfile_path / self.validation_results_file
 
