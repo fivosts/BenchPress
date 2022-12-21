@@ -307,6 +307,18 @@ class GreweAbstract(DownstreamTask):
     """
     self.data_generator = self.data_generator + updated_dataloader
     self.saveCheckpoint()
+
+  def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
+    """
+    End of LM generation's epoch hook.
+    """
+    if FLAGS.use_http_server:
+      serialized = []
+      for cand in candidates:
+        serialized.append(
+          ActiveSample_to_JSON(cand)
+        )
+      http_server.client_put_request(serialized)
     return
 
   def saveCheckpoint(self) -> None:
@@ -609,19 +621,6 @@ class Grewe(GreweAbstract):
         samples_hash.add(str(inp_ids))
     return data_generator.DictPredictionDataloader(samples)
 
-  def step_generation(self, candidates: typing.List['ActiveSample']) -> None:
-    """
-    End of LM generation's epoch hook.
-    """
-    if FLAGS.use_http_server:
-      serialized = []
-      for cand in candidates:
-        serialized.append(
-          ActiveSample_to_JSON(cand)
-        )
-      http_server.client_put_request(serialized)
-    return
-
   def InputtoEncodedVector(self,
                            static_feats      : typing.Dict[str, float],
                            transferred_bytes : int,
@@ -639,7 +638,7 @@ class Grewe(GreweAbstract):
     except ZeroDivisionError:
       i2 = 0.0
     try:
-      i3 = static_feats['localmem'] / (static_feats['mem'] * local_size)
+      i3 = (static_feats['localmem'] / static_feats['mem']) * local_size
     except ZeroDivisionError:
       i3 = 0.0
     try:
@@ -751,6 +750,7 @@ class FeatureLessGrewe(GreweAbstract):
                 [self.TargetLabeltoID(entry.status)]
               )
             )
+        pool.close()
         self.test_set = data_generator.ListTrainDataloader(test_data)
     return
 

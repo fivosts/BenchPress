@@ -257,7 +257,7 @@ class ExpectedErrorReduction(backends.BackendBase):
             )
           ),
           num_workers = 0,
-          drop_last   = False if self.torch.distributed.get_world_size() == 1 else True,
+          drop_last   = False if environment.WORLD_SIZE == 1 else True,
         )
         # Set dataloader in case of TPU training.
         if self.torch_tpu_available:
@@ -441,8 +441,8 @@ class ExpectedErrorReduction(backends.BackendBase):
     current_step = max(0, current_step)
 
     ## If DDP, each node will work separately on chunks of the unlabelled dataset.
-    node_size = len(sample_set) // self.torch.distributed.get_world_size()
-    node_rem  = len(sample_set) % self.torch.distributed.get_world_size()
+    node_size = len(sample_set) // environment.WORLD_SIZE
+    node_rem  = len(sample_set) % environment.WORLD_SIZE
     node_set  = sample_set.get_sliced_subset(environment.WORLD_RANK * node_size, (1 + environment.WORLD_RANK) * node_size)
     if environment.WORLD_RANK == environment.WORLD_SIZE - 1 and node_rem > 0:
       node_set += sample_set.get_sliced_subset((1 + environment.WORLD_RANK) * node_size)
@@ -487,11 +487,20 @@ class ExpectedErrorReduction(backends.BackendBase):
 
         extended_dataset = self.downstream_task.data_generator + extended_datapoint
         ## Copy the model to a temp one.
-        new_model = model.MLP(self.model_config)
-        new_model.load_state_dict(self.sample.model.state_dict())
-
-        if self.pytorch.num_nodes <= 1 and self.pytorch.num_gpus > 1:
+        new_model = model.MLP(self.model_config).to(self.pytorch.device)
+        if self.pytorch.num_nodes > 1:
+          distrib.barrier()
+          new_model.load_state_dict(self.sample.model.module.state_dict())
+          new_model = self.torch.nn.parallel.DistributedDataParallel(
+            new_model,
+            device_ids    = [self.pytorch.offset_device],
+            output_device = self.pytorch.offset_device,
+          )
+        elif self.pytorch.num_gpus > 1:
+          new_model.load_state_dict(self.sample.model.module.state_dict())
           new_model = self.torch.nn.DataParallel(new_model)
+        else:
+          new_model.load_state_dict(self.sample.model.state_dict())
 
         ## Define optimizer, scheduler for training regime.
         opt, lr_scheduler = optimizer.create_optimizer_and_scheduler(
@@ -527,7 +536,7 @@ class ExpectedErrorReduction(backends.BackendBase):
           for unl_batch in iter(loader):
             for target_id_batch in target_ids:
               out = self.model_step(new_model, {'input_ids': unl_batch['input_ids'], 'target_ids': target_id_batch}, is_sampling = False)
-              aggr_entropy += out['total_loss']
+              aggr_entropy += out['total_loss'].mean()
         node_losses['aggregated_entropy'][idx][out_label] = aggr_entropy
 
       node_losses['expected_error_rate'][idx] = sum(

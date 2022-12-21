@@ -188,7 +188,8 @@ function(install_external_deps)
     # protoc compiler
     ExternalProject_Add(cldrive
       GIT_REPOSITORY    https://github.com/fivosts/cldrive.git
-      GIT_TAG           87b5f084679d22d42af7a82099ad442f349fc554
+      # GIT_TAG           87b5f084679d22d42af7a82099ad442f349fc554
+      GIT_TAG           e169b1198b7bb4388be472a4cbfe9c2dff294bd3
       GIT_PROGRESS      true
       BUILD_IN_SOURCE   true
       PREFIX            ${THIRD_PARTY}

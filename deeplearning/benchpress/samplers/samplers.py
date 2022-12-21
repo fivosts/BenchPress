@@ -503,6 +503,9 @@ class Sampler(object):
       meta.config.CopyFrom(self.config)
       pbutil.ToFile(meta, path = self.cache.path / "META.pbtxt")
       commit.saveCommit(self.cache.path)
+      if self.config.HasField("description"):
+        with open(self.cache.path / self.config.description, 'w') as outf:
+          outf.write("")
 
     # Set in Specialize().
     self.encoded_start_text = None

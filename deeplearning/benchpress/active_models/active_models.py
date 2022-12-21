@@ -52,6 +52,12 @@ flags.DEFINE_boolean(
   "All candidate feature vectors have equal likelihood of being important"
 )
 
+flags.DEFINE_integer(
+  "num_active_samples",
+  256,
+  "Select number of points you want to sample with active learner."
+)
+
 def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_learning_pb2.ActiveLearner:
   """
   Parse proto description and check for validity.
@@ -161,13 +167,13 @@ class Model(object):
       self.Train(update_dataloader = update_dataloader)
     return
 
-  def Sample(self, num_samples: int = 512) -> typing.List[typing.Dict[str, float]]:
+  def Sample(self, num_samples: int = None) -> typing.List[typing.Dict[str, float]]:
     """
     Sample the active learner.
     Knowing a downstream task, the active learning model samples
     and returns the datapoints that are deemed valuable.
     """
-    sample_set = self.downstream_task.sample_space(num_samples = num_samples)
+    sample_set = self.downstream_task.sample_space(num_samples = FLAGS.num_active_samples if num_samples is None else num_samples)
     if FLAGS.disable_active_learning:
       l.logger().warn("Active learning has been disabled. Skip update training.")
       l.logger().warn("This is passive learning mode to illustrate AL's significance.")

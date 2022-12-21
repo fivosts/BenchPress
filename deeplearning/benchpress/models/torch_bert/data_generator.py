@@ -269,7 +269,7 @@ def hidden_state_candidate_worker(sample           : np.array,
   try:
     code = tokenizer.ArrayToCode(sample, with_formatting = False)
     _ = opencl.Compile(code)
-    features = extractor.RawToDictFeats(code, [feature_space])[feature_space]
+    features = extractor.RawToDictFeats(hidden_state, [feature_space])[feature_space]
     return (True, ActiveSample(
       sample_feed = feed,
       sample      = sample,
@@ -388,8 +388,8 @@ def write_eval_db(eval_db          : evaluate_cand_database.SearchCandidateDatab
       objs[sobj.sha256] = [sobj, 1]
   with eval_db.Session(commit = True) as session:
     offset_idx = 0
-    for sha, obj in objs.items():
-      try:
+    try:
+      for sha, obj in objs.items():
         entry = session.query(evaluate_cand_database.SearchCandidate).filter_by(sha256 = sha).first()
         if entry is not None:
           entry.frequency += obj[1]
@@ -398,16 +398,16 @@ def write_eval_db(eval_db          : evaluate_cand_database.SearchCandidateDatab
           obj[0].id += offset_idx
           offset_idx += 1
           session.add(obj[0])
-        session.commit()
-      except Exception as e:
-        l.logger().error(entry)
-        if entry is not None:
-          l.logger().error(entry.id)
-          l.logger().error(entry.sha256)
-        l.logger().error(sha)
-        l.logger().error("count: {}".format(eval_db.count))
-        l.logger().error("offset_idx: {}".format(offset_idx))
-        print(e)
+      session.commit()
+    except Exception as e:
+      l.logger().error(entry)
+      if entry is not None:
+        l.logger().error(entry.id)
+        l.logger().error(entry.sha256)
+      l.logger().error(sha)
+      l.logger().error("count: {}".format(eval_db.count))
+      l.logger().error("offset_idx: {}".format(offset_idx))
+      print(e)
   return
 
 class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
