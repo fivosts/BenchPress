@@ -361,7 +361,7 @@ class ActiveSampler(FeatureSampler):
     if FLAGS.disable_active_learning:
       return
     upd_samples, upd_loader = self.active_learner.downstream_task.UpdateDataGenerator(
-      target_samples, top_k, self.target_benchmark.features, self.tokenizer
+      target_samples, self.target_benchmark.features, top_k, self.tokenizer
     )
     if len(upd_loader) > 0:
       self.active_learner.UpdateLearn(upd_loader)
