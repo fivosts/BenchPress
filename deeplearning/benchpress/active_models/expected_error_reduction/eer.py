@@ -330,7 +330,7 @@ class ExpectedErrorReduction(backends.BackendBase):
               current_step += 1
             # End of epoch
             if not update_estimator:
-              self.saveCheckpoint(train_estimator, step = current_step)
+              self.saveCheckpoint(train_estimator, current_step = current_step)
             if self.is_world_process_zero() and not update_estimator:
               try:
                 l.logger().info(
