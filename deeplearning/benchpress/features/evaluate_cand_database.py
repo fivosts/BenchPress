@@ -133,7 +133,7 @@ class SearchCandidate(Base, sqlutil.ProtoBackedMixin):
 
     return SearchCandidate(
       id                = id,
-      sha256            = crypto.sha256_str(str_input_feed + str_sample + str(hole_lengths)),
+      sha256            = crypto.sha256_str(str_input_feed + str_sample + str(hole_lengths) + target_benchmark[0]),
       sample_sha256     = crypto.sha256_str(str_sample),
       generation_id     = generation_id,
       frequency         = 1,
