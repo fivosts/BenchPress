@@ -700,11 +700,7 @@ class FeatureLessGrewe(GreweAbstract):
         'local_size'       : (1, 8),  # 2**pow,
       }
       if test_db:
-        if test_db.exists():
-          # self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)))
-          self.test_db = None
-        else:
-          raise FileNotFoundError(test_db)
+        self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)), must_exist = True)
       else:
         self.test_db = None
     self.hidden_state_size = hidden_state_size
@@ -740,18 +736,22 @@ class FeatureLessGrewe(GreweAbstract):
         test_data = []
         pool = multiprocessing.Pool()
         it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = self.feature_space), data)
-
-        for dp in data:
-          out = ExtractorWorker(dp, fspace = self.feature_space)
-          if out:
-            feats, entry = out
-            test_data.append(
-              (
-                self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
-                [self.TargetLabeltoID(entry.status)]
+        try:
+          loop = tqdm.tqdm(it, total = len(data), desc = "FeatureLessGrewe corpus setup", leave = False) if environment.WORLD_RANK == 0 else it
+          for dp in loop:
+            out = ExtractorWorker(dp, fspace = self.feature_space)
+            if out:
+              feats, entry = out
+              test_data.append(
+                (
+                  self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
+                  [self.TargetLabeltoID(entry.status)]
+                )
               )
-            )
-        pool.close()
+          pool.close()
+        except Exception as e:
+          pool.terminate()
+          raise e
         self.test_set = data_generator.ListTrainDataloader(test_data)
     return
 
