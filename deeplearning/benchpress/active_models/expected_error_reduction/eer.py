@@ -609,7 +609,7 @@ class ExpectedErrorReduction(backends.BackendBase):
     Saves model, scheduler, optimizer checkpoints per epoch.
     """
     if self.is_world_process_zero():
-      ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, self.current_step)
+      ckpt_comp = lambda x: self.ckpt_path / "{}-{}.pt".format(x, current_step)
 
       if self.torch_tpu_available:
         if self.pytorch.torch_xla_model.rendezvous("saving_checkpoint"):
@@ -626,7 +626,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         self.torch.save(estimator.scheduler.state_dict(), ckpt_comp("scheduler"))
 
       with open(self.ckpt_path / "checkpoint.meta", 'a') as mf:
-        mf.write("train_step: {}\n".format(self.current_step))
+        mf.write("train_step: {}\n".format(current_step))
     return
 
   def loadCheckpoint(self, estimator: 'ExpectedErrorReduction.Estimator') -> int:
