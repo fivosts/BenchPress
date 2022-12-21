@@ -220,6 +220,95 @@ class GreweAbstract(DownstreamTask):
       k: v for k, v in zip(self.input_labels, input_ids)
     }
 
+  def CollectRuntimeFeatures(self,
+                             samples   : typing.List['ActiveSample'],
+                             top_k     : int,
+                             tokenizer : 'tokenizers.TokenizerBase',
+                            ) -> typing.List['ActiveSample']:
+    """
+    Collect the top_k samples that can run on CLDrive and set their global size
+    to the appropriate value so it can match the transferred bytes.
+    """
+    if FLAGS.use_http_server:
+      if environment.WORLD_RANK == 0:
+        new_samples = []
+        while int(http_server.client_status_request()[1]) >= 300: # While the backend is WORKING
+          time.sleep(2)
+        while int(http_server.client_status_request()[1]) != 200:
+          new_samples += http_server.client_get_request()
+          time.sleep(1)
+        if environment.WORLD_SIZE > 1:
+          distrib.broadcast(new_samples)
+      else:
+        new_samples = distrib.broadcast()
+      distrib.barrier()
+      new_samples = [JSON_to_ActiveSample(x) for x in new_samples]
+      if top_k != -1:
+        return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:top_k]
+      else:
+        l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
+        return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)
+    else:
+      new_samples = []
+      total = 0
+      for sample in sorted(samples, key = lambda x: x.score):
+        ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer)
+        for s in ret:
+          if s.runtime_features['label'] in {"CPU", "GPU"}:
+            total += 1
+            new_samples.append(s)
+          if top_k != -1 and total >= top_k:
+            return new_samples
+      return new_samples
+
+  def UpdateDownstreamDatabase(self,
+                               new_samples     : typing.List[typing.Dict[str, typing.Any]],
+                               target_features : typing.Dict[str, float],
+                               tokenizer       : 'tokenizers.TokenizerBase',
+                               ) -> None:
+    """
+    Update exported database of downstream task.
+    """
+    if environment.WORLD_RANK == 0:
+      cur_sample_ep = self.downstream_data.sampling_epoch
+      self.downstream_data.add_epoch(
+        new_samples, cur_sample_ep, target_features, tokenizer
+      )
+    distrib.barrier()
+    return
+
+  def UpdateDataGenerator(self,
+                          new_samples     : typing.List['ActiveSample'],
+                          target_features : typing.Dict[str, float],
+                          top_k           : int,
+                          tokenizer       : 'tokenizers.TokenizerBase',
+                          ) -> data_generator.ListTrainDataloader:
+    """
+    Collect new generated samples, find their runtime features and processs to a torch dataset.
+    """
+    new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
+    self.UpdateDownstreamDatabase(new_samples, target_features, tokenizer)
+    updated_dataset = [
+      (
+        self.InputtoEncodedVector(entry.features,
+                                  entry.runtime_features['transferred_bytes'],
+                                  entry.runtime_features['local_size']
+                                  ),
+        [self.TargetLabeltoID(entry.runtime_features['label'])]
+      ) for entry in new_samples
+    ]
+    if len(updated_dataset) == 0:
+      l.logger().warn("Update dataset is empty.")
+    return updated_dataset, data_generator.ListTrainDataloader(updated_dataset, lazy = True)
+
+  def UpdateTrainDataset(self, updated_dataloader: data_generator.ListTrainDataloader) -> None:
+    """
+    After active learner has been updated, store updated samples to original train dataset.
+    """
+    self.data_generator = self.data_generator + updated_dataloader
+    self.saveCheckpoint()
+    return
+
   def saveCheckpoint(self) -> None:
     """
     Store data generator.
@@ -483,95 +572,6 @@ class Grewe(GreweAbstract):
           time.sleep(1)
     except KeyboardInterrupt:
       pass
-    return
-
-  def CollectRuntimeFeatures(self,
-                             samples   : typing.List['ActiveSample'],
-                             top_k     : int,
-                             tokenizer : 'tokenizers.TokenizerBase',
-                            ) -> typing.List['ActiveSample']:
-    """
-    Collect the top_k samples that can run on CLDrive and set their global size
-    to the appropriate value so it can match the transferred bytes.
-    """
-    if FLAGS.use_http_server:
-      if environment.WORLD_RANK == 0:
-        new_samples = []
-        while int(http_server.client_status_request()[1]) >= 300: # While the backend is WORKING
-          time.sleep(2)
-        while int(http_server.client_status_request()[1]) != 200:
-          new_samples += http_server.client_get_request()
-          time.sleep(1)
-        if environment.WORLD_SIZE > 1:
-          distrib.broadcast(new_samples)
-      else:
-        new_samples = distrib.broadcast()
-      distrib.barrier()
-      new_samples = [JSON_to_ActiveSample(x) for x in new_samples]
-      if top_k != -1:
-        return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:top_k]
-      else:
-        l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
-        return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)
-    else:
-      new_samples = []
-      total = 0
-      for sample in sorted(samples, key = lambda x: x.score):
-        ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer)
-        for s in ret:
-          if s.runtime_features['label'] in {"CPU", "GPU"}:
-            total += 1
-            new_samples.append(s)
-          if top_k != -1 and total >= top_k:
-            return new_samples
-      return new_samples
-
-  def UpdateDownstreamDatabase(self,
-                               new_samples     : typing.List[typing.Dict[str, typing.Any]],
-                               target_features : typing.Dict[str, float],
-                               tokenizer       : 'tokenizers.TokenizerBase',
-                               ) -> None:
-    """
-    Update exported database of downstream task.
-    """
-    if environment.WORLD_RANK == 0:
-      cur_sample_ep = self.downstream_data.sampling_epoch
-      self.downstream_data.add_epoch(
-        new_samples, cur_sample_ep, target_features, tokenizer
-      )
-    distrib.barrier()
-    return
-
-  def UpdateDataGenerator(self,
-                          new_samples     : typing.List['ActiveSample'],
-                          target_features : typing.Dict[str, float],
-                          top_k           : int,
-                          tokenizer       : 'tokenizers.TokenizerBase',
-                          ) -> data_generator.ListTrainDataloader:
-    """
-    Collect new generated samples, find their runtime features and processs to a torch dataset.
-    """
-    new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
-    self.UpdateDownstreamDatabase(new_samples, target_features, tokenizer)
-    updated_dataset = [
-      (
-        self.InputtoEncodedVector(entry.features,
-                                  entry.runtime_features['transferred_bytes'],
-                                  entry.runtime_features['local_size']
-                                  ),
-        [self.TargetLabeltoID(entry.runtime_features['label'])]
-      ) for entry in new_samples
-    ]
-    if len(updated_dataset) == 0:
-      l.logger().warn("Update dataset is empty.")
-    return updated_dataset, data_generator.ListTrainDataloader(updated_dataset, lazy = True)
-
-  def UpdateTrainDataset(self, updated_dataloader: data_generator.ListTrainDataloader) -> None:
-    """
-    After active learner has been updated, store updated samples to original train dataset.
-    """
-    self.data_generator = self.data_generator + updated_dataloader
-    self.saveCheckpoint()
     return
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
