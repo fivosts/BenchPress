@@ -388,7 +388,7 @@ class FeatureLessGreweInstance(Base, sqlutil.ProtoBackedMixin):
                 tokenizer       : 'tokenizers.TokenizerBase',
                 ) -> typing.List['FeatureLessGreweInstance']:
     instances = []
-    for sample, grewe_feats in batch.items():
+    for sample, grewe_feats in batch:
       src = tokenizer.ArrayToCode(sample.sample)
       instances.append(FeatureLessGreweInstance.FromArgs(
         src                = src,
