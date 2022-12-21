@@ -703,6 +703,7 @@ class FeatureLessGrewe(GreweAbstract):
         self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)), must_exist = True)
       else:
         self.test_db = None
+      self.test_set = None
     self.hidden_state_size = hidden_state_size
     return
 
