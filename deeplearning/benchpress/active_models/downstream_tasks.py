@@ -356,7 +356,7 @@ class GreweAbstract(DownstreamTask):
     else:
       new_samples = []
       total = 0
-      for sample in sorted(samples, key = lambda x: x.score):
+      for sample in tqdm.tqdm(sorted(samples, key = lambda x: x.score), total = len(samples), desc = "CLDrive"):
         ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer)
         for s in ret:
           if s.runtime_features['label'] in {"CPU", "GPU"}:
