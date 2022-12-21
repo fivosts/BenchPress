@@ -220,6 +220,111 @@ class GreweAbstract(DownstreamTask):
       k: v for k, v in zip(self.input_labels, input_ids)
     }
 
+  def CollectSingleRuntimeFeature(self,
+                                  sample: 'ActiveSample',
+                                  tokenizer: 'tokenizers.TokenizerBase',
+                                  store_rejects: bool = False,
+                                  ) -> typing.Tuple[typing.List['ActiveSample'], typing.List['ActiveSample']]:
+    """
+    Overloaded function to compute runtime features for a single instance.
+    """
+    def create_sample(s: 'ActiveSample', code: str, trb: int, gs: int) -> typing.List['ActiveSample']:
+      nrfeats = s.runtime_features
+      nrfeats['transferred_bytes'] = trb
+      nrfeats['global_size'] = int(2**gs)
+      cached = self.corpus_db.update_and_get(
+        code,
+        s.features,
+        "BenchPress",
+        global_size = nrfeats['global_size'],
+        local_size  = nrfeats['local_size'],
+        num_runs    = 1000,
+        timeout     = 60,
+      )
+
+      def is_float(x):
+        try:
+          float(x)
+          return True
+        except ValueError:
+          return False
+
+      nrfeats['label'] = cached.status
+      if nrfeats['label'] in {"CPU", "GPU"}:
+        nrfeats['cpu_transfer_ns'] = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
+        nrfeats['cpu_kernel_ns']   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
+        nrfeats['gpu_transfer_ns'] = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
+        nrfeats['gpu_kernel_ns']   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
+
+      return s._replace(runtime_features = nrfeats)
+
+    exp_tr_bytes = sample.runtime_features['transferred_bytes']
+    local_size   = sample.runtime_features['local_size']
+    found        = False
+    found_bytes  = None
+    gsize        = int(max(1, math.log2(local_size)))
+    opt_gsize    = gsize
+    code         = tokenizer.ArrayToCode(sample.sample)
+    new_samples  = []
+    rejects      = []
+    while not found and gsize <= 20:
+      sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
+      if sha256 in self.corpus_db.status_cache:
+        cached = self.corpus_db.get_entry(code, "BenchPress", int(2**gsize), int(local_size))
+      else:
+        cached = self.corpus_db.update_and_get(
+          code,
+          sample.features,
+          "BenchPress",
+          global_size = int(2**gsize),
+          local_size  = int(local_size),
+          num_runs    = 1000,
+          timeout     = 60,
+        )
+      if cached is not None and cached.status in {"CPU", "GPU"}:
+        tr_bytes = cached.transferred_bytes
+        if not FLAGS.only_optimal_gsize:
+          s = create_sample(
+              s    = sample,
+              code = code,
+              trb  = tr_bytes,
+              gs   = gsize
+            )
+          if s.runtime_features['label'] in {"CPU", "GPU"}:
+            new_samples.append(s)
+          elif store_rejects:
+            rejects.append(s)
+      else:
+        if store_rejects:
+          rejects.append(
+            create_sample(
+              s    = sample,
+              code = code,
+              trb  = exp_tr_bytes,
+              gs   = gsize,
+            )
+          )
+        tr_bytes = None
+      if FLAGS.only_optimal_gsize:
+        if tr_bytes:
+          if tr_bytes < exp_tr_bytes:
+            opt_gsize   = gsize
+            found_bytes = tr_bytes
+          else:
+            found = True
+            if found_bytes is None or abs(exp_tr_bytes - tr_bytes) < abs(exp_tr_bytes - found_bytes):
+              opt_gsize   = gsize
+              found_bytes = abs(exp_tr_bytes - tr_bytes)
+      gsize += 1
+    if FLAGS.only_optimal_gsize:
+      if found_bytes:
+        s = create_sample(sample, code, found_bytes, opt_gsize)
+        if s.runtime_features['label'] in {"CPU", "GPU"}:
+          new_samples = [s]
+        elif store_rejects:
+          rejects.append(s)
+    return new_samples, rejects
+
   def CollectRuntimeFeatures(self,
                              samples   : typing.List['ActiveSample'],
                              top_k     : int,
@@ -319,6 +424,30 @@ class GreweAbstract(DownstreamTask):
           ActiveSample_to_JSON(cand)
         )
       http_server.client_put_request(serialized)
+    return
+
+  def ServeRuntimeFeatures(self, tokenizer: 'tokenizers.TokenizerBase') -> None:
+    """
+    In server mode, listen to the read queue, collect runtime features,
+    append to local cache and publish to write queue for the client to fetch.
+    This has been easily implemented only for HTTP server and not socket.
+    """
+    try:
+      while self.cl_proc.is_alive():
+        if not self.read_queue.empty():
+          self.work_flag.value = True
+          source, serialized   = self.read_queue.get()
+          sample   = JSON_to_ActiveSample(serialized)
+          ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
+          for x in ret:
+            self.write_queues[source].append(ActiveSample_to_JSON(x))
+          for x in rej:
+            self.reject_queues[source].append(ActiveSample_to_JSON(x))
+        else:
+          self.work_flag.value = False
+          time.sleep(1)
+    except KeyboardInterrupt:
+      pass
     return
 
   def saveCheckpoint(self) -> None:
@@ -455,135 +584,6 @@ class Grewe(GreweAbstract):
       else:
         self.data_generator = data_generator.ListTrainDataloader(self.dataset)
       self.saveCheckpoint()
-    return
-
-  def CollectSingleRuntimeFeature(self,
-                                  sample: 'ActiveSample',
-                                  tokenizer: 'tokenizers.TokenizerBase',
-                                  store_rejects: bool = False,
-                                  ) -> typing.Tuple[typing.List['ActiveSample'], typing.List['ActiveSample']]:
-    """
-    Overloaded function to compute runtime features for a single instance.
-    """
-    def create_sample(s: 'ActiveSample', code: str, trb: int, gs: int) -> typing.List['ActiveSample']:
-      nrfeats = s.runtime_features
-      nrfeats['transferred_bytes'] = trb
-      nrfeats['global_size'] = int(2**gs)
-      cached = self.corpus_db.update_and_get(
-        code,
-        s.features,
-        "BenchPress",
-        global_size = nrfeats['global_size'],
-        local_size  = nrfeats['local_size'],
-        num_runs    = 1000,
-        timeout     = 60,
-      )
-
-      def is_float(x):
-        try:
-          float(x)
-          return True
-        except ValueError:
-          return False
-
-      nrfeats['label'] = cached.status
-      if nrfeats['label'] in {"CPU", "GPU"}:
-        nrfeats['cpu_transfer_ns'] = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
-        nrfeats['cpu_kernel_ns']   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
-        nrfeats['gpu_transfer_ns'] = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
-        nrfeats['gpu_kernel_ns']   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
-
-      return s._replace(runtime_features = nrfeats)
-
-    exp_tr_bytes = sample.runtime_features['transferred_bytes']
-    local_size   = sample.runtime_features['local_size']
-    found        = False
-    found_bytes  = None
-    gsize        = int(max(1, math.log2(local_size)))
-    opt_gsize    = gsize
-    code         = tokenizer.ArrayToCode(sample.sample)
-    new_samples  = []
-    rejects      = []
-    while not found and gsize <= 20:
-      sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
-      if sha256 in self.corpus_db.status_cache:
-        cached = self.corpus_db.get_entry(code, "BenchPress", int(2**gsize), int(local_size))
-      else:
-        cached = self.corpus_db.update_and_get(
-          code,
-          sample.features,
-          "BenchPress",
-          global_size = int(2**gsize),
-          local_size  = int(local_size),
-          num_runs    = 1000,
-          timeout     = 60,
-        )
-      if cached is not None and cached.status in {"CPU", "GPU"}:
-        tr_bytes = cached.transferred_bytes
-        if not FLAGS.only_optimal_gsize:
-          s = create_sample(
-              s    = sample,
-              code = code,
-              trb  = tr_bytes,
-              gs   = gsize
-            )
-          if s.runtime_features['label'] in {"CPU", "GPU"}:
-            new_samples.append(s)
-          elif store_rejects:
-            rejects.append(s)
-      else:
-        if store_rejects:
-          rejects.append(
-            create_sample(
-              s    = sample,
-              code = code,
-              trb  = exp_tr_bytes,
-              gs   = gsize,
-            )
-          )
-        tr_bytes = None
-      if FLAGS.only_optimal_gsize:
-        if tr_bytes:
-          if tr_bytes < exp_tr_bytes:
-            opt_gsize   = gsize
-            found_bytes = tr_bytes
-          else:
-            found = True
-            if found_bytes is None or abs(exp_tr_bytes - tr_bytes) < abs(exp_tr_bytes - found_bytes):
-              opt_gsize   = gsize
-              found_bytes = abs(exp_tr_bytes - tr_bytes)
-      gsize += 1
-    if FLAGS.only_optimal_gsize:
-      if found_bytes:
-        s = create_sample(sample, code, found_bytes, opt_gsize)
-        if s.runtime_features['label'] in {"CPU", "GPU"}:
-          new_samples = [s]
-        elif store_rejects:
-          rejects.append(s)
-    return new_samples, rejects
-
-  def ServeRuntimeFeatures(self, tokenizer: 'tokenizers.TokenizerBase') -> None:
-    """
-    In server mode, listen to the read queue, collect runtime features,
-    append to local cache and publish to write queue for the client to fetch.
-    This has been easily implemented only for HTTP server and not socket.
-    """
-    try:
-      while self.cl_proc.is_alive():
-        if not self.read_queue.empty():
-          self.work_flag.value = True
-          source, serialized   = self.read_queue.get()
-          sample   = JSON_to_ActiveSample(serialized)
-          ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
-          for x in ret:
-            self.write_queues[source].append(ActiveSample_to_JSON(x))
-          for x in rej:
-            self.reject_queues[source].append(ActiveSample_to_JSON(x))
-        else:
-          self.work_flag.value = False
-          time.sleep(1)
-    except KeyboardInterrupt:
-      pass
     return
 
   def sample_space(self, num_samples: int = 512) -> data_generator.DictPredictionDataloader:
