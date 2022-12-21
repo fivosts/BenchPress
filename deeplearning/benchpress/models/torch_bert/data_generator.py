@@ -356,42 +356,47 @@ def write_eval_db(eval_db          : evaluate_cand_database.SearchCandidateDatab
   """
   Evaluated step and rejected candidates monitoring/caching.
   """
-  objs = {}
-  for sample in samples:
-    try:
-      _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
-      compile_status = True
-    except ValueError:
-      compile_status = False
-
-    sobj = evaluate_cand_database.SearchCandidate.FromArgs(
-      tokenizer        = tokenizer,
-      id               = eval_db.count,
-      input_feed       = sample.sample_feed.input_feed,
-      input_ids        = sample.input_ids,
-      input_features   = sample.sample_feed.input_features,
-      input_score      = sample.sample_feed.input_score,
-      hole_lengths     = sample.hole_lengths,
-      sample           = sample.sample,
-      sample_indices   = sample.sample_indices,
-      output_features  = sample.features,
-      runtime_features = sample.runtime_features,
-      sample_score     = sample.score,
-      target_benchmark = target_benchmark,
-      target_features  = target_features,
-      compile_status   = compile_status,
-      generation_id    = gen_id,
-    )
-    if sobj.sha256 in objs:
-      objs[sobj.sha256][1] += 1
-    else:
-      objs[sobj.sha256] = [sobj, 1]
   with eval_db.Session(commit = True) as session:
+    cached = {
+     d.sha256: d for d in
+     session.query(evaluate_cand_database.SearchCandidate).filter_by(target_benchmark = "// {}\n{}".format(target_benchmark[0], target_benchmark[1])).all()
+    }
+    objs = {}
+    for sample in samples:
+      try:
+        _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
+        compile_status = True
+      except ValueError:
+        compile_status = False
+
+      sobj = evaluate_cand_database.SearchCandidate.FromArgs(
+        tokenizer        = tokenizer,
+        id               = eval_db.count,
+        input_feed       = sample.sample_feed.input_feed,
+        input_ids        = sample.input_ids,
+        input_features   = sample.sample_feed.input_features,
+        input_score      = sample.sample_feed.input_score,
+        hole_lengths     = sample.hole_lengths,
+        sample           = sample.sample,
+        sample_indices   = sample.sample_indices,
+        output_features  = sample.features,
+        runtime_features = sample.runtime_features,
+        sample_score     = sample.score,
+        target_benchmark = target_benchmark,
+        target_features  = target_features,
+        compile_status   = compile_status,
+        generation_id    = gen_id,
+      )
+      if sobj.sha256 in objs:
+        objs[sobj.sha256][1] += 1
+      else:
+        objs[sobj.sha256] = [sobj, 1]
+
     offset_idx = 0
     try:
       for sha, obj in objs.items():
-        entry = session.query(evaluate_cand_database.SearchCandidate).filter_by(sha256 = sha).first()
-        if entry is not None:
+        if sha in cached:
+          entry = cached[sha]
           entry.frequency += obj[1]
         else:
           obj[0].frequency = obj[1]
