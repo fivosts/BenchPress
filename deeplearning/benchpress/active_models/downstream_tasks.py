@@ -434,21 +434,6 @@ class GreweAbstract(DownstreamTask):
       pass
     return
 
-  def saveCheckpoint(self) -> None:
-    """
-    Store data generator.
-    """
-    if environment.WORLD_RANK == 0:
-      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
-        pickle.dump(
-          {
-            'data_generator': self.data_generator,
-            'random_generator': self.rand_generator,
-          },
-          outf
-        )
-    return
-
   def loadCheckpoint(self) -> 'torch.Dataset':
     """
     Load state of downstream task.
@@ -647,6 +632,21 @@ class Grewe(GreweAbstract):
       i4 = 0.0
     return [i1, i2, i3, i4]
 
+  def saveCheckpoint(self) -> None:
+    """
+    Store data generator.
+    """
+    if environment.WORLD_RANK == 0:
+      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
+        pickle.dump(
+          {
+            'data_generator': self.data_generator,
+            'random_generator': self.rand_generator,
+          },
+          outf
+        )
+    return
+
 class FeatureLessGrewe(GreweAbstract):
   """
   A feature-less implementation of Grewe's CPU vs GPU model.
@@ -690,6 +690,7 @@ class FeatureLessGrewe(GreweAbstract):
               )
             )
         self.test_dataset = data_generator.ListTrainDataloader(test_data)
+        self.saveCheckpoint()
       return self.test_dataset
     else:
       return None
@@ -744,7 +745,9 @@ class FeatureLessGrewe(GreweAbstract):
     checkpointed = self.loadCheckpoint()
     if checkpointed:
       self.data_generator = checkpointed['data_generator']
-      self.rand_generator = checkpointed['rand_generator']
+      self.rand_generator = np.random.RandomState()
+      self.rand_generator.set_state(checkpointed['rand_generator'])
+      self.test_dataset   = checkpointed['test_dataset']
       self.dataset = self.data_generator.dataset
     else:
       ## For Expected Error Reduction, no human benchmarks are used for initial training.
@@ -752,6 +755,7 @@ class FeatureLessGrewe(GreweAbstract):
       self.dataset = []
       self.rand_generator = np.random
       self.rand_generator.seed(self.random_seed)
+    self.saveCheckpoint()
     return
 
   def sample_space(self, num_samples: int = 128) -> data_generator.DictPredictionDataloader:
@@ -826,6 +830,22 @@ class FeatureLessGrewe(GreweAbstract):
       'transferred_bytes' : trb,
       'local_size'        : ls,
     }
+
+  def saveCheckpoint(self) -> None:
+    """
+    Store data generator.
+    """
+    if environment.WORLD_RANK == 0:
+      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
+        pickle.dump(
+          {
+            'data_generator'   : self.data_generator,
+            'random_generator' : self.rand_generator.get_state(),
+            'test_dataset'     : self.test_dataset,
+          },
+          outf
+        )
+    return
 
 TASKS = {
   "Grewe" : Grewe,
