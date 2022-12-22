@@ -398,7 +398,8 @@ class ExpectedErrorReduction(backends.BackendBase):
       accuracy = [0, 0]
       with self.torch.no_grad():
         self.train.model.eval()
-        loader.sampler.set_epoch(0)
+        if self.pytorch.num_nodes > 1:
+          loader.sampler.set_epoch(0)
         for inputs in batch_iter:
 
           step_out = self.model_step(self.train.model, inputs)
