@@ -733,7 +733,7 @@ class FeatureLessGrewe(GreweAbstract):
       self.rand_generator.seed(self.random_seed)
 
       if self.test_db:
-        data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU")]
+        data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU_benchmarks")]
         test_data = []
         pool = multiprocessing.Pool()
         it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = self.feature_space), data)
