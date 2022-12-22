@@ -672,6 +672,27 @@ class FeatureLessGrewe(GreweAbstract):
   def feature_space(self) -> str:
     return "HiddenState"
 
+  @property
+  def test_set(self) -> 'torch.Dataset':
+    if self.test_db:
+      if not self.test_dataset:
+        data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU_benchmarks")]
+        test_data = []
+        loop = tqdm.tqdm(data, total = len(data), desc = "FeatureLessGrewe corpus setup", leave = False) if environment.WORLD_RANK == 0 else it
+        for dp in loop:
+          out = ExtractorWorker(dp, fspace = self.feature_space)
+          if out:
+            feats, entry = out
+            test_data.append(
+              (
+                self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
+                [self.TargetLabeltoID(entry.status)]
+              )
+            )
+        self.test_dataset = data_generator.ListTrainDataloader(test_data)
+      return self.test_dataset
+    else:
+      return None
 
   def __init__(self,
                corpus_path       : pathlib.Path,
@@ -703,7 +724,7 @@ class FeatureLessGrewe(GreweAbstract):
         self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)), must_exist = True)
       else:
         self.test_db = None
-      self.test_set = None
+      self.test_dataset = None
     self.hidden_state_size = hidden_state_size
     return
 
@@ -731,29 +752,6 @@ class FeatureLessGrewe(GreweAbstract):
       self.dataset = []
       self.rand_generator = np.random
       self.rand_generator.seed(self.random_seed)
-
-      if self.test_db:
-        data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU_benchmarks")]
-        test_data = []
-        pool = multiprocessing.Pool()
-        it = pool.imap_unordered(functools.partial(ExtractorWorker, fspace = self.feature_space), data)
-        try:
-          loop = tqdm.tqdm(it, total = len(data), desc = "FeatureLessGrewe corpus setup", leave = False) if environment.WORLD_RANK == 0 else it
-          for dp in loop:
-            out = ExtractorWorker(dp, fspace = self.feature_space)
-            if out:
-              feats, entry = out
-              test_data.append(
-                (
-                  self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
-                  [self.TargetLabeltoID(entry.status)]
-                )
-              )
-          pool.close()
-        except Exception as e:
-          pool.terminate()
-          raise e
-        self.test_set = data_generator.ListTrainDataloader(test_data)
     return
 
   def sample_space(self, num_samples: int = 128) -> data_generator.DictPredictionDataloader:

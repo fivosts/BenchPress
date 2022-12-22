@@ -82,12 +82,13 @@ class HiddenStateFeatures(object):
       Feature vector and diagnostics in str format.
     """
     global LANGUAGE_MODEL
+    sequence_length = LANGUAGE_MODEL.config.architecture.max_position_embeddings
     with LANGUAGE_MODEL.torch.no_grad():
-      encoded = LANGUAGE_MODEL.sample.data_generator._padToMaxPosition(
-        LANGUAGE_MODEL.sample.data_generator._addStartEndToken(
-          [int(x) for x in LANGUAGE_MODEL.tokenizer.TokenizeString(src)]
-        )
-      )[:LANGUAGE_MODEL.sample.data_generator.sampler.sequence_length]
+      encoded = [int(x) for x in LANGUAGE_MODEL.tokenizer.TokenizeString(src)]
+      encoded = [LANGUAGE_MODEL.tokenizer.startToken] + encoded + [LANGUAGE_MODEL.tokenizer.endToken]
+      if len(encoded) < sequence_length:
+        encoded = encoded + [LANGUAGE_MODEL.tokenizer.padToken] * (sequence_length - len(encoded))
+      encoded = encoded[:sequence_length]
       input_ids = LANGUAGE_MODEL.torch.LongTensor(encoded).unsqueeze(0)
       inputs = {
         'input_ids'         : input_ids,
