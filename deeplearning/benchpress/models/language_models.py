@@ -228,6 +228,7 @@ class Model(object):
       model_pb2.NetworkArchitecture.INCODER_1B: incoder.Incoder1B,
       model_pb2.NetworkArchitecture.INCODER_6B: incoder.Incoder6B,
     }[config.architecture.backend](self.config, self.cache, self.hash)
+    hidden_state.setup_lm(self.backend)
     l.logger().info("Initialized {} in {}".format(self.backend, self.cache.path))
     return
 
@@ -285,7 +286,6 @@ class Model(object):
       shutil.copyfile(self.corpus.tokenizer_path, self.cache.path / "checkpoints" / "backup_tokenizer.pkl")
 
     self.backend.Create(tokenizer = self.corpus.tokenizer)
-    hidden_state.setup_lm(self.backend)
     return
 
   def PreTrain(self, **kwargs) -> "Model":
