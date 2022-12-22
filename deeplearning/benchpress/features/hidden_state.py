@@ -81,6 +81,7 @@ class HiddenStateFeatures(object):
     Returns:
       Feature vector and diagnostics in str format.
     """
+    global LANGUAGE_MODEL
     with LANGUAGE_MODEL.torch.no_grad():
       encoded = LANGUAGE_MODEL.sample.data_generator._padToMaxPosition(
         LANGUAGE_MODEL.sample.data_generator._addStartEndToken(
