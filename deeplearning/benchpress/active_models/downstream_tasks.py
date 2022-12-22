@@ -641,7 +641,7 @@ class Grewe(GreweAbstract):
         pickle.dump(
           {
             'data_generator': self.data_generator,
-            'random_generator': self.rand_generator,
+            'rand_generator': self.rand_generator,
           },
           outf
         )
@@ -839,9 +839,9 @@ class FeatureLessGrewe(GreweAbstract):
       with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
         pickle.dump(
           {
-            'data_generator'   : self.data_generator,
-            'random_generator' : self.rand_generator.get_state(),
-            'test_dataset'     : self.test_dataset,
+            'data_generator' : self.data_generator,
+            'rand_generator' : self.rand_generator.get_state(),
+            'test_dataset'   : self.test_dataset,
           },
           outf
         )
