@@ -346,11 +346,12 @@ def write_samples_cache(db_sample_obs : sample_observers.SamplesDatabaseObserver
       pass
   return
 
-def write_eval_db(eval_db          : evaluate_cand_database.SearchCandidateDatabase,
-                  tokenizer        : tokenizers.TokenizerBase,
-                  samples          : typing.List[ActiveSample],
-                  target_benchmark : typing.Tuple[str, str],
-                  target_features  : typing.Dict[str, float],
+def write_eval_db(eval_db           : evaluate_cand_database.SearchCandidateDatabase,
+                  tokenizer         : tokenizers.TokenizerBase,
+                  compiling_samples : typing.List[ActiveSample],
+                  rejected_samples  : typing.List[ActiveSample],
+                  target_benchmark  : typing.Tuple[str, str],
+                  target_features   : typing.Dict[str, float],
                   gen_id    : int,
                   ) -> None:
   """
@@ -362,35 +363,35 @@ def write_eval_db(eval_db          : evaluate_cand_database.SearchCandidateDatab
      session.query(evaluate_cand_database.SearchCandidate).filter_by(target_benchmark = "// {}\n{}".format(target_benchmark[0], target_benchmark[1])).all()
     }
     objs = {}
-    for sample in samples:
-      try:
-        _ = opencl.Compile(tokenizer.ArrayToCode(sample.sample))
-        compile_status = True
-      except ValueError:
-        compile_status = False
+    for idx, samples in enumerate([compiling_samples, rejected_samples]):
+      for sample in samples:
+        if idx == 0:
+          compile_status = True
+        else:
+          compile_status = False
 
-      sobj = evaluate_cand_database.SearchCandidate.FromArgs(
-        tokenizer        = tokenizer,
-        id               = eval_db.count,
-        input_feed       = sample.sample_feed.input_feed,
-        input_ids        = sample.input_ids,
-        input_features   = sample.sample_feed.input_features,
-        input_score      = sample.sample_feed.input_score,
-        hole_lengths     = sample.hole_lengths,
-        sample           = sample.sample,
-        sample_indices   = sample.sample_indices,
-        output_features  = sample.features,
-        runtime_features = sample.runtime_features,
-        sample_score     = sample.score,
-        target_benchmark = target_benchmark,
-        target_features  = target_features,
-        compile_status   = compile_status,
-        generation_id    = gen_id,
-      )
-      if sobj.sha256 in objs:
-        objs[sobj.sha256][1] += 1
-      else:
-        objs[sobj.sha256] = [sobj, 1]
+        sobj = evaluate_cand_database.SearchCandidate.FromArgs(
+          tokenizer        = tokenizer,
+          id               = eval_db.count,
+          input_feed       = sample.sample_feed.input_feed,
+          input_ids        = sample.input_ids,
+          input_features   = sample.sample_feed.input_features,
+          input_score      = sample.sample_feed.input_score,
+          hole_lengths     = sample.hole_lengths,
+          sample           = sample.sample,
+          sample_indices   = sample.sample_indices,
+          output_features  = sample.features,
+          runtime_features = sample.runtime_features,
+          sample_score     = sample.score,
+          target_benchmark = target_benchmark,
+          target_features  = target_features,
+          compile_status   = compile_status,
+          generation_id    = gen_id,
+        )
+        if sobj.sha256 in objs:
+          objs[sobj.sha256][1] += 1
+        else:
+          objs[sobj.sha256] = [sobj, 1]
 
     offset_idx = 0
     try:
@@ -849,10 +850,11 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
               kwargs = {
                 'eval_db'   : self.eval_db,
                 'tokenizer' : self.tokenizer,
-                'samples'   : step_candidates + rejected_candidates,
-                'target_benchmark' : (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
-                'target_features'  : self.feat_sampler.target_benchmark.features,
-                'gen_id'           : feeds[0].gen_id,
+                'compiling_samples' : step_candidates,
+                'rejected_samples'  : rejected_candidates,
+                'target_benchmark'  : (self.feat_sampler.target_benchmark.name, self.feat_sampler.target_benchmark.contents),
+                'target_features'   : self.feat_sampler.target_benchmark.features,
+                'gen_id'            : feeds[0].gen_id,
               }
             )
             write_eval_proc.start()
