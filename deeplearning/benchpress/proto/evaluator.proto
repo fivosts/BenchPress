@@ -60,6 +60,7 @@ message evaluators {
     FeatureSpaceCovLabel      feature_space_cov_label     = 19;
     FeatureSpaceCovGroup      feature_space_cov_group     = 20;
     AnalyzeBeamSearch         analyze_beam_search         = 21;
+    GenDistanceDistribution   gen_distance_distribution   = 22;
   }
 }
 
@@ -244,6 +245,14 @@ message FeatureSpaceCovGroup {
 
 // 21
 message AnalyzeBeamSearch {
+  optional string               target        = 1;
+  optional string               feature_space = 2;
+  repeated DatabasesGroups      db_group      = 3;
+  optional PlotterConfiguration plot_config   = 4;
+}
+
+// 22
+message GenDistanceDistribution {
   optional string               target        = 1;
   optional string               feature_space = 2;
   repeated DatabasesGroups      db_group      = 3;
