@@ -226,7 +226,6 @@ class BenchmarkSampler(FeatureSampler):
     self.loadCheckpoint()
     try:
       if self.target_benchmark is None:
-        self.benchmarks.pop(0)
         self.target_benchmark = self.benchmarks.pop(0)
         # l.logger().info("Target benchmark: {}\nTarget fetures: {}".format(self.target_benchmark.name, self.target_benchmark.features))
     except IndexError:
