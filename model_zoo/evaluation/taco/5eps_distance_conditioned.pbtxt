@@ -1,6 +1,6 @@
 workspace: "/var/foivos/results/conditioned_features_results/5eps/"
 evaluator {
-  AnalyzeBeamSearch {
+  analyze_beam_search {
     targets: 'rodinia'
     feature_space: 'GreweFeatures'
     db_group {
@@ -14,7 +14,7 @@ evaluator {
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feed_database.db"
     }
   }
-  AnalyzeBeamSearch {
+  analyze_beam_search {
     targets: 'rodinia'
     feature_space: 'AutophaseFeatures'
     db_group {
@@ -30,7 +30,7 @@ evaluator {
   }
 
 
-  AnalyzeBeamSearch {
+  analyze_beam_search {
     targets: 'rodinia'
     feature_space: 'InstCountFeatures'
     db_group {

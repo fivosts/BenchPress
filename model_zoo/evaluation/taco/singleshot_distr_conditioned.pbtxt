@@ -1,22 +1,48 @@
-workspace: "/home/fivosts/feat_coverage"
+workspace: "/var/foivos/results/conditioned_features_results/singleshot/"
 evaluator {
-  feature_space_cov_group {
-    grewe_baseline: "/home/fivosts/pact_data/gpgpu_benchmarks.csv"
-    csv {
-      name: "BenchPress"
-      path: "/home/fivosts/pact_data/benchpress_active.csv"
+  gen_distance_distribution {
+    targets: 'rodinia'
+    generation_id: 0
+    feature_space: 'GreweFeatures'
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SearchCandidateDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/6c454ab425e2a9eafc47da07e73b55a221d772e6/sample_corpus/active_feed_database.db"
     }
-    csv {
-      name: "BenchPress_passive"
-      path: "/home/fivosts/pact_data/benchpress_passive.csv"
+    db_group {
+      group_name: "BenchPress_conditioned"
+      db_type: "SearchCandidateDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/1a7b72ae98d732b45bf2fb76bc3b8da1eb798f29/sample_corpus/active_feed_database.db"
     }
-    csv {
-      name: "CLgen"
-      path: "/home/fivosts/pact_data/clgen.csv"
+  }
+  gen_distance_distribution {
+    targets: 'rodinia'
+    generation_id: 0
+    feature_space: 'AutophaseFeatures'
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SearchCandidateDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/c3c187c8f4479137636c652b1fcb7bdb798ea427/sample_corpus/active_feed_database.db"
     }
-    csv {
-      name: "GitHub"
-      path: "/home/fivosts/pact_data/github.csv"
+    db_group {
+      group_name: "BenchPress_conditioned"
+      db_type: "SearchCandidateDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/7253878836e02d088a7f1329936d07fa0aed41bd/sample_corpus/active_feed_database.db"
+    }
+  }
+  gen_distance_distribution {
+    targets: 'rodinia'
+    generation_id: 0
+    feature_space: 'InstCountFeatures'
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SearchCandidateDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/89f12f25f4711d94515fdf5ffcc251dad174d5b2/sample_corpus/active_feed_database.db"
+    }
+    db_group {
+      group_name: "BenchPress_conditioned"
+      db_type: "SearchCandidateDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/73098aaa7627eafc55383c5a3a8e4d0f96e5ecd2/sample_corpus/active_feed_database.db"
     }
   }
 }
