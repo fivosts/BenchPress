@@ -278,7 +278,7 @@ def GenDistanceDistribution(**kwargs) -> None:
         groups[target] = {dbg.group_name: []}
       elif dbg.group_name not in groups[target]:
         groups[target][dbg.group_name] = []
-      groups[target][dbg.group_name] += [b.score]*b.frequency
+      groups[target][dbg.group_name] += [b.sample_score]*b.frequency
 
   for target, groups in groups.items():
     distrs = []
