@@ -362,7 +362,8 @@ def TopKCLDrive(**kwargs) -> None:
   top_k          = kwargs.get('top_k')
   unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "topk_cldrive"
+  workspace_path.mkdir(exist_ok = True, parents = True)
 
   groups = {}
   gsize, lsize = [2**10, 2**15, 2**20], [2**10] # 1024 is max local size for GTX1080.

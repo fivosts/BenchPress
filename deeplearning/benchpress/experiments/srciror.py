@@ -249,7 +249,8 @@ def SRCIRORVsBenchPress(**kwargs) -> None:
   beam_width        = kwargs.get('beam_width')
   unique_code       = kwargs.get('unique_code', False)
   plot_config       = kwargs.get('plot_config')
-  workspace_path    = kwargs.get('workspace_path')
+  workspace_path    = kwargs.get('workspace_path') / "srciror_vs_benchpress" / feature_space
+  workspace_path.mkdir(exist_ok = True, parents = True)
 
   if mutation_level == 'src':
     if not pathlib.Path(SRCIROR_SRC).exists():

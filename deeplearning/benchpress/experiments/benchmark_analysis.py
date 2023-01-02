@@ -33,7 +33,8 @@ def AnalyzeTarget(**kwargs) -> None:
   """
   targets   = kwargs.get('targets')
   tokenizer = kwargs.get('tokenizer')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "analyze_target"
+  workspace_path.mkdir(exist_ok = True, parents = True)
   raise NotImplementedError
   return
 
@@ -44,7 +45,8 @@ def TokenSizeDistribution(**kwargs) -> None:
   """
   db_groups      = kwargs.get('db_groups')
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "token_size_distr"
+  workspace_path.mkdir(exist_ok = True, parents = True)
 
   names = []
   token_lens = []
@@ -76,7 +78,8 @@ def LLVMInstCountDistribution(**kwargs) -> None:
   """
   db_groups      = kwargs.get('db_groups')
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "llvm_instcount_distr"
+  workspace_path.mkdir(exist_ok = True, parents = True)
 
   names = []
   token_lens = []
@@ -108,8 +111,9 @@ def PCASamplesFeatures(**kwargs) -> None:
   """
   db_groups      = kwargs.get('db_groups')
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
   feature_space  = kwargs.get('feature_space')
+  workspace_path = kwargs.get('workspace_path') / "pca_samples_feat" / feature_space
+  workspace_path.mkdir(exist_ok = True, parents = True)
 
   indexed_data = {}
   full_data    = []
@@ -163,7 +167,8 @@ def FeaturesDistribution(**kwargs) -> None:
   top_k          = kwargs.get('top_k')
   unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "features_distr" / feature_space
+  workspace_path.mkdir(exist_ok = True, parents = True)
   data = {}
 
   # You need this if you want to have the same (github) baseline but when github is not plotted.
@@ -264,7 +269,8 @@ def HumanLikeness(**kwargs) -> None:
   top_k          = kwargs.get('top_k')
   unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "human_likely"
+  workspace_path.mkdir(exist_ok = True, parents = True)
   data = {}
 
   # You need this if you want to have the same (github) baseline but when github is not plotted.

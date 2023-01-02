@@ -27,8 +27,9 @@ def CompMemGrewe(**kwargs) -> None:
   """
   db_groups      = kwargs.get('db_groups')
   target         = kwargs.get('targets')
-  workspace_path = kwargs.get('workspace_path')
   plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path') / "comp_vs_mem_grewe"
+  workspace_path.mkdir(exist_ok = True, parents = True)
   feature_space  = "GreweFeatures"
 
   groups = {

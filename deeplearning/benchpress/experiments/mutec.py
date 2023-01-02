@@ -212,7 +212,8 @@ def MutecVsBenchPress(**kwargs) -> None:
   beam_width     = kwargs.get('beam_width')
   unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "mutec_vs_benchpress" / feature_space
+  workspace_path.mkdir(exist_ok = True, parents = True)
 
   if not pathlib.Path(MUTEC).exists():
     raise FileNotFoundError("Mutec executable not found: {}".format(MUTEC))
