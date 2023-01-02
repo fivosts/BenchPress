@@ -14,6 +14,8 @@ evaluator {
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
     }
   }
+}
+evaluator {
   analyze_beam_search {
     target: 'rodinia'
     feature_space: 'AutophaseFeatures'
@@ -28,8 +30,8 @@ evaluator {
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
     }
   }
-
-
+}
+evaluator {
   analyze_beam_search {
     target: 'rodinia'
     feature_space: 'InstCountFeatures'
