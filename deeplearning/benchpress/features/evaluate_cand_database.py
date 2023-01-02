@@ -178,6 +178,12 @@ class SearchCandidateDatabase(sqlutil.Database):
     with self.Session() as s:
       return s.query(SearchCandidate).all()
 
+  @property
+  def get_target_benchmarks(self):
+    """Return all unique target benchmarks"""
+    with self.Session() as s:
+      return s.query(SearchCandidate.target_benchmark).all()
+
 def input_samples_distribution(data) -> None:
   # 1) Frequency per generation.
   #   x-axis: times occured, y-axis: how many samples did hit these freq.
