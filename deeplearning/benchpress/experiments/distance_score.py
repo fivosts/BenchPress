@@ -251,3 +251,41 @@ def AnalyzeBeamSearch(**kwargs) -> None:
   single_feat_dist.plot()
   (single_base_dist - single_feat_dist).plot()
   return
+
+@public.evaluator
+def GenDistanceDistribution(**kwargs) -> None:
+  """
+  For a given beam search generation, calculate the distance distribution from the given target benchmark.
+
+  Compare against multiple db_groups.
+  """
+  db_groups      = kwargs.get('db_groups')
+  feature_space  = kwargs.get('feature_space')
+  plot_config    = kwargs.get('plot_config')
+  workspace_path = kwargs.get('workspace_path')
+  generation_id  = kwargs.get('generation_id')
+
+  groups = {}
+  for dbg in db_groups:
+    ## Flattened list of scores distribution, sorted by target -> group
+    if not dbg.db_type == evaluate_cand_database.SearchCandidateDatabase:
+      raise ValueError("Beam search analysis requires SearchCandidateDatabase, but received {}", dbg.db_type)
+    benchmarks = [x for x in dbg.get_data if x.generation_id == generation_id]
+    for b in benchmarks:
+      target = b.target_benchmark.split('\n')[0].replace("// ", "")
+      if target not in groups:
+        groups[target] = {dbg.group_name: []}
+      elif dbg.group_name not in groups[target]:
+        groups[target][dbg.group_name] = []
+      groups[target][dbg.group_name] += [b.score]*b.frequency
+
+  for target, groups in groups.items():
+    distrs = []
+    for name, data in groups.items():
+      d = distributions.GenericDistribution(data, workspace_path, "{}-{}".format(target, name))
+      d.plot()
+      distrs.append(d)
+    if len(distrs) == 2:
+      diff = d[1] - d[0]
+      diff.plot()
+  return
