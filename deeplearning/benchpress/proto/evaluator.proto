@@ -254,9 +254,10 @@ message AnalyzeBeamSearch {
 // 22
 message GenDistanceDistribution {
   optional string               target        = 1;
-  optional string               feature_space = 2;
-  repeated DatabasesGroups      db_group      = 3;
-  optional PlotterConfiguration plot_config   = 4;
+  optional int32                generation_id = 2;
+  optional string               feature_space = 3;
+  repeated DatabasesGroups      db_group      = 4;
+  optional PlotterConfiguration plot_config   = 5;
 }
 
 // Define a group of Databases that will be considered jointly.
