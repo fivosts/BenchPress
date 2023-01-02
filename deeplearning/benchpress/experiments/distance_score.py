@@ -287,6 +287,6 @@ def GenDistanceDistribution(**kwargs) -> None:
       d.plot()
       distrs.append(d)
     if len(distrs) == 2:
-      diff = d[1] - d[0]
+      diff = distrs[1] - distrs[0]
       diff.plot()
   return
