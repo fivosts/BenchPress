@@ -20,6 +20,7 @@ import typing
 import math
 
 from deeplearning.benchpress.features import active_feed_database
+from deeplearning.benchpress.features import evaluate_cand_database
 from deeplearning.benchpress.features import extractor
 from deeplearning.benchpress.corpuses import encoded
 from deeplearning.benchpress.samplers import samples_database
