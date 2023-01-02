@@ -223,33 +223,33 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     path = workspace_path,
     **plot_config if plot_config else {},
   )
-  base_dist = distributions.GenericDistribution(
-    samples = [int(x*10) for x in stats['Base']['best_distance']],
-    log_path = workspace_path,
-    set_name = "Base_best_dist_distr_{}".format(feature_space)
-  )
-  feat_dist = distributions.GenericDistribution(
-    samples = [int(x*10) for x in stats['Feature_Head']['best_distance']],
-    log_path = workspace_path,
-    set_name = "FeatHead_best_dist_distr_{}".format(feature_space)
-  )
-  base_dist.plot()
-  feat_dist.plot()
-  (base_dist - feat_dist).plot()
+  # base_dist = distributions.GenericDistribution(
+  #   samples = [int(x*10) for x in stats['Base']['best_distance']],
+  #   log_path = workspace_path,
+  #   set_name = "Base_best_dist_distr_{}".format(feature_space)
+  # )
+  # feat_dist = distributions.GenericDistribution(
+  #   samples = [int(x*10) for x in stats['Feature_Head']['best_distance']],
+  #   log_path = workspace_path,
+  #   set_name = "FeatHead_best_dist_distr_{}".format(feature_space)
+  # )
+  # base_dist.plot()
+  # feat_dist.plot()
+  # (base_dist - feat_dist).plot()
 
-  single_base_dist = distributions.GenericDistribution(
-    samples = [int(x*10) for x in stats['Base']['singleshot_distance']],
-    log_path = workspace_path,
-    set_name = "Base_single_dist_distr_{}".format(feature_space)
-  )
-  single_feat_dist = distributions.GenericDistribution(
-    samples = [int(x*10) for x in stats['Feature_Head']['singleshot_distance']],
-    log_path = workspace_path,
-    set_name = "FeatHead_single_dist_distr_{}".format(feature_space)
-  )
-  single_base_dist.plot()
-  single_feat_dist.plot()
-  (single_base_dist - single_feat_dist).plot()
+  # single_base_dist = distributions.GenericDistribution(
+  #   samples = [int(x*10) for x in stats['Base']['singleshot_distance']],
+  #   log_path = workspace_path,
+  #   set_name = "Base_single_dist_distr_{}".format(feature_space)
+  # )
+  # single_feat_dist = distributions.GenericDistribution(
+  #   samples = [int(x*10) for x in stats['Feature_Head']['singleshot_distance']],
+  #   log_path = workspace_path,
+  #   set_name = "FeatHead_single_dist_distr_{}".format(feature_space)
+  # )
+  # single_base_dist.plot()
+  # single_feat_dist.plot()
+  # (single_base_dist - single_feat_dist).plot()
   return
 
 @public.evaluator
