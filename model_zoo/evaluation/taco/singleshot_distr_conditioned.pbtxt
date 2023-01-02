@@ -1,7 +1,7 @@
 workspace: "/var/foivos/results/conditioned_features_results/singleshot/"
 evaluator {
   gen_distance_distribution {
-    targets: 'rodinia'
+    target: 'rodinia'
     generation_id: 0
     feature_space: 'GreweFeatures'
     db_group {
@@ -16,7 +16,7 @@ evaluator {
     }
   }
   gen_distance_distribution {
-    targets: 'rodinia'
+    target: 'rodinia'
     generation_id: 0
     feature_space: 'AutophaseFeatures'
     db_group {
@@ -31,7 +31,7 @@ evaluator {
     }
   }
   gen_distance_distribution {
-    targets: 'rodinia'
+    target: 'rodinia'
     generation_id: 0
     feature_space: 'InstCountFeatures'
     db_group {
