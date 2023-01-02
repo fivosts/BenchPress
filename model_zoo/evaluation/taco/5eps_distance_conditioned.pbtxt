@@ -6,12 +6,12 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "ActiveFeedDatabase"
-      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/151d0798850577700175ead8f40fe56b0384c44d/sample_corpus/active_feed_database.db"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/151d0798850577700175ead8f40fe56b0384c44d/sample_corpus/active_feeds.db"
     }
     db_group {
       group_name: "BenchPress_conditioned"
       db_type: "ActiveFeedDatabase"
-      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feed_database.db"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
     }
   }
   analyze_beam_search {
@@ -20,12 +20,12 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "ActiveFeedDatabase"
-      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/1515bcd73b711d75fb2dfabfd49840b244c11b0f/sample_corpus/active_feed_database.db"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/1515bcd73b711d75fb2dfabfd49840b244c11b0f/sample_corpus/active_feeds.db"
     }
     db_group {
       group_name: "BenchPress_conditioned"
       db_type: "ActiveFeedDatabase"
-      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feed_database.db"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
     }
   }
 
@@ -36,12 +36,12 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "ActiveFeedDatabase"
-      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/aad4e616e884c71887fd2fe6447e495fee406183/sample_corpus/active_feed_database.db"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/aad4e616e884c71887fd2fe6447e495fee406183/sample_corpus/active_feeds.db"
     }
     db_group {
       group_name: "BenchPress_conditioned"
       db_type: "ActiveFeedDatabase"
-      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feed_database.db"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
     }
   }
 }
