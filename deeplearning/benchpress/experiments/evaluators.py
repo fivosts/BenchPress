@@ -25,6 +25,7 @@ from deeplearning.benchpress.proto import evaluator_pb2
 from deeplearning.benchpress.samplers import samples_database
 from deeplearning.benchpress.features import extractor
 from deeplearning.benchpress.features import feature_sampler
+from deeplearning.benchpress.features import evaluate_cand_database
 from deeplearning.benchpress.features import active_feed_database
 from deeplearning.benchpress.corpuses import benchmarks
 from deeplearning.benchpress.corpuses import tokenizers
@@ -76,10 +77,11 @@ class DBGroup(object):
   def __init__(self, group_name: str, db_type: str, databases: typing.List[pathlib.Path], tokenizer = None, size_limit: int = None):
     self.group_name = group_name
     self.db_type = {
-      "SamplesDatabase"    : samples_database.SamplesDatabase,
-      "ActiveFeedDatabase" : active_feed_database.ActiveFeedDatabase,
-      "EncodedContentFiles": encoded.EncodedContentFiles,
-      "CLSmithDatabase"    : clsmith.CLSmithDatabase,
+      "SamplesDatabase"         : samples_database.SamplesDatabase,
+      "ActiveFeedDatabase"      : active_feed_database.ActiveFeedDatabase,
+      "SearchCandidateDatabase" : evaluate_cand_database.SearchCandidateDatabase,
+      "EncodedContentFiles"     : encoded.EncodedContentFiles,
+      "CLSmithDatabase"         : clsmith.CLSmithDatabase,
     }[db_type]
     self.databases            = [self.db_type("sqlite:///{}".format(pathlib.Path(p).resolve()), must_exist = True) for p in databases]
     self.features             = {ext: None for ext in extractor.extractors.keys()}
@@ -808,6 +810,33 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         "target {} not found".format(ev.analyze_beam_search.target),
       )
       pbutil.AssertFieldIsSet(ev.analyze_beam_search, "feature_space")
+    elif ev.HasField("gen_distance_distribution"):
+      ### GenDistanceDistribution
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      if not pathlib.Path(config.tokenizer).resolve().exists():
+        raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
+      # DB groups
+      for dbs in ev.gen_distance_distribution.db_group:
+        for db in dbs.database:
+          p = pathlib.Path(db).resolve()
+          if not p.exists():
+            raise FileNotFoundError(p)
+        if dbs.HasField("size_limit"):
+          pbutil.AssertFieldConstraint(
+            dbs,
+            "size_limit",
+            lambda x : x > 0,
+            "Size limit must be a positive integer, {}".format(dbs.size_limit)
+          )
+      # Specialized fields.
+      pbutil.AssertFieldConstraint(
+        ev.gen_distance_distribution,
+        "target",
+        lambda x: x in benchmarks.targets,
+        "target {} not found".format(ev.gen_distance_distribution.target),
+      )
+      pbutil.AssertFieldIsSet(ev.gen_distance_distribution, "feature_space")
     else:
       raise ValueError(ev)
   return config
@@ -847,7 +876,8 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.TrainGrewe                : grewe_api.TrainGrewe,
     evaluator_pb2.FeatureSpaceCovLabel      : grewe_api.FeatureSpaceCovLabel,
     evaluator_pb2.FeatureSpaceCovGroup      : grewe_api.FeatureSpaceCovGroup,
-    evaluator_pb2.AnalyzeBeamSearch         : distance_score.AnalyzeBeamSearch
+    evaluator_pb2.AnalyzeBeamSearch         : distance_score.AnalyzeBeamSearch,
+    evaluator_pb2.GenDistanceDistribution   : distance_score.GenDistanceDistribution,
   }
   db_cache       = {}
   target_cache   = {}
@@ -1241,6 +1271,31 @@ def main(config: evaluator_pb2.Evaluation):
 
     elif ev.HasField("analyze_beam_search"):
       sev = ev.analyze_beam_search
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
+      # Gather target benchmarks and cache them
+      if isinstance(sev.target, list):
+        kw_args["targets"] = []
+        for t in sev.target:
+          if t not in target_cache:
+            target_cache[t] = TargetBenchmarks(t)
+          kw_args["targets"].append(target_cache[t])
+      else:
+        if sev.target not in target_cache:
+          target_cache[sev.target] = TargetBenchmarks(sev.target)
+        kw_args["targets"] = target_cache[sev.target]
+      for dbs in sev.db_group:
+        key = dbs.group_name + ''.join(dbs.database)
+        if key not in db_cache:
+          size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
+          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+        kw_args['db_groups'].append(db_cache[key])
+      # Gather feature spaces if applicable.
+      if sev.HasField("feature_space"):
+        kw_args['feature_space'] = sev.feature_space
+
+    elif ev.HasField("gen_distance_distribution"):
+      sev = ev.gen_distance_distribution
       if sev.HasField("plot_config"):
         kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
       # Gather target benchmarks and cache them
