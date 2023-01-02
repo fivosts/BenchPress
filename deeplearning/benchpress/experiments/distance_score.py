@@ -283,7 +283,7 @@ def GenDistanceDistribution(**kwargs) -> None:
   for target, groups in groups.items():
     distrs = []
     for name, data in groups.items():
-      d = distributions.GenericDistribution([int(round(x)) for x in data], workspace_path, "{}-{}".format(target, name))
+      d = distributions.GenericDistribution([int(round(x)) for x in data if x < float('inf')], workspace_path, "{}-{}".format(target, name))
       d.plot()
       distrs.append(d)
     if len(distrs) == 2:
