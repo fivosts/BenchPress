@@ -837,6 +837,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         "target {} not found".format(ev.gen_distance_distribution.target),
       )
       pbutil.AssertFieldIsSet(ev.gen_distance_distribution, "feature_space")
+      pbutil.AssertFieldIsSet(ev.gen_distance_distribution, "generation_id")
     else:
       raise ValueError(ev)
   return config
@@ -1318,6 +1319,8 @@ def main(config: evaluator_pb2.Evaluation):
       # Gather feature spaces if applicable.
       if sev.HasField("feature_space"):
         kw_args['feature_space'] = sev.feature_space
+      if sev.HasField("generation_id"):
+        kw_args['generation_id'] = sev.generation_id
     else:
       raise NotImplementedError(ev)
 
