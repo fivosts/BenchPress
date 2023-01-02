@@ -1,7 +1,7 @@
 workspace: "/var/foivos/results/conditioned_features_results/5eps/"
 evaluator {
   analyze_beam_search {
-    targets: 'rodinia'
+    target: 'rodinia'
     feature_space: 'GreweFeatures'
     db_group {
       group_name: "BenchPress"
@@ -15,7 +15,7 @@ evaluator {
     }
   }
   analyze_beam_search {
-    targets: 'rodinia'
+    target: 'rodinia'
     feature_space: 'AutophaseFeatures'
     db_group {
       group_name: "BenchPress"
@@ -31,7 +31,7 @@ evaluator {
 
 
   analyze_beam_search {
-    targets: 'rodinia'
+    target: 'rodinia'
     feature_space: 'InstCountFeatures'
     db_group {
       group_name: "BenchPress"
