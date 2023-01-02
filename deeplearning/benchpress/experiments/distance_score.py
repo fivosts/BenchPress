@@ -43,7 +43,7 @@ def KAverageScore(**kwargs) -> None:
   top_k          = kwargs.get('top_k')
   unique_code    = kwargs.get('unique_code', False)
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "{}_avg_score".format(top_k) / feature_space
   groups = {}
 
   # You need this if you want to have the same (github) baseline but when github is not plotted.
@@ -125,7 +125,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
   target         = kwargs.get('targets')
   feature_space  = kwargs.get('feature_space')
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "analyze_beam_search" / feature_space
 
   def feats_to_list(feats: typing.Dict[str, float]) -> typing.Tuple[typing.List, typing.List]:
     k, v = list(feats.keys()), list(feats.values())
@@ -189,7 +189,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     plotter.GrouppedRadar(
       groups    = radar_features,
       plot_name = "feeds_radar_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
-      path      = workspace_path,
+      path      = workspace_path / "radar",
       title     = benchmark.name,
       **plot_config if plot_config else {},
     )
@@ -197,7 +197,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     plotter.GroupScatterPlot(
       groups    = generations_score,
       plot_name = "Beam_generation_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
-      path      = workspace_path,
+      path      = workspace_path / "scatter",
       mode      = "lines+markers",
       title     = benchmark.name,
       **plot_config if plot_config else {},
@@ -210,7 +210,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       )
     },
     plot_name = "zero_distances_{}_{}".format(feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
-    path = workspace_path,
+    path = workspace_path / "stats",
     **plot_config if plot_config else {},
   )
   plotter.GrouppedBars(
@@ -221,7 +221,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       )
     },
     plot_name = "total_epochs_{}_{}".format(feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
-    path = workspace_path,
+    path = workspace_path / "stats",
     **plot_config if plot_config else {},
   )
   # base_dist = distributions.GenericDistribution(
@@ -263,7 +263,7 @@ def GenDistanceDistribution(**kwargs) -> None:
   db_groups      = kwargs.get('db_groups')
   feature_space  = kwargs.get('feature_space')
   plot_config    = kwargs.get('plot_config')
-  workspace_path = kwargs.get('workspace_path')
+  workspace_path = kwargs.get('workspace_path') / "gen_distance_distr" / feature_space
   generation_id  = kwargs.get('generation_id')
 
   groups = {}
