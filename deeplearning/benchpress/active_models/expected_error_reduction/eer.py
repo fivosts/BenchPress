@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-A neural architecture for CPU vs GPU device mapping prediction.
+A neural architecture for downstream task label prediction.
 
 This head is used for feature-less learning to target benchmarks.
 """
@@ -365,11 +365,14 @@ class ExpectedErrorReduction(backends.BackendBase):
     """
     Run validation to measure accuracy on the downstream task's selected test set, if exists.
     """
+    # Load the test database from the downstream task.
     test_set = self.downstream_task.test_set
+    # If non-empty.
     if test_set:
       _ = self.loadCheckpoint(self.train)
       self.train.model.zero_grad()
 
+      # Setup sampler and dataloader.
       if self.pytorch.num_nodes <= 1:
         sampler = self.torch.utils.data.SequentialSampler(test_set)
       else:
@@ -397,12 +400,14 @@ class ExpectedErrorReduction(backends.BackendBase):
         loader = self.pytorch.torch_ploader.ParallelLoader(
                             data_generator, [self.pytorch.device]
                           ).per_device_loader(self.pytorch.device)
+      # Setup iterator and accuracy metrics.
       batch_iter = tqdm.tqdm(iter(loader), desc = "Test Set", leave = False if self.is_world_process_zero() else iter(loader))
       accuracy = [0, 0]
       with self.torch.no_grad():
         self.train.model.eval()
         if self.pytorch.num_nodes > 1:
           loader.sampler.set_epoch(0)
+        # Run inference.
         for inputs in batch_iter:
 
           step_out = self.model_step(self.train.model, inputs)
@@ -423,6 +428,8 @@ class ExpectedErrorReduction(backends.BackendBase):
             output_label = step_out['output_label'].unsqueeze(0)
             target_ids   = inputs  ['target_ids'].unsqueeze(0).to(self.pytorch.device)
 
+          # Assign to the first index the count of correct predictions.
+          # Assign to the second index the total predictions.
           accuracy[0] += int(self.torch.sum(output_label == target_ids).cpu())
           accuracy[1] += int(output_label.shape[0])
 
