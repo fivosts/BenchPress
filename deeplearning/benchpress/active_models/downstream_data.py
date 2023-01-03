@@ -168,6 +168,14 @@ class GreweInstance(Base, sqlutil.ProtoBackedMixin):
       + str(global_size)
       + str(oracle)
     )
+    try:
+      F1 = transferred_bytes / (grewe_feats['comp'] + grewe_feats['mem'])
+    except ZeroDivisionError:
+      F1 = 0.0
+    try:
+      F3 = (grewe_feats['localmem'] / grewe_feats['mem']) * local_size
+    except ZeroDivisionError:
+      F3 = 0.0
     return GreweInstance(**{
       "src"                : src,
       "sampling_epoch"     : sampling_epoch,
@@ -175,19 +183,19 @@ class GreweInstance(Base, sqlutil.ProtoBackedMixin):
       "features"           : "\n".join(["{}:{}".format(k, v) for k, v in grewe_feats.items()]),
       "target_features"    : "\n".join(["{}:{}".format(k, v) for k, v in target_features.items()]),
       "euclidean_distance" : euclidean_distance,
-      "benchmark" : "{}-cl.A".format(sha),
-      "dataset"   : global_size,
-      "comp"      : grewe_feats['comp'],
-      "rational"  : grewe_feats['rational'],
-      "mem"       : grewe_feats['mem'],
-      "localmem"  : grewe_feats['localmem'],
-      "coalesced" : grewe_feats['coalesced'],
-      "atomic"    : grewe_feats['atomic'],
-      "transfer"  : transferred_bytes,
-      "wgsize"    : local_size,
-      "F1"        : transferred_bytes / (grewe_feats['comp'] + grewe_feats['mem']),
-      "F2"        : grewe_feats["F2:coalesced/mem"],
-      "F3"        : (grewe_feats['localmem'] / grewe_feats['mem']) * local_size,
+      "benchmark"   : "{}-cl.A".format(sha),
+      "dataset"     : global_size,
+      "comp"        : grewe_feats['comp'],
+      "rational"    : grewe_feats['rational'],
+      "mem"         : grewe_feats['mem'],
+      "localmem"    : grewe_feats['localmem'],
+      "coalesced"   : grewe_feats['coalesced'],
+      "atomic"      : grewe_feats['atomic'],
+      "transfer"    : transferred_bytes,
+      "wgsize"      : local_size,
+      "F1"          : F1,
+      "F2"          : grewe_feats["F2:coalesced/mem"],
+      "F3"          : F3,
       "F4"          : grewe_feats["F4:comp/mem"],
       "oracle"      : oracle,
       "runtime"     : min(cpu_transfer_ns + cpu_kernel_ns, gpu_transfer_ns + gpu_kernel_ns),
@@ -336,6 +344,14 @@ class FeatureLessGreweInstance(Base, sqlutil.ProtoBackedMixin):
       + str(global_size)
       + str(oracle)
     )
+    try:
+      F1 = transferred_bytes / (grewe_feats['comp'] + grewe_feats['mem'])
+    except ZeroDivisionError:
+      F1 = 0.0
+    try:
+      F3 = (grewe_feats['localmem'] / grewe_feats['mem']) * local_size
+    except ZeroDivisionError:
+      F3 = 0.0
     return FeatureLessGreweInstance(**{
       "src"                : src,
       "sampling_epoch"     : sampling_epoch,
@@ -353,9 +369,9 @@ class FeatureLessGreweInstance(Base, sqlutil.ProtoBackedMixin):
       "atomic"    : grewe_feats['atomic'],
       "transfer"  : transferred_bytes,
       "wgsize"    : local_size,
-      "F1"        : transferred_bytes / (grewe_feats['comp'] + grewe_feats['mem']),
+      "F1"        : F1,
       "F2"        : grewe_feats["F2:coalesced/mem"],
-      "F3"        : (grewe_feats['localmem'] / grewe_feats['mem']) * local_size,
+      "F3"        : F3,
       "F4"        : grewe_feats["F4:comp/mem"],
       "oracle"      : oracle,
       "runtime"     : min(cpu_transfer_ns + cpu_kernel_ns, gpu_transfer_ns + gpu_kernel_ns),
