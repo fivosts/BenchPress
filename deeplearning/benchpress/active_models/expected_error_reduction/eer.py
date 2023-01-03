@@ -197,10 +197,13 @@ class ExpectedErrorReduction(backends.BackendBase):
     """
     Train the AL predictive model.
     """
+    # The update dataloader for when you want to step-train after collecting target benchmark.
     update_dataloader = kwargs.get('update_dataloader', None)
+    # Temp estimator, for when you are temp-training a model version during EER Sample.
     update_estimator  = kwargs.get('eer_estimator', None)
 
     if not update_estimator:
+      # If not a temp estimator, then create the standard train estimator if not already created.
       self._ConfigTrainParams(self.downstream_task.data_generator)
 
     train_estimator = update_estimator if update_estimator else self.train
