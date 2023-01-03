@@ -18,17 +18,9 @@ downstream tasks that the committee can be trained on.
 
 The input and output features per downstream task are defined.
 """
-import sqlite3
-import pathlib
-import pickle
-import math
 import datetime
-import functools
 import typing
 import tqdm
-import multiprocessing
-import time
-import numpy as np
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -36,7 +28,7 @@ from sqlalchemy.ext import declarative
 from deeplearning.benchpress.util import sqlutil
 from deeplearning.benchpress.util import crypto
 
-from absl import app, flags
+from absl import flags
 
 FLAGS = flags.FLAGS
 
