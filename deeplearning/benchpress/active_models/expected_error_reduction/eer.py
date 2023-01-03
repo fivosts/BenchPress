@@ -18,12 +18,8 @@ A neural architecture for CPU vs GPU device mapping prediction.
 This head is used for feature-less learning to target benchmarks.
 """
 import typing
-import heapq
+import collections
 import tqdm
-import datetime
-import math
-import pathlib
-import copy
 
 from deeplearning.benchpress.models.torch_bert import hooks
 from deeplearning.benchpress.active_models import backends
@@ -668,7 +664,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         OR it might as well need the opposite. Transitioning from
         single to multiple GPUs will mean that 'module.' prefix is missing
         """
-        new_state_dict = OrderedDict()
+        new_state_dict = collections.OrderedDict()
         for k, v in self.torch.load(ckpt_comp("model")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
@@ -690,7 +686,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         OR it might as well need the opposite. Transitioning from
         single to multiple GPUs will mean that 'module.' prefix is missing
         """
-        new_state_dict = OrderedDict()
+        new_state_dict = collections.OrderedDict()
         for k, v in self.torch.load(ckpt_comp("model")).items():
           if k[:7] == 'module.':
             name = k[7:] # remove `module.`
