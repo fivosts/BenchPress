@@ -34,11 +34,9 @@ from deeplearning.benchpress.experiments import cldrive
 from deeplearning.benchpress.features import extractor
 from deeplearning.benchpress.features import grewe
 from deeplearning.benchpress.corpuses import tokenizers
-from deeplearning.benchpress.util import distributions
 from deeplearning.benchpress.util import environment
 from deeplearning.benchpress.util import distrib
 from deeplearning.benchpress.util import http_server
-from deeplearning.benchpress.util import socket_server
 from deeplearning.benchpress.util import crypto
 from deeplearning.benchpress.util import logging as l
 from deeplearning.benchpress.models.torch_bert.data_generator import JSON_to_ActiveSample
@@ -208,8 +206,8 @@ class GreweAbstract(DownstreamTask):
     """
     trb, ls = runtime_values
     return {
-      'transferred_bytes' : trb,
-      'local_size'        : ls,
+      'transferred_bytes' : int(trb),
+      'local_size'        : int(ls),
     }
 
   def VecToInputFeatDict(self, input_ids: typing.List[float]) -> typing.Dict[str, float]:
@@ -827,8 +825,8 @@ class FeatureLessGrewe(GreweAbstract):
     """
     trb, ls = runtime_values
     return {
-      'transferred_bytes' : trb,
-      'local_size'        : ls,
+      'transferred_bytes' : int(trb),
+      'local_size'        : int(ls),
     }
 
   def saveCheckpoint(self) -> None:
