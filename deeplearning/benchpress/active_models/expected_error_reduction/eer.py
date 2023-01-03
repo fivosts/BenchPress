@@ -435,6 +435,7 @@ class ExpectedErrorReduction(backends.BackendBase):
 
       epoch_accuracy = accuracy[0] / accuracy[1]
       distrib.barrier()
+    l.logger().error("Validation stats: {}".format(epoch_accuracy))
     return epoch_accuracy
 
   def Sample(self, sample_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
