@@ -222,9 +222,11 @@ class ExpectedErrorReduction(backends.BackendBase):
       if len(data_generator) == 0:
         return
 
+      # Empty cache for GPU environments.
       if self.pytorch.num_gpus > 0:
         self.torch.cuda.empty_cache()
 
+      # Load most recent checkpoint to estimator, if not temp-model.
       if not update_estimator:
         current_step = self.loadCheckpoint(train_estimator)
         if current_step >= 0:
@@ -241,6 +243,7 @@ class ExpectedErrorReduction(backends.BackendBase):
       if current_step < num_train_steps:
         train_estimator.model.zero_grad()
 
+        # Setup sampler and data loader.
         if self.pytorch.num_nodes <= 1:
           sampler = self.torch.utils.data.RandomSampler(data_generator, replacement = False)
         else:
@@ -272,6 +275,7 @@ class ExpectedErrorReduction(backends.BackendBase):
         # Get dataloader iterator and setup hooks.
         batch_iterator = iter(loader)
         if self.is_world_process_zero() and not update_estimator:
+          # Monitoring hook.
           train_hook = hooks.tensorMonitorHook(
             self.logfile_path,
             current_step,
@@ -333,7 +337,7 @@ class ExpectedErrorReduction(backends.BackendBase):
             if self.is_world_process_zero() and not update_estimator:
               try:
                 l.logger().info(
-                  "EER: Epoch {} Loss: {}".format(
+                  "EER: Step {} Loss: {}".format(
                     current_step // self.training_opts.steps_per_epoch, train_hook.epoch_loss
                   )
                 )
