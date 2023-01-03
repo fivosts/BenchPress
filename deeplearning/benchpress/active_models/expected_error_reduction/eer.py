@@ -210,6 +210,7 @@ class ExpectedErrorReduction(backends.BackendBase):
 
     if update_dataloader is None and update_estimator is None:
       l.logger().info("Initial EER model training.")
+      # self.Validate()
     if not self.is_trained or update_dataloader is not None or update_estimator:
 
       data_generator  = (
@@ -348,9 +349,9 @@ class ExpectedErrorReduction(backends.BackendBase):
                     current_step
                   )
                 )
-              epoch_accuracy = self.Validate()
+              val_accuracy = self.Validate()
               train_hook.end_epoch(
-                val_test_set_accuracy = epoch_accuracy,
+                **{"val_{}_accuracy".format(key): val for key, val in val_accuracy.items()}
               )
             if self.torch_tpu_available:
               self.pytorch.torch_xla.master_print(self.pytorch.torch_xla_met.metrics_report())
@@ -402,7 +403,7 @@ class ExpectedErrorReduction(backends.BackendBase):
                           ).per_device_loader(self.pytorch.device)
       # Setup iterator and accuracy metrics.
       batch_iter = tqdm.tqdm(iter(loader), desc = "Test Set", leave = False if self.is_world_process_zero() else iter(loader))
-      accuracy = [0, 0]
+      accuracy = {}
       with self.torch.no_grad():
         self.train.model.eval()
         if self.pytorch.num_nodes > 1:
@@ -428,14 +429,21 @@ class ExpectedErrorReduction(backends.BackendBase):
             output_label = step_out['output_label'].unsqueeze(0)
             target_ids   = inputs  ['target_ids'].unsqueeze(0).to(self.pytorch.device)
 
+          # Group accuracy stats by label.
           # Assign to the first index the count of correct predictions.
           # Assign to the second index the total predictions.
-          accuracy[0] += int(self.torch.sum(output_label == target_ids).cpu())
-          accuracy[1] += int(output_label.shape[0])
+          for id, label in zip(self.downstream_task.output_ids, self.downstream_task.output_labels):
+            if label not in accuracy:
+              accuracy[label] = [0, 0]
+            accuracy[label][0] += int(self.torch.sum((output_label == id) & (target_ids == id)).cpu())
+            accuracy[label][1] += int(self.torch.sum(target_ids == id).cpu())
 
-      epoch_accuracy = accuracy[0] / accuracy[1]
+      # You may want to all gather that.
+      epoch_accuracy = {
+        k: v[0] / v[1] for k, v in accuracy.items()
+      }
       distrib.barrier()
-    l.logger().error("Validation stats: {}".format(epoch_accuracy))
+    l.logger().error("Total data: {},\nValidation stats: {}\n{}".format(len(test_set), epoch_accuracy, accuracy))
     return epoch_accuracy
 
   def Sample(self, sample_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
