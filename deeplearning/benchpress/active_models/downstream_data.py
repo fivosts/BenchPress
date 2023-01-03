@@ -229,13 +229,13 @@ class GreweInstance(Base, sqlutil.ProtoBackedMixin):
         grewe_feats        = sample.features,
         target_features    = target_features,
         euclidean_distance = sample.score,
-        transferred_bytes  = sample.runtime_features['transferred_bytes'],
-        local_size         = sample.runtime_features['local_size'],
+        transferred_bytes  = int(sample.runtime_features['transferred_bytes']),
+        local_size         = int(sample.runtime_features['local_size']),
         oracle             = sample.runtime_features['label'],
-        cpu_transfer_ns    = sample.runtime_features['cpu_transfer_ns'],
-        cpu_kernel_ns      = sample.runtime_features['cpu_kernel_ns'],
-        gpu_transfer_ns    = sample.runtime_features['gpu_transfer_ns'],
-        gpu_kernel_ns      = sample.runtime_features['gpu_kernel_ns'],
+        cpu_transfer_ns    = int(sample.runtime_features['cpu_transfer_ns']),
+        cpu_kernel_ns      = int(sample.runtime_features['cpu_kernel_ns']),
+        gpu_transfer_ns    = int(sample.runtime_features['gpu_transfer_ns']),
+        gpu_kernel_ns      = int(sample.runtime_features['gpu_kernel_ns']),
         kernel_nlines      = len(src.split('\n')),
         kernel_size        = len(src.split(' ')),
       ))
@@ -397,6 +397,7 @@ class FeatureLessGreweInstance(Base, sqlutil.ProtoBackedMixin):
                 ) -> typing.List['FeatureLessGreweInstance']:
     instances = []
     for sample, grewe_feats in batch:
+      print(sample.runtime_features['local_size'])
       src = tokenizer.ArrayToCode(sample.sample)
       instances.append(FeatureLessGreweInstance.FromArgs(
         src                = src,
@@ -406,13 +407,13 @@ class FeatureLessGreweInstance(Base, sqlutil.ProtoBackedMixin):
         grewe_feats        = grewe_feats,
         target_features    = target_features,
         euclidean_distance = sample.score,
-        transferred_bytes  = sample.runtime_features['transferred_bytes'],
-        local_size         = sample.runtime_features['local_size'],
+        transferred_bytes  = int(sample.runtime_features['transferred_bytes']),
+        local_size         = int(sample.runtime_features['local_size']),
         oracle             = sample.runtime_features['label'],
-        cpu_transfer_ns    = sample.runtime_features['cpu_transfer_ns'],
-        cpu_kernel_ns      = sample.runtime_features['cpu_kernel_ns'],
-        gpu_transfer_ns    = sample.runtime_features['gpu_transfer_ns'],
-        gpu_kernel_ns      = sample.runtime_features['gpu_kernel_ns'],
+        cpu_transfer_ns    = int(sample.runtime_features['cpu_transfer_ns']),
+        cpu_kernel_ns      = int(sample.runtime_features['cpu_kernel_ns']),
+        gpu_transfer_ns    = int(sample.runtime_features['gpu_transfer_ns']),
+        gpu_kernel_ns      = int(sample.runtime_features['gpu_kernel_ns']),
         kernel_nlines      = len(src.split('\n')),
         kernel_size        = len(src.split(' ')),
       ))
