@@ -783,7 +783,7 @@ class BertForPreTraining(BertPreTrainedModel):
       prediction_scores, encoded_features = self.cls(sequence_output, input_features)
     else:
       prediction_scores, encoded_features = None, None
-    return prediction_scores, encoded_features, outputs[0], outputs[1]
+    return prediction_scores, encoded_features, sequence_output, pooled_output
 
   def forward(
     self,
