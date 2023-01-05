@@ -452,6 +452,7 @@ class torchBert(backends.BackendBase):
       ),
       bar = bar if environment.WORLD_RANK == 0 else None,
       extract_hidden_state = extract_hidden_state,
+      hidden_state_size    = self.hidden_state_size,
     )
 
     outputs['generated_samples'] = samples.detach()
@@ -1015,6 +1016,44 @@ class torchBert(backends.BackendBase):
           generated_samples,
           sample_indices
         )
+  
+  def EncodeInputs(self, src: typing.List[str]) -> np.array:
+    """
+    According to each LM's rules, encode a list of source codes to encoded arrays
+    ready to be fed into the model.
+
+    Args:
+      src: List of source codes.
+    
+    Returns:
+      A list of encoded numpy arrays.
+    """
+    sequence_length = self.config.architecture.max_position_embeddings
+    data_generator = self.sample.data_generator
+    encoded = [
+      data_generator._padToMaxPosition(
+        data_generator._addStartEndToken(
+          self.tokenizer.TokenizeString(x)))
+      for x in src
+    ][:sequence_length]
+    return encoded
+
+  def ExtractHidden(self, encoded: typing.List[np.array]) -> np.array:
+    """
+    Extract hidden state from backend language model.
+
+    Args:
+      encoded: A list of input ids that will be provided to the LM.
+                Has to be two-dimensional: [num_sequences X sequence_length]
+
+    Returns:
+      The hidden state of the provided inputs.
+    """
+    workload_input_ids = self.torch.LongTensor(encoded).to(self.pytorch.device)
+    batch_size = self.sampler.batch_size
+    return self.sample.model.extract_hidden_state(
+      workload_input_ids, self.hidden_state_size, batch_size
+    )
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None or test_sampler.is_live or test_sampler.is_active:
