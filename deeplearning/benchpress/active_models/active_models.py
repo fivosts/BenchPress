@@ -95,7 +95,6 @@ class Model(object):
   def __init__(self,
                config            : active_learning_pb2.ActiveLearner,
                cache_path        : pathlib.Path,
-               hidden_state_size : int = None,
                ):
     """Instantiate a model.
 
@@ -127,7 +126,6 @@ class Model(object):
       pathlib.Path(self.config.training_corpus).resolve(),
       self.cache_path / "downstream_task",
       self.config.random_seed,
-      hidden_state_size = hidden_state_size,
       test_db = pathlib.Path(self.config.test_db).resolve() if self.config.HasField("test_db") else None
     )
 
@@ -154,7 +152,7 @@ class Model(object):
     if FLAGS.disable_active_learning:
       l.logger().warn("Active learning has been disabled. Skip training.")
     else:
-      self.backend.Train(**kwargs)
+        self.backend.Train(**kwargs)
     return self
 
   def UpdateLearn(self, update_dataloader: 'torch.utils.data.Dataset') -> None:
