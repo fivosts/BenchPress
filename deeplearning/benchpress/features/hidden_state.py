@@ -93,7 +93,7 @@ class HiddenStateFeatures(object):
     else:
       encoded = LANGUAGE_MODEL.EncodeInputs(src)
       hidden_state = LANGUAGE_MODEL.ExtractHidden(encoded)
-    return list(hidden_state.cpu().numpy())
+    return list(hidden_state.detach().cpu().numpy())
 
   @classmethod
   def ExtractIRRawFeatures(cls, bytecode: str) -> str:
