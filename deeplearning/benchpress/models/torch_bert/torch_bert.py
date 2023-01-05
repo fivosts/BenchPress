@@ -101,7 +101,7 @@ class torchBert(backends.BackendBase):
 
   @property
   def hidden_state_size(self):
-    return self.config.architecture.max_position_embeddings
+    return self.config.architecture.max_position_embeddings * self.config.architecture.hidden_size
 
   def __repr__(self):
     return "BenchPress"
