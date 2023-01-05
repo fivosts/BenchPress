@@ -792,23 +792,24 @@ class BertForPreTraining(BertPreTrainedModel):
                            batch_size            : int,
                            workload_input_mask   : torch.LongTensor = None,
                            workload_position_ids : torch.LongTensor = None,
-                           ):
+                           ) -> torch.FloatTensor:
     """
     Get a workload of input ids and extract the hidden state of the model.
     """
-    hidden_states = self.torch.zeros(
+    device = workload_input_ids.get_device()
+    hidden_states = torch.zeros(
       [workload_input_ids.shape[0], hidden_state_size],
       dtype = torch.float32,
-    ).to(pytorch.device)
+    ).to(device)
 
     for idx in range(0, len(workload_input_ids), batch_size):
       input_ids = workload_input_ids[idx * batch_size: (idx + 1) * batch_size]
       if workload_input_mask is None:
-        input_mask = (input_ids != self.tokenizer.padToken)
+        input_mask = (input_ids != self.compile_sampler.tokenizer.padToken)
       else:
         input_mask = workload_input_mask[idx * batch_size: (idx + 1) * batch_size]
       if workload_position_ids is None:
-        position_ids = torch.arange(input_ids.shape[-1], dtype = torch.int64).to(pytorch.device)
+        position_ids = torch.arange(input_ids.shape[-1], dtype = torch.int64).to(device)
       else:
         position_ids = workload_position_ids[idx * batch_size: (idx + 1) * batch_size]
 
@@ -816,18 +817,18 @@ class BertForPreTraining(BertPreTrainedModel):
         input_ids,
         input_mask,
         position_ids,
-        extract_hidden_state = True,
+        extract_hidden_state = False, ## Don't forget to set this to true if you don't need prediction scores.
       )
       """
       TODO Research: Hidden states are collected from prediction_scores and have a shape of [seq_length x 1].
                     At each index lies the prob of the respective token in the input sequence.
       """
-      # sequence_length = workload_input_ids.shape[-1]
-      # hidden_states[idx*batch_size: (idx+1)*batch_size] = prediction_scores[:, range(sequence_length), input_ids][range(batch_size), range(batch_size)]
+      sequence_length = workload_input_ids.shape[-1]
+      hidden_states[idx*batch_size: (idx+1)*batch_size] = prediction_scores[:, range(sequence_length), input_ids][range(len(input_ids)), range(len(input_ids))]
       """
       TODO Research: Hidden states are collected from the encoder's outputs [seq_len x hidden_size]. Flatten everything out.
       """
-      hidden_states[idx*batch_size: (idx+1)*batch_size] = hidden_state.reshape((batch_size, -1))
+      # hidden_states[idx*batch_size: (idx+1)*batch_size] = hidden_state.reshape((batch_size, -1))
     return hidden_states
 
   def forward(
@@ -846,6 +847,7 @@ class BertForPreTraining(BertPreTrainedModel):
     output_hidden_states = None,
     is_validation        = False,
     step                 = -1,
+    extract_args         = None,
     **kwargs
   ):
     r"""
@@ -881,12 +883,16 @@ class BertForPreTraining(BertPreTrainedModel):
     if workload is not None:
       input_ids, attention_mask, position_ids, input_features = workload
 
+    if extract_args:
+      ## If using only for hidden state extraction.
+      return self.extract_hidden_state(**extract_args)
+
     device = input_ids.get_device()
     device = device if device >= 0 else 'cpu'
 
     ## If there is a sampling workload, load it directly to the compiler.
     extract_hidden_state = kwargs.get('extract_hidden_state', False)
-    hidden_state_size    = kwargs.get('extract_hidden_state', None)
+    hidden_state_size    = kwargs.get('hidden_state_size', None)
     if workload is not None:
       if self.cls is None:
         raise ValueError("This mode requires a classification head.")
@@ -903,7 +909,6 @@ class BertForPreTraining(BertPreTrainedModel):
         prediction_scores,
         position_ids[0],
         bar = bar,
-        extract_hidden_state = extract_hidden_state,
       )
       hidden_states = None
       if extract_hidden_state:
