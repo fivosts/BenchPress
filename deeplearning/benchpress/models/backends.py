@@ -18,7 +18,6 @@ import numpy as np
 
 from deeplearning.benchpress.corpuses import tokenizers
 from deeplearning.benchpress.corpuses import corpuses
-from deeplearning.benchpress.samplers import samplers
 from deeplearning.benchpress.proto import model_pb2
 from deeplearning.benchpress.util import cache
 from deeplearning.benchpress.util import pytorch
@@ -61,17 +60,17 @@ class BackendBase(object):
     raise NotImplementedError("Abstract Class.")
 
   def InitSampling(
-    self, sampler: samplers.Sampler, seed: typing.Optional[int] = None
+    self, sampler: 'samplers.Sampler', seed: typing.Optional[int] = None
   ) -> None:
     """Initialize backend for sampling."""
     raise NotImplementedError("Abstract Class.")
 
-  def InitSampleBatch(self, sampler: samplers.Sampler) -> None:
+  def InitSampleBatch(self, sampler: 'samplers.Sampler') -> None:
     """Begin a new sampling batch. Only called after InitSampling()."""
     raise NotImplementedError("Abstract Class.")
 
   def SampleNextIndices(
-    self, sampler: samplers.Sampler, done: np.ndarray, tokenizer = None
+    self, sampler: 'samplers.Sampler', done: np.ndarray, tokenizer = None
   ) -> np.ndarray:
     """Sample the next indices for the current sample batch.
 
