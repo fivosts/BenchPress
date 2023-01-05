@@ -287,7 +287,6 @@ class CompilationSampler(object):
                              prediction_scores       : torch.FloatTensor,
                              position_ids            : torch.LongTensor,
                              bar                     : 'tqdm.tqdm' = None,
-                             extract_hidden_state    : bool = False,
                              ) -> typing.Tuple[typing.List[np.array], typing.List[typing.List[int]]]:
     """
     This function receives a full workload of input ids to be sampled.
@@ -412,25 +411,7 @@ class CompilationSampler(object):
           sidx_length  = torch.cat((sidx_length, torch.full((res, 1), 0, dtype = torch.int64).to(device)), 0)
         w_idx += res
 
-    final_hidden_state = None
-    if extract_hidden_state:
-      final_hidden_state = torch.zeros(
-        [queue.shape[0], model.config.max_position_embeddings],
-        dtype = torch.float32,
-      ).to(device)
-      for widx in range(wload_size):
-        prediction_scores, _, _, _ = model.get_output(
-          queue[widx*batch_size: (widx+1)*batch_size],
-          (queue[widx*batch_size: (widx+1)*batch_size] != self.tokenizer.padToken),
-          position_ids[:batch_size],
-          None,
-        ) ## Feature directed model will not work here.
-        final_hidden_state[widx*batch_size: (widx+1)*batch_size] = prediction_scores[
-          :,
-          range(sequence_length),
-          queue[widx*batch_size: (widx+1)*batch_size]
-        ][range(batch_size), range(batch_size)]
-    return queue, sample_indices, final_hidden_state
+    return queue, sample_indices
 
   def StepHoleSeq(self,
                   batch             : torch.LongTensor,
