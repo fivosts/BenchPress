@@ -33,6 +33,7 @@ from deeplearning.benchpress.active_models import downstream_data
 from deeplearning.benchpress.experiments import cldrive
 from deeplearning.benchpress.features import extractor
 from deeplearning.benchpress.features import grewe
+from deeplearning.benchpress.features import hidden_state
 from deeplearning.benchpress.corpuses import tokenizers
 from deeplearning.benchpress.util import environment
 from deeplearning.benchpress.util import distrib
@@ -463,7 +464,7 @@ class Grewe(GreweAbstract):
   @property
   def static_features_labels(self) -> typing.List[str]:
     return grewe.KEYS
-  
+
   @property
   def input_labels(self) -> typing.List[str]:
     return [
@@ -654,13 +655,11 @@ class FeatureLessGrewe(GreweAbstract):
   """
   @property
   def input_size(self) -> int:
-    return self.hidden_state_size + self.runtime_features_size
-  
+    return self.static_features_size + self.runtime_features_size
+
   @property
   def static_features_labels(self) -> typing.List[str]:
-    return [
-      "f{}".format(str(r)) for r in range(self.hidden_state_size)
-    ]
+    return hidden_state.KEYS
 
   @property
   def input_labels(self) -> typing.List[str]:
@@ -697,7 +696,6 @@ class FeatureLessGrewe(GreweAbstract):
                corpus_path       : pathlib.Path,
                cache_path        : pathlib.Path,
                random_seed       : int,
-               hidden_state_size : int  = None,
                use_as_server     : bool = False,
                test_db           : pathlib.Path = None,
                **unused_kwargs,
@@ -724,7 +722,6 @@ class FeatureLessGrewe(GreweAbstract):
       else:
         self.test_db = None
       self.test_dataset = None
-    self.hidden_state_size = hidden_state_size
     return
 
   def __repr__(self) -> str:
