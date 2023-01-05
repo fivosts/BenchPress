@@ -15,8 +15,7 @@
 """
 Feature Extraction module for Dominic Grewe features.
 """
-import subprocess
-import tempfile
+import math
 import typing
 
 from absl import flags
@@ -24,13 +23,18 @@ from absl import flags
 from deeplearning.benchpress.util import pytorch
 from deeplearning.benchpress.util.pytorch import torch
 from deeplearning.benchpress.util import logging as l
+from deeplearning.benchpress.models import backends
 
 FLAGS = flags.FLAGS
 
 KEYS = None
 LANGUAGE_MODEL = None
 
-def setup_lm(lm: 'backends.BackendBase') -> None:
+def setup_lm(lm: backends.BackendBase) -> None:
+  """
+  Initialize the language model that will be used as a feature extractor.
+  Also, the keys of the feature space (they are parametric to the hidden size).
+  """
   global LANGUAGE_MODEL
   global KEYS
   KEYS = ["f{}".format(x) for x in range(lm.hidden_state_size)]
@@ -72,7 +76,7 @@ class HiddenStateFeatures(object):
     return {}
 
   @classmethod
-  def ExtractRawFeatures(cls, src: str) -> typing.List[float]:
+  def ExtractRawFeatures(cls, src: typing.Union[str, typing.List[str]]) -> typing.List[float]:
     """
     Invokes BenchPress to collect hidden softmax activations.
 
@@ -82,30 +86,11 @@ class HiddenStateFeatures(object):
       Feature vector and diagnostics in str format.
     """
     global LANGUAGE_MODEL
-    sequence_length = LANGUAGE_MODEL.config.architecture.max_position_embeddings
-    with LANGUAGE_MODEL.torch.no_grad():
-      encoded = [int(x) for x in LANGUAGE_MODEL.tokenizer.TokenizeString(src)]
-      encoded = [LANGUAGE_MODEL.tokenizer.startToken] + encoded + [LANGUAGE_MODEL.tokenizer.endToken]
-      if len(encoded) < sequence_length:
-        encoded = encoded + [LANGUAGE_MODEL.tokenizer.padToken] * (sequence_length - len(encoded))
-      encoded = encoded[:sequence_length]
-      input_ids = LANGUAGE_MODEL.torch.LongTensor(encoded).unsqueeze(0)
-      inputs = {
-        'input_ids'         : input_ids,
-        'input_mask'        : (input_ids != LANGUAGE_MODEL.tokenizer.padToken),
-        'position_ids'      : LANGUAGE_MODEL.torch.arange(len(encoded), dtype = LANGUAGE_MODEL.torch.int64).unsqueeze(0),
-        'mask_labels'       : LANGUAGE_MODEL.torch.full(tuple(input_ids.shape), -100, dtype = LANGUAGE_MODEL.torch.int64),
-        'masked_lm_lengths' : LANGUAGE_MODEL.torch.full([1, 1], -1, dtype = LANGUAGE_MODEL.torch.int64),
-        'input_features'    : None, ## TODO!
-      }
-      token_probs = LANGUAGE_MODEL.model_step(
-           LANGUAGE_MODEL.sample.model,
-           inputs,
-           is_validation = True,
-           extract_hidden_state = True,
-         )['prediction_logits']
-      input_id_probs = token_probs[(0, range(inputs['input_ids'].shape[-1]), inputs['input_ids'].squeeze(0))]
-      return [float(x) for x in input_id_probs]
+
+    if isinstance(src, list):
+      src = [src]
+    encoded = LANGUAGE_MODEL.EncodeInputs(src)
+    return LANGUAGE_MODEL.ExtractHidden(encoded)
 
   @classmethod
   def ExtractIRRawFeatures(cls, bytecode: str) -> str:
@@ -121,7 +106,6 @@ class HiddenStateFeatures(object):
     Converts clgen_features subprocess output from raw string
     to a mapped dictionary of feature -> value.
     """
-    normalized = torch.sigmoid(torch.FloatTensor(hidden_states))
     return {
-      "{}".format(k): float(v) for k, v in zip(KEYS, normalized)
+      "{}".format(k): 1 / (1 + math.exp(-float(v))) for k, v in zip(KEYS, hidden_states)
     }
