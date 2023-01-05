@@ -767,6 +767,7 @@ class BertForPreTraining(BertPreTrainedModel):
                  inputs_embeds        = None,
                  output_attentions    = None,
                  output_hidden_states = None,
+                 extract_hidden_state: bool = False,
                  ) -> typing.Tuple[torch.FloatTensor, torch.FloatTensor]:
     outputs = self.bert(
       input_ids            = input_ids,
@@ -779,10 +780,10 @@ class BertForPreTraining(BertPreTrainedModel):
       output_hidden_states = output_hidden_states,
     )
     sequence_output, pooled_output = outputs[:2]
-    if self.cls is not None:
-      prediction_scores, encoded_features = self.cls(sequence_output, input_features)
-    else:
+    if self.cls is None or extract_hidden_state:
       prediction_scores, encoded_features = None, None
+    else:
+      prediction_scores, encoded_features = self.cls(sequence_output, input_features)
     return prediction_scores, encoded_features, sequence_output, pooled_output
 
   def forward(
