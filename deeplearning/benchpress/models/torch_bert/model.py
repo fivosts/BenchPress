@@ -787,11 +787,11 @@ class BertForPreTraining(BertPreTrainedModel):
     return prediction_scores, encoded_features, sequence_output, pooled_output
 
   def extract_hidden_state(self,
-                           workload_input_ids   : torch.LongTensor,
-                           hidden_state_size    : int,
-                           batch_size           : int,
-                           workload_input_mask  : torch.LongTensor = None,
-                           workload_position_ids: torch.LongTensor = None,
+                           workload_input_ids    : torch.LongTensor,
+                           hidden_state_size     : int,
+                           batch_size            : int,
+                           workload_input_mask   : torch.LongTensor = None,
+                           workload_position_ids : torch.LongTensor = None,
                            ):
     """
     Get a workload of input ids and extract the hidden state of the model.
