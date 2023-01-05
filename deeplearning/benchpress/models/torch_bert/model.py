@@ -828,7 +828,9 @@ class BertForPreTraining(BertPreTrainedModel):
       """
       TODO Research: Hidden states are collected from the encoder's outputs [seq_len x hidden_size]. Flatten everything out.
       """
+      print(prediction_scores[:, range(sequence_length), input_ids][range(len(input_ids)), range(len(input_ids))])
       # hidden_states[idx*batch_size: (idx+1)*batch_size] = hidden_state.reshape((batch_size, -1))
+    hidden_states = torch.sigmoid(hidden_states)
     return hidden_states
 
   def forward(
