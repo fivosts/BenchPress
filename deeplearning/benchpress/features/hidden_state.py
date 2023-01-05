@@ -87,10 +87,13 @@ class HiddenStateFeatures(object):
     """
     global LANGUAGE_MODEL
 
-    if isinstance(src, list):
-      src = [src]
-    encoded = LANGUAGE_MODEL.EncodeInputs(src)
-    return LANGUAGE_MODEL.ExtractHidden(encoded)
+    if not isinstance(src, list):
+      encoded = LANGUAGE_MODEL.EncodeInputs([src])
+      hidden_state = LANGUAGE_MODEL.ExtractHidden(encoded).squeeze(0)
+    else:
+      encoded = LANGUAGE_MODEL.EncodeInputs(src)
+      hidden_state = LANGUAGE_MODEL.ExtractHidden(encoded)
+    return hidden_state
 
   @classmethod
   def ExtractIRRawFeatures(cls, bytecode: str) -> str:
