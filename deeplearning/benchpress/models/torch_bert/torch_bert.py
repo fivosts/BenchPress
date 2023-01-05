@@ -101,7 +101,8 @@ class torchBert(backends.BackendBase):
 
   @property
   def hidden_state_size(self):
-    return self.config.architecture.max_position_embeddings * self.config.architecture.hidden_size
+    # return self.config.architecture.max_position_embeddings * self.config.architecture.hidden_size
+    return self.config.architecture.hidden_size
 
   def __repr__(self):
     return "BenchPress"
@@ -1051,8 +1052,12 @@ class torchBert(backends.BackendBase):
     """
     workload_input_ids = self.torch.LongTensor(encoded).to(self.pytorch.device)
     batch_size = self.sampler.batch_size
-    return self.sample.model.extract_hidden_state(
-      workload_input_ids, self.hidden_state_size, batch_size
+    return self.sample.model(
+      extract_args = {
+        'workload_input_ids' : workload_input_ids,
+        'hidden_state_size'  : self.hidden_state_size,
+        'batch_size'         : batch_size,
+      }
     )
 
   def _getTestSampler(self, test_sampler, sequence_length):
