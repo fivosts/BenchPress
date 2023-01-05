@@ -110,5 +110,5 @@ class HiddenStateFeatures(object):
     to a mapped dictionary of feature -> value.
     """
     return {
-      "{}".format(k): 1 / (1 + math.exp(-float(v))) for k, v in zip(KEYS, hidden_states)
+      "{}".format(k): (v) for k, v in zip(KEYS, hidden_states)
     }
