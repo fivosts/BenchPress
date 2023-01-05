@@ -601,6 +601,31 @@ class Model(object):
             break
     return continue_sampling, seq_count, compiled
 
+  def EncodeInputs(self, src: typing.List[str]) -> np.array:
+    """
+    According to each LM's rules, encode a list of source codes to encoded arrays
+    ready to be fed into the model.
+
+    Args:
+      src: List of source codes.
+    
+    Returns:
+      A list of encoded numpy arrays.
+    """
+    return self.backend.EncodeInputs(src)
+
+  def ExtractHidden(self, encoded: typing.List[np.array]) -> np.array:
+    """
+    Extract hidden state from backend language model.
+
+    Args:
+      input_ids: A list of input ids that will be provided to the LM.
+
+    Returns:
+      The hidden state of the provided inputs.
+    """
+    return self.backend.ExtractHidden(encoded)
+
   def SamplerCache(self, sampler: 'samplers.Sampler') -> pathlib.Path:
     """Get the path to a sampler cache.
 
