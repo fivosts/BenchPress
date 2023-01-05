@@ -13,23 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Active Learning feature space models."""
-import os
-import time
-import socket
-import shutil
-import getpass
 import pathlib
 import typing
-import datetime
-import humanize
-
-import numpy as np
 
 from deeplearning.benchpress.util import pbutil
-from deeplearning.benchpress.util import cache
-from deeplearning.benchpress.util import crypto
 from deeplearning.benchpress.util import commit
-from deeplearning.benchpress.util import sqlutil
 from deeplearning.benchpress.util import environment
 from deeplearning.benchpress.util import distrib
 from deeplearning.benchpress.active_models import downstream_tasks
@@ -37,7 +25,6 @@ from deeplearning.benchpress.active_models.committee import active_committee
 from deeplearning.benchpress.active_models.committee import config as com_config
 from deeplearning.benchpress.active_models.expected_error_reduction import eer
 from deeplearning.benchpress.active_models.expected_error_reduction import config as eer_config
-from deeplearning.benchpress.samplers import sample_observers as sample_observers_lib
 from deeplearning.benchpress.proto import active_learning_pb2
 from absl import flags
 
