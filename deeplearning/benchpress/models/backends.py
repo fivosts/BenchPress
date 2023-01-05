@@ -84,6 +84,14 @@ class BackendBase(object):
     """Specifically sample a requested batch of data."""
     raise NotImplementedError("Abstract Class.")
 
+  def EncodeInputs(self, src: typing.List[str]) -> np.array:
+    """Encode text inputs to numpy arrays."""
+    raise NotImplementedError("Abstract Class.")
+  
+  def ExtractHidden(self, encoded: typing.List[np.array]) -> np.array:
+    """Extract Hidden State from Language Model"""
+    raise NotImplementedError("Abstract Class")
+
   def GetEncoderModule(self, **kwargs) -> torch.nn.Module:
     """Return the internal torch module of an architecture."""
     raise NotImplementedError("Abstract class")
