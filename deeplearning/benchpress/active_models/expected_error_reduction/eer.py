@@ -222,6 +222,10 @@ class ExpectedErrorReduction(backends.BackendBase):
       )
       if len(data_generator) == 0:
         return
+      # ## TODO: Dummy code. If active learner can't learn on test set, then features suck.
+      # Toggle this to train on test set. Used for evaluation purposes.
+      # elif not update_estimator:
+      #   data_generator = self.downstream_task.test_set
 
       # Empty cache for GPU environments.
       if self.pytorch.num_gpus > 0:
@@ -402,7 +406,7 @@ class ExpectedErrorReduction(backends.BackendBase):
                             data_generator, [self.pytorch.device]
                           ).per_device_loader(self.pytorch.device)
       # Setup iterator and accuracy metrics.
-      batch_iter = tqdm.tqdm(iter(loader), desc = "Test Set", leave = False if self.is_world_process_zero() else iter(loader))
+      batch_iter = tqdm.tqdm(iter(loader), desc = "Test Set", leave = False) if self.is_world_process_zero() else iter(loader)
       accuracy = {}
       with self.torch.no_grad():
         self.train.model.eval()
