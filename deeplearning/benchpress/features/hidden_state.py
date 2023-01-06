@@ -65,7 +65,10 @@ class HiddenStateFeatures(object):
     is returned.
     """
     raw_features = cls.ExtractRawFeatures(src)
-    return cls.RawToDictFeats(raw_features)
+    if isinstance(src, list):
+      return [cls.RawToDictFeats(r) for r in raw_features]
+    else:
+      return cls.RawToDictFeats(raw_features)
 
   @classmethod
   def ExtractIRFeatures(cls, bytecode: str) -> typing.Dict[str, float]:
