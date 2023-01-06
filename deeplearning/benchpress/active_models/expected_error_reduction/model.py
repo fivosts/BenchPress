@@ -26,7 +26,7 @@ def mish(x):
 
 ACT2FN = {
   "gelu"     : activations.gelu,
-  "relu"     : torch.nn.functional.relu,
+  "relu"     : torch.nn.ReLU,
   "swish"    : activations.swish,
   "gelu_new" : activations.gelu_new,
   "mish"     : mish,
