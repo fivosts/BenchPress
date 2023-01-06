@@ -76,7 +76,7 @@ class HiddenStateFeatures(object):
     return {}
 
   @classmethod
-  def ExtractRawFeatures(cls, src: typing.Union[str, typing.List[str]]) -> typing.List[float]:
+  def ExtractRawFeatures(cls, src: typing.Union[str, typing.List[str]]) -> typing.Union[typing.List[float], typing.List[typing.List[float]]]:
     """
     Invokes BenchPress to collect hidden softmax activations.
 
