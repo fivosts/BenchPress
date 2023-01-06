@@ -1088,7 +1088,7 @@ class torchBert(backends.BackendBase):
         """
         TODO Research: Hidden states are collected from the encoder's outputs [seq_len x hidden_size]. Flatten everything out.
         """
-        # hidden_states[idx*batch_size: (idx+1)*batch_size] = hidden_state.reshape((batch_size, -1)).detach().cpu()
+        # hidden_states[idx*real_batch_size: (idx+1)*real_batch_size] = hidden_state.reshape((real_batch_size, -1)).detach().cpu()
         ###########################################
         bar.update(real_batch_size)
       assert not (self.torch.sum(hidden_states, dim = -1) == 0).any(), hidden_states
