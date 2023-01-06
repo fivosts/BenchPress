@@ -803,15 +803,17 @@ class BertForPreTraining(BertPreTrainedModel):
     ).to(device)
 
     for idx in range(0, len(workload_input_ids), batch_size):
-      input_ids = workload_input_ids[idx * batch_size: (idx + 1) * batch_size]
+      input_ids = workload_input_ids[idx: idx + batch_size]
       if workload_input_mask is None:
         input_mask = (input_ids != self.compile_sampler.tokenizer.padToken)
       else:
-        input_mask = workload_input_mask[idx * batch_size: (idx + 1) * batch_size]
+        input_mask = workload_input_mask[idx: idx + batch_size]
       if workload_position_ids is None:
         position_ids = torch.arange(input_ids.shape[-1], dtype = torch.int64).to(device)
       else:
-        position_ids = workload_position_ids[idx * batch_size: (idx + 1) * batch_size]
+        position_ids = workload_position_ids[idx: idx + batch_size]
+
+      real_batch_size = len(input_ids)
 
       prediction_scores, encoded_features, hidden_state, _ = self.get_output(
         input_ids,
@@ -824,13 +826,13 @@ class BertForPreTraining(BertPreTrainedModel):
                     At each index lies the prob of the respective token in the input sequence.
       """
       sequence_length = workload_input_ids.shape[-1]
-      hidden_states[idx*batch_size: (idx+1)*batch_size] = prediction_scores[:, range(sequence_length), input_ids][range(len(input_ids)), range(len(input_ids))]
+      hidden_states[idx: idx + real_batch_size] = prediction_scores[:, range(sequence_length), input_ids][range(real_batch_size), range(real_batch_size)]
       """
       TODO Research: Hidden states are collected from the encoder's outputs [seq_len x hidden_size]. Flatten everything out.
       """
-      print(prediction_scores[:, range(sequence_length), input_ids][range(len(input_ids)), range(len(input_ids))])
       # hidden_states[idx*batch_size: (idx+1)*batch_size] = hidden_state.reshape((batch_size, -1))
     hidden_states = torch.sigmoid(hidden_states)
+    print("Add assertion here for 0.5")
     return hidden_states
 
   def forward(
