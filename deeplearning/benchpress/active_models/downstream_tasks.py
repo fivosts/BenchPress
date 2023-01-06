@@ -679,8 +679,10 @@ class FeatureLessGrewe(GreweAbstract):
         assert len(features) == len(data), "{}, {}".format(len(features), len(data))
         for dp, features in tqdm.tqdm(zip(data, features), total = len(data)):
           test_data.append(
-            self.InputtoEncodedVector(features, dp.transferred_bytes, dp.local_size),
-            [self.TargetLabeltoID(dp.status)]
+            (
+              self.InputtoEncodedVector(features, dp.transferred_bytes, dp.local_size),
+              [self.TargetLabeltoID(dp.status)]
+            )
           )
         self.test_dataset = data_generator.ListTrainDataloader(test_data)
         self.saveCheckpoint()
