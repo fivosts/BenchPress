@@ -20,6 +20,8 @@ from __future__ import print_function
 import os
 import copy
 import shutil
+import multiprocessing
+import functools
 import humanize
 import typing
 import pathlib
@@ -84,6 +86,12 @@ flags.DEFINE_boolean(
   False,
   "Use TensorRT for the sampling model."
 )
+
+def worker(src, sequence_length, tokenizer):
+  src = list(tokenizer.TokenizeString(src))
+  src = [tokenizer.startToken] + src + [tokenizer.endToken]
+  src = src + [tokenizer.padToken] * max(0, sequence_length - len(src))
+  return src[:sequence_length]
 
 class torchBert(backends.BackendBase):
 
@@ -444,7 +452,7 @@ class torchBert(backends.BackendBase):
     inputs = self.to_device(inputs)
     if environment.WORLD_RANK == 0:
       bar = tqdm.auto.trange(wload_size, desc=desc, leave = False, position = 0)
-    samples, sample_indices, hidden_state = model(
+    samples, sample_indices = model(
       workload = (
         inputs['input_ids'],
         inputs['input_mask'],
@@ -452,8 +460,6 @@ class torchBert(backends.BackendBase):
         inputs['input_features'],
       ),
       bar = bar if environment.WORLD_RANK == 0 else None,
-      extract_hidden_state = extract_hidden_state,
-      hidden_state_size    = self.hidden_state_size,
     )
 
     outputs['generated_samples'] = samples.detach()
@@ -461,7 +467,7 @@ class torchBert(backends.BackendBase):
     outputs['input_ids']         = self.torch.reshape(inputs['input_ids'], tuple(samples.shape))
     outputs['masked_lm_lengths'] = self.torch.reshape(inputs['masked_lm_lengths'].to(self.pytorch.device), (samples.shape[0], -1))
     if extract_hidden_state:
-      outputs['hidden_state'] = hidden_state.detach()
+      outputs['hidden_state'] = self.ExtractHidden(samples)
 
     outputs['generated_samples'] = list(outputs['generated_samples'].cpu().numpy())
     outputs['sample_indices']    = list(outputs['sample_indices'].cpu().numpy())
@@ -1017,8 +1023,8 @@ class torchBert(backends.BackendBase):
           generated_samples,
           sample_indices
         )
-  
-  def EncodeInputs(self, src: typing.List[str]) -> np.array:
+
+  def EncodeInputs(self, src: typing.List[np.array]) -> typing.List[np.array]:
     """
     According to each LM's rules, encode a list of source codes to encoded arrays
     ready to be fed into the model.
@@ -1030,13 +1036,12 @@ class torchBert(backends.BackendBase):
       A list of encoded numpy arrays.
     """
     sequence_length = self.config.architecture.max_position_embeddings
-    data_generator = self.sample.data_generator
-    encoded = [
-      data_generator._padToMaxPosition(
-        data_generator._addStartEndToken(
-          self.tokenizer.TokenizeString(x)))
-      for x in src
-    ][:sequence_length]
+    pool = multiprocessing.Pool()
+    encoded = []
+    it = pool.imap(functools.partial(worker, sequence_length = sequence_length, tokenizer = self.tokenizer), src, chunksize = 256)
+    for enc in tqdm.tqdm(it, total = len(src), desc = "Encode Inputs", leave = False):
+      encoded.append(enc)
+    pool.close()
     return encoded
 
   def ExtractHidden(self, encoded: typing.List[np.array]) -> np.array:
@@ -1050,15 +1055,45 @@ class torchBert(backends.BackendBase):
     Returns:
       The hidden state of the provided inputs.
     """
-    workload_input_ids = self.torch.LongTensor(encoded).to(self.pytorch.device)
-    batch_size = self.sampler.batch_size
-    return self.sample.model(
-      extract_args = {
-        'workload_input_ids' : workload_input_ids,
-        'hidden_state_size'  : self.hidden_state_size,
-        'batch_size'         : batch_size,
-      }
+    if not isinstance(encoded, self.torch.Tensor):
+      workload_input_ids = self.torch.LongTensor(encoded).to(self.pytorch.device)
+    else:
+      workload_input_ids = encoded
+
+    hidden_states = self.torch.zeros(
+      [workload_input_ids.shape[0], self.hidden_state_size],
+      dtype = self.torch.float32,
     )
+
+    bar = tqdm.tqdm(total = workload_input_ids.shape[0], desc = "Extract Hidden State", leave = False)
+    with self.torch.no_grad():
+      for idx in range(0, workload_input_ids.shape[0], self.sampler.batch_size):
+        input_ids = workload_input_ids[idx : idx + self.sampler.batch_size].to(self.pytorch.device)
+        input_mask = (input_ids != self.tokenizer.padToken)
+        position_ids = self.torch.arange(input_ids.shape[-1], dtype = self.torch.int64).unsqueeze(0).repeat(input_ids.shape[0], 1).to(self.pytorch.device)
+        prediction_scores, hidden_state = self.sample.model(
+          input_ids = input_ids,
+          attention_mask = input_mask,
+          position_ids = position_ids,
+          extract_hidden_state = True,
+        )
+        real_batch_size = input_ids.shape[0]
+        ###########################################
+        """
+        TODO Research: Hidden states are collected from prediction_scores and have a shape of [seq_length x 1].
+                      At each index lies the prob of the respective token in the input sequence.
+        """
+        sequence_length = workload_input_ids.shape[-1]
+        hidden_states[idx: idx + real_batch_size] = prediction_scores[:, range(sequence_length), input_ids][range(real_batch_size), range(real_batch_size)].detach().cpu()
+        """
+        TODO Research: Hidden states are collected from the encoder's outputs [seq_len x hidden_size]. Flatten everything out.
+        """
+        # hidden_states[idx*batch_size: (idx+1)*batch_size] = hidden_state.reshape((batch_size, -1)).detach().cpu()
+        ###########################################
+        bar.update(real_batch_size)
+      assert not (self.torch.sum(hidden_states, dim = -1) == 0).any(), hidden_states
+      hidden_states = self.torch.sigmoid(hidden_states)
+      return hidden_states
 
   def _getTestSampler(self, test_sampler, sequence_length):
     if test_sampler is None or test_sampler.is_live or test_sampler.is_active:
