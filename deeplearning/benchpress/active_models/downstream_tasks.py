@@ -674,18 +674,14 @@ class FeatureLessGrewe(GreweAbstract):
     if self.test_db:
       if not self.test_dataset:
         data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU_benchmarks")]
+        features = extractor.ExtractFeatures([x.source for x in data], [self.feature_space])[self.feature_space]
         test_data = []
-        loop = tqdm.tqdm(data, total = len(data), desc = "FeatureLessGrewe corpus setup", leave = False) if environment.WORLD_RANK == 0 else it
-        for dp in loop:
-          out = ExtractorWorker(dp, fspace = self.feature_space)
-          if out:
-            feats, entry = out
-            test_data.append(
-              (
-                self.InputtoEncodedVector(feats, entry.transferred_bytes, entry.local_size),
-                [self.TargetLabeltoID(entry.status)]
-              )
-            )
+        assert len(features) == len(data), "{}, {}".format(len(features), len(data))
+        for dp, features in tqdm.tqdm(zip(data, features), total = len(data)):
+          test_data.append(
+            self.InputtoEncodedVector(features, dp.transferred_bytes, dp.local_size),
+            [self.TargetLabeltoID(dp.status)]
+          )
         self.test_dataset = data_generator.ListTrainDataloader(test_data)
         self.saveCheckpoint()
       return self.test_dataset
