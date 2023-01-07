@@ -51,7 +51,7 @@ def ExtractFeaturesIter(srcs: typing.List[str],
                         header_file     : str = None,
                         use_aux_headers : bool = True,
                         extra_args      : typing.List[str] = []
-                        ) -> typing.Dict[str, typing.Generator[typing.Dict[str, float]]]:
+                        ) -> typing.Dict[str, typing.Iterator[typing.Dict[str, float]]]:
   """
   Wrapper method for core feature functions.
   Returns a mapping between extractor type(string format) and feature data collected.
@@ -75,7 +75,7 @@ def ExtractIRFeatures(bytecode: str,
 
 def ExtractIRFeaturesIter(bytecodes: typing.List[str],
                           ext: typing.List[str] = None,
-                          ) -> typing.Dict[str, typing.Generator[typing.Dict[str, float]]]:
+                          ) -> typing.Dict[str, typing.Iterator[typing.Dict[str, float]]]:
   """
   Wrapper method for core feature functions.
   Returns a mapping between extractor type(string format) and feature data collected.
@@ -107,7 +107,7 @@ def ExtractRawFeaturesIter(srcs: typing.List[str],
                            header_file     : str = None,
                            use_aux_headers : bool = True,
                            extra_args      : typing.List[str] = []
-                           ) -> typing.Generator[str]:
+                           ) -> typing.Iterator[str]:
   """
   Wrapper method for core feature functions.
   Returns a mapping between extractor type(string format) and feature data collected.
@@ -135,7 +135,7 @@ def ExtractIRRawFeatures(bytecode: str,
 
 def ExtractIRRawFeaturesIter(bytecodes: typing.List[str],
                              ext: typing.List[str] = None,
-                             ) -> typing.Generator[str]:
+                             ) -> typing.Iterator[str]:
   """
   Wrapper method for core feature functions.
   Returns a mapping between extractor type(string format) and feature data collected.

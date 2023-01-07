@@ -73,7 +73,7 @@ class HiddenStateFeatures(object):
                           header_file     : str  = None,
                           use_aux_headers : bool = True,
                           extra_args      : typing.List[str] = [],
-                          ) -> typing.Generator[typing.Dict[str, float]]:
+                          ) -> typing.Iterator[typing.Dict[str, float]]:
     """
     Invokes clgen_features extractor on source code and return feature mappings
     in dictionary format.
