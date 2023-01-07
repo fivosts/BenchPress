@@ -14,6 +14,7 @@
 # limitations under the License.
 """CPU and GPU memory usage monitor"""
 import os
+humanize
 import pathlib
 import psutil
 import threading
@@ -23,12 +24,20 @@ import typing
 from deeplearning.benchpress.util import gpu
 from deeplearning.benchpress.util import monitors
 
-def getRamUsage() -> float:
+def getRamUsage() -> typing.Dict[str, str]:
   """
   Return memory usage of current PID without its child processes.
   """
   process = psutil.Process(os.getpid())
-  return process.memory_info()
+  return {
+    'dss': humanize.naturalsize(process.dss),
+    'vms': humanize.naturalsize(process.vms),
+    'shared': humanize.naturalsize(process.shared),
+    'text': humanize.naturalsize(process.text),
+    'lib': humanize.naturalsize(process.lib),
+    'data': humanize.naturalsize(process.data),
+    'dirty': humanize.naturalsize(process.dirty),
+  }
 
 def monRamUsage(path: pathlib.Path) -> None:
   ram_monitor = monitors.HistoryMonitor(
