@@ -23,6 +23,13 @@ import typing
 from deeplearning.benchpress.util import gpu
 from deeplearning.benchpress.util import monitors
 
+def getRamUsage() -> float:
+  """
+  Return memory usage of current PID without its child processes.
+  """
+  process = psutil.Process(os.getpid())
+  return process.memory_info()
+
 def monRamUsage(path: pathlib.Path) -> None:
   ram_monitor = monitors.HistoryMonitor(
     path, "ram_usage"
