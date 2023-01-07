@@ -14,7 +14,7 @@
 # limitations under the License.
 """CPU and GPU memory usage monitor"""
 import os
-humanize
+import humanize
 import pathlib
 import psutil
 import threading
