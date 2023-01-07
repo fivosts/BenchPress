@@ -46,6 +46,20 @@ def ExtractFeatures(src: str,
     ext = [k for k in extractors.keys() if k != 'HiddenState']
   return {xt: extractors[xt].ExtractFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args) for xt in ext}
 
+def ExtractFeaturesIter(srcs: typing.List[str],
+                        ext: typing.List[str] = None,
+                        header_file     : str = None,
+                        use_aux_headers : bool = True,
+                        extra_args      : typing.List[str] = []
+                        ) -> typing.Dict[str, typing.Generator[typing.Dict[str, float]]]:
+  """
+  Wrapper method for core feature functions.
+  Returns a mapping between extractor type(string format) and feature data collected.
+  """
+  if not ext:
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
+  return {xt: extractors[xt].ExtractFeaturesIter(srcs, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args) for xt in ext}
+
 def ExtractIRFeatures(bytecode: str,
                       ext: typing.List[str] = None,
                       ) -> typing.Dict[str, typing.Dict[str, float]]:
@@ -58,6 +72,19 @@ def ExtractIRFeatures(bytecode: str,
   if not ext:
     ext = [k for k in extractors.keys() if k != 'HiddenState']
   return {xt: extractors[xt].ExtractIRFeatures(bytecode) for xt in ext}
+
+def ExtractIRFeaturesIter(bytecodes: typing.List[str],
+                          ext: typing.List[str] = None,
+                          ) -> typing.Dict[str, typing.Generator[typing.Dict[str, float]]]:
+  """
+  Wrapper method for core feature functions.
+  Returns a mapping between extractor type(string format) and feature data collected.
+
+  Works for LLVM-IR as an input.
+  """
+  if not ext:
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
+  return {xt: extractors[xt].ExtractIRFeaturesIter(bytecodes) for xt in ext}
 
 def ExtractRawFeatures(src: str,
                        ext: typing.List[str] = None,
@@ -75,6 +102,22 @@ def ExtractRawFeatures(src: str,
     raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
   return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args)) for xt in ext])
 
+def ExtractRawFeaturesIter(srcs: typing.List[str],
+                           ext: typing.List[str] = None,
+                           header_file     : str = None,
+                           use_aux_headers : bool = True,
+                           extra_args      : typing.List[str] = []
+                           ) -> typing.Generator[str]:
+  """
+  Wrapper method for core feature functions.
+  Returns a mapping between extractor type(string format) and feature data collected.
+  """
+  if not ext:
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
+  if ext and not isinstance(ext, list):
+    raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
+  return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractRawFeaturesIter(srcs, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args)) for xt in ext])
+
 def ExtractIRRawFeatures(bytecode: str,
                          ext: typing.List[str] = None,
                          ) -> str:
@@ -90,6 +133,21 @@ def ExtractIRRawFeatures(bytecode: str,
     raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
   return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractIRRawFeatures(bytecode)) for xt in ext])
 
+def ExtractIRRawFeaturesIter(bytecodes: typing.List[str],
+                             ext: typing.List[str] = None,
+                             ) -> typing.Generator[str]:
+  """
+  Wrapper method for core feature functions.
+  Returns a mapping between extractor type(string format) and feature data collected.
+
+  Works for LLVM-IR as an input.
+  """
+  if not ext:
+    ext = [k for k in extractors.keys() if k != 'HiddenState']
+  if ext and not isinstance(ext, list):
+    raise TypeError("Requested feature space extractors must be a list, {} received".format(type(ext)))
+  return '\n'.join(["{}:\n{}".format(xt, extractors[xt].ExtractIRRawFeaturesIter(bytecodes)) for xt in ext])
+
 def RawToDictFeats(str_feats: typing.Union[str, typing.List[float]], ext: typing.List[str] = None) -> typing.Dict[str, typing.Dict[str, float]]:
   """
   Wrapper method for core feature functions.
@@ -104,4 +162,3 @@ def RawToDictFeats(str_feats: typing.Union[str, typing.List[float]], ext: typing
   else:
     feats = {ext[0]: str_feats}
   return {xt: extractors[xt].RawToDictFeats(feat) for xt, feat in feats.items()}
-
