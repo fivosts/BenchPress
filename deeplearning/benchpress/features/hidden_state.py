@@ -65,10 +65,25 @@ class HiddenStateFeatures(object):
     is returned.
     """
     raw_features = cls.ExtractRawFeatures(src)
-    if isinstance(src, list):
-      return [cls.RawToDictFeats(r) for r in raw_features]
-    else:
-      return cls.RawToDictFeats(raw_features)
+    return cls.RawToDictFeats(raw_features)
+
+  @classmethod
+  def ExtractFeaturesIter(cls,
+                          srcs: typing.List[str],
+                          header_file     : str  = None,
+                          use_aux_headers : bool = True,
+                          extra_args      : typing.List[str] = [],
+                          ) -> typing.Generator[typing.Dict[str, float]]:
+    """
+    Invokes clgen_features extractor on source code and return feature mappings
+    in dictionary format.
+
+    If the code has syntax errors, features will not be obtained and empty dict
+    is returned.
+    """
+    raw_features = cls.ExtractRawFeatures(srcs)
+    for feat_vec in raw_features:
+      yield cls.RawToDictFeats(feat_vec)
 
   @classmethod
   def ExtractIRFeatures(cls, bytecode: str) -> typing.Dict[str, float]:
@@ -89,7 +104,6 @@ class HiddenStateFeatures(object):
       Feature vector and diagnostics in str format.
     """
     global LANGUAGE_MODEL
-
     if not isinstance(src, list):
       encoded = LANGUAGE_MODEL.EncodeInputs([src])
       hidden_state = LANGUAGE_MODEL.ExtractHidden(encoded).squeeze(0)
