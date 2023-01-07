@@ -81,8 +81,8 @@ class HiddenStateFeatures(object):
     If the code has syntax errors, features will not be obtained and empty dict
     is returned.
     """
-    raw_features = cls.ExtractRawFeatures(srcs)
-    for feat_vec in raw_features:
+    for src in srcs:
+      feat_vec = cls.ExtractRawFeatures(src)
       yield cls.RawToDictFeats(feat_vec)
 
   @classmethod
