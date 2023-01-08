@@ -17,7 +17,6 @@ import typing
 import numpy as np
 
 from deeplearning.benchpress.corpuses import tokenizers
-from deeplearning.benchpress.corpuses import corpuses
 from deeplearning.benchpress.proto import model_pb2
 from deeplearning.benchpress.util import cache
 from deeplearning.benchpress.util import pytorch
@@ -47,11 +46,11 @@ class BackendBase(object):
   def Create(self, tokenizer: tokenizers.TokenizerBase) -> None:
     self.tokenizer = tokenizer
 
-  def PreTrain(self, corpus: corpuses.Corpus, **extra_kwargs) -> None:
+  def PreTrain(self, corpus: 'corpuses.Corpus', **extra_kwargs) -> None:
     """Pre-train the backend"""
     raise NotImplementedError("pre-training is only supported in PyTorch BERT.")
 
-  def Train(self, corpus: corpuses.Corpus, **extra_kwargs) -> None:
+  def Train(self, corpus: 'corpuses.Corpus', **extra_kwargs) -> None:
     """Train the backend."""
     raise NotImplementedError("Abstract Class.")
 
