@@ -81,9 +81,12 @@ class HiddenStateFeatures(object):
     If the code has syntax errors, features will not be obtained and empty dict
     is returned.
     """
-    for src in srcs:
-      feat_vec = cls.ExtractRawFeatures(src)
-      yield cls.RawToDictFeats(feat_vec)
+    batch_size = extra_args.get('batch_size', 256)
+    for bidx in range(0, len(srcs), batch_size):
+      batch = srcs[bidx: bidx + batch_size]
+      batch_feats = cls.ExtractRawFeatures(batch)
+      for feat_vec in batch_feats:
+        yield cls.RawToDictFeats(feat_vec)
 
   @classmethod
   def ExtractIRFeatures(cls, bytecode: str) -> typing.Dict[str, float]:
