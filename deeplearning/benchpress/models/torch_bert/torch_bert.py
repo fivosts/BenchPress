@@ -1024,7 +1024,7 @@ class torchBert(backends.BackendBase):
           sample_indices
         )
 
-  def EncodeInputs(self, src: typing.List[np.array]) -> typing.List[np.array]:
+  def EncodeInputs(self, srcs: typing.List[np.array]) -> typing.List[np.array]:
     """
     According to each LM's rules, encode a list of source codes to encoded arrays
     ready to be fed into the model.
@@ -1036,10 +1036,10 @@ class torchBert(backends.BackendBase):
       A list of encoded numpy arrays.
     """
     sequence_length = self.config.architecture.max_position_embeddings
-    pool = multiprocessing.Pool()
+    pool = multiprocessing.Pool(min(os.cpu_count(), len(srcs)))
     encoded = []
-    it = pool.imap(functools.partial(worker, sequence_length = sequence_length, tokenizer = self.tokenizer), src, chunksize = 256)
-    for enc in tqdm.tqdm(it, total = len(src), desc = "Encode Inputs", leave = False):
+    it = pool.imap(functools.partial(worker, sequence_length = sequence_length, tokenizer = self.tokenizer), srcs, chunksize = 256)
+    for enc in tqdm.tqdm(it, total = len(srcs), desc = "Encode Inputs", leave = False):
       encoded.append(enc)
     pool.close()
     return encoded
@@ -1088,7 +1088,7 @@ class torchBert(backends.BackendBase):
         """
         TODO Research: Hidden states are collected from the encoder's outputs [seq_len x hidden_size]. Flatten everything out.
         """
-        # hidden_states[idx*real_batch_size: (idx+1)*real_batch_size] = hidden_state.reshape((real_batch_size, -1)).detach().cpu()
+        # hidden_states[idx: idx + real_batch_size] = hidden_state.reshape((real_batch_size, -1)).detach().cpu()
         ###########################################
         bar.update(real_batch_size)
       assert not (self.torch.sum(hidden_states, dim = -1) == 0).any(), hidden_states
