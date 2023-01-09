@@ -46,13 +46,23 @@ class ListTrainDataloader(torch.utils.data.Dataset):
     """
     self.dataset = []
     for dp in dataset:
-      inp, targ = dp
-      self.dataset.append(
-        {
-          'input_ids' : torch.FloatTensor(inp),
-          'target_ids': torch.LongTensor(targ),
-        }
-      )
+      if len(dp) == 2:
+        inp, targ = dp
+        self.dataset.append(
+          {
+            'input_ids' : torch.FloatTensor(inp),
+            'target_ids': torch.LongTensor(targ),
+          }
+        )
+      elif len(dp) == 3:
+        inp, targ, idx = dp
+        self.dataset.append(
+          {
+            'input_ids' : torch.FloatTensor(inp),
+            'target_ids': torch.LongTensor(targ),
+            'idx'       : torch.LongTensor(idx),
+          }
+        )
     return
 
   def get_batched_dataset(self) -> typing.Dict[str, np.array]:
