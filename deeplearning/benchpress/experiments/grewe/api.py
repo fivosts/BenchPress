@@ -591,6 +591,14 @@ def fetch_gpgpu_cummins_benchmarks(gpgpu_path: pathlib.Path, cldrive_path: pathl
   """
   Parse GPGPU folder, isolate and collect all kernel instances.
   Save to DataFrame.
+
+  Args:
+    gpgpu_path:
+      Root path where the GPGPU benchmarks are located.
+    cldrive_path:
+      Path where the CLDrive database is located.
+    out_path:
+      Path where the CSV is going to be exported.
   """
   if isinstance(gpgpu_path, str):
     gpgpu_path = pathlib.Path(gpgpu_path)
