@@ -504,7 +504,7 @@ class Grewe(GreweAbstract):
         'coalesced'        : (0, 10),
         'atomic'           : (0, 10),
         'transferred_bytes': (1, 31), # 2**pow,
-        'local_size'       : (1, 8),  # 2**pow,
+        'local_size'       : (1, 10),  # 2**pow,
       }
     return
 
@@ -713,7 +713,7 @@ class FeatureLessGrewe(GreweAbstract):
       self.rand_generator = None
       self.gen_bounds = {
         'transferred_bytes': (1, 31), # 2**pow,
-        'local_size'       : (1, 8),  # 2**pow,
+        'local_size'       : (1, 10),  # 2**pow,
       }
       if test_db:
         self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)), must_exist = True)
