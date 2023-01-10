@@ -162,7 +162,7 @@ def DriveSource(src        : str,
 
   # for gsize in tqdm.tqdm([2**6, 2**7, 2**8, 2**10, 2**12, 2**14, 2**16, 2**18, 2**20], desc = "gsize", leave = False):
   for gsize in tqdm.tqdm([2**1, 2**2, 2**4, 2**8, 2**10, 2**12, 2**14, 2**16, 2**18, 2**20], desc = "gsize", leave = False):
-    for lsize in tqdm.tqdm([2**1, 2**2, 2**3, 2**4, 2**5, 2**6, 2**7, 2**8], desc = "lsize", leave = False):
+    for lsize in tqdm.tqdm([2**1, 2**2, 2**3, 2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10], desc = "lsize", leave = False):
       if lsize > gsize:
         continue
 
