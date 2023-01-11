@@ -37,11 +37,12 @@ class InstCountFeatures(object):
                       header_file     : str = None,
                       use_aux_headers : bool = True,
                       extra_args      : typing.List[str] = [],
+                      **kwargs,
                       ) -> typing.Dict[str, float]:
     return cls.RawToDictFeats(cls.ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args))
 
   @classmethod
-  def ExtractIRFeatures(cls, bytecode: str) -> typing.Dict[str, float]:
+  def ExtractIRFeatures(cls, bytecode: str, **kwargs) -> typing.Dict[str, float]:
     return cls.RawToDictFeats(cls.ExtractIRRawFeatures(bytecode))
 
   @classmethod
@@ -50,6 +51,7 @@ class InstCountFeatures(object):
                          header_file     : str = None,
                          use_aux_headers : bool = True,
                          extra_args      : typing.List[str] = [],
+                         **kwargs,
                          ) -> str:
     try:
       return opencl.CompileOptimizer(src, INSTCOUNT, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args)
@@ -57,12 +59,12 @@ class InstCountFeatures(object):
       return ""
 
   @classmethod
-  def ExtractIRRawFeatures(cls, bytecode: str) -> str:
+  def ExtractIRRawFeatures(cls, bytecode: str. **kwargs) -> str:
     try:
       return opencl.CompileOptimizerIR(bytecode, INSTCOUNT)
     except ValueError:
       return ""
 
   @classmethod
-  def RawToDictFeats(cls, str_feats: str) -> typing.Dict[str, float]:
+  def RawToDictFeats(cls, str_feats: str. **kwargs) -> typing.Dict[str, float]:
     return {feat.split(' : ')[0]: int(feat.split(' : ')[1]) for feat in str_feats.split('\n') if ' : ' in feat}

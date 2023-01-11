@@ -56,6 +56,7 @@ class HiddenStateFeatures(object):
                       header_file     : str  = None,
                       use_aux_headers : bool = True,
                       extra_args      : typing.List[str] = [],
+                      **kwargs,
                       ) -> typing.Dict[str, float]:
     """
     Invokes clgen_features extractor on source code and return feature mappings
@@ -73,6 +74,7 @@ class HiddenStateFeatures(object):
                           header_file     : str  = None,
                           use_aux_headers : bool = True,
                           extra_args      : typing.List[str] = [],
+                          **kwargs,
                           ) -> typing.Iterator[typing.Dict[str, float]]:
     """
     Invokes clgen_features extractor on source code and return feature mappings
@@ -81,7 +83,7 @@ class HiddenStateFeatures(object):
     If the code has syntax errors, features will not be obtained and empty dict
     is returned.
     """
-    batch_size = extra_args.get('batch_size', 256)
+    batch_size = kwargs.get('batch_size', 256)
     for bidx in range(0, len(srcs), batch_size):
       batch = srcs[bidx: bidx + batch_size]
       batch_feats = cls.ExtractRawFeatures(batch)
@@ -89,7 +91,7 @@ class HiddenStateFeatures(object):
         yield cls.RawToDictFeats(feat_vec)
 
   @classmethod
-  def ExtractIRFeatures(cls, bytecode: str) -> typing.Dict[str, float]:
+  def ExtractIRFeatures(cls, bytecode: str, **kwargs) -> typing.Dict[str, float]:
     """
     Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
     """
@@ -97,7 +99,7 @@ class HiddenStateFeatures(object):
     return {}
 
   @classmethod
-  def ExtractRawFeatures(cls, src: typing.Union[str, typing.List[str]]) -> typing.Union[typing.List[float], typing.List[typing.List[float]]]:
+  def ExtractRawFeatures(cls, src: typing.Union[str, typing.List[str]], **kwargs) -> typing.Union[typing.List[float], typing.List[typing.List[float]]]:
     """
     Invokes BenchPress to collect hidden softmax activations.
 
@@ -116,7 +118,7 @@ class HiddenStateFeatures(object):
     return list(hidden_state.detach().cpu().numpy())
 
   @classmethod
-  def ExtractIRRawFeatures(cls, bytecode: str) -> str:
+  def ExtractIRRawFeatures(cls, bytecode: str, **kwargs) -> str:
     """
     Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
     """
@@ -124,7 +126,7 @@ class HiddenStateFeatures(object):
     return ""
 
   @classmethod
-  def RawToDictFeats(cls, hidden_states: typing.List[float]) -> typing.Dict[str, float]:
+  def RawToDictFeats(cls, hidden_states: typing.List[float], **kwargs) -> typing.Dict[str, float]:
     """
     Converts clgen_features subprocess output from raw string
     to a mapped dictionary of feature -> value.

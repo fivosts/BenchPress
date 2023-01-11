@@ -58,6 +58,7 @@ class GreweFeatures(object):
                       header_file     : str = None,
                       use_aux_headers : bool = True,
                       extra_args      : typing.List[str] = [],
+                      **kwargs,
                       ) -> typing.Dict[str, float]:
     """
     Invokes clgen_features extractor on source code and return feature mappings
@@ -75,6 +76,7 @@ class GreweFeatures(object):
                           header_file     : str = None,
                           use_aux_headers : bool = True,
                           extra_args      : typing.List[str] = [],
+                          **kwargs,
                           ) -> typing.Iterator[typing.Dict[str, float]]:
     """
     Invokes clgen_features extractor on source code and return feature mappings
@@ -88,7 +90,7 @@ class GreweFeatures(object):
       yield cls.RawToDictFeats(str_features)
 
   @classmethod
-  def ExtractIRFeatures(cls, bytecode: str) -> typing.Dict[str, float]:
+  def ExtractIRFeatures(cls, bytecode: str, **kwargs) -> typing.Dict[str, float]:
     """
     Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
     """
@@ -100,6 +102,7 @@ class GreweFeatures(object):
                          header_file     : str = None,
                          use_aux_headers : bool = True,
                          extra_args      : typing.List[str] = [],
+                         **kwargs,
                          ) -> str:
     """
     Invokes clgen_features extractor on a single kernel.
@@ -139,14 +142,14 @@ class GreweFeatures(object):
     return stdout
 
   @classmethod
-  def ExtractIRRawFeatures(cls, bytecode: str) -> str:
+  def ExtractIRRawFeatures(cls, bytecode: str, **kwargs) -> str:
     """
     Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
     """
     return ""
 
   @classmethod
-  def RawToDictFeats(cls, str_feats: str) -> typing.Dict[str, float]:
+  def RawToDictFeats(cls, str_feats: str, **kwargs) -> typing.Dict[str, float]:
     """
     Converts clgen_features subprocess output from raw string
     to a mapped dictionary of feature -> value.
