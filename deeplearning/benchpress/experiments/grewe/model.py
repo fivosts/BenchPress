@@ -443,12 +443,22 @@ def leave_one_benchmark_out(clf, get_features, D, benchmark, synthetics = False,
   else:
     train_mask = ~test_mask
 
+  import math
   # Create training and testing data:
   X_train = get_features(D[train_mask])
+  for id1, seq in enumerate(X_train):
+    for id2, el in enumerate(seq):
+      if math.isnan(el) or math.isinf(el):
+        X_train[id1][id2] = 0.0
+
   y_train = getclass(D[train_mask])
 
   D_test = D[test_mask]
   X_test = get_features(D_test)
+  for id1, seq in enumerate(X_test):
+    for id2, el in enumerate(seq):
+      if math.isnan(el) or math.isinf(el):
+        X_test[id1][id2] = 0.0
   y_test = getclass(D_test)
 
   # Train classifier:
