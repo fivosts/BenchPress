@@ -140,16 +140,48 @@ class GreweAbstract(DownstreamTask):
   def output_ids(self) -> typing.Tuple[str, str]:
     return [0, 1]
 
+  @property
+  def test_set(self) -> 'torch.Dataset':
+    if self.test_db:
+      if not self.test_dataset:
+        data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU_benchmarks")]
+        features_iter = extractor.ExtractFeaturesIter([x.source for x in data], [self.feature_space])[self.feature_space]
+        test_data = []
+        for dp, features in tqdm.tqdm(zip(data, features_iter), total = len(data), desc = "Test Set"):
+          test_data.append(
+            (
+              self.InputtoEncodedVector(features, dp.transferred_bytes, dp.local_size),
+              [self.TargetLabeltoID(dp.status)],
+              [int(dp.id)],
+            )
+          )
+        self.test_dataset = data_generator.ListTrainDataloader(test_data)
+        self.saveCheckpoint()
+      return self.test_dataset
+    else:
+      return None
+
   def __init__(self,
                name          : str,
                cache_path    : pathlib.Path,
                task_type     : typing.Callable,
                random_seed   : int,
-               use_as_server : bool
+               use_as_server : bool,
+               test_db       : pathlib.Path = None,
                ) -> None:
     super(GreweAbstract, self).__init__(
-      name, cache_path, task_type, random_seed, use_as_server
+      name,
+      cache_path,
+      task_type,
+      random_seed,
+      use_as_server,
     )
+    if use_as_server:
+      if test_db:
+        self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)), must_exist = True)
+      else:
+        self.test_db = None
+      self.test_dataset = None
     return
 
   def setup_server(self) -> None:
@@ -433,6 +465,22 @@ class GreweAbstract(DownstreamTask):
       pass
     return
 
+  def saveCheckpoint(self) -> None:
+    """
+    Store data generator.
+    """
+    if environment.WORLD_RANK == 0:
+      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
+        pickle.dump(
+          {
+            'data_generator': self.data_generator,
+            'rand_generator': self.rand_generator.get_state(),
+            'test_dataset'   : self.test_dataset,
+          },
+          outf
+        )
+    return
+
   def loadCheckpoint(self) -> 'torch.Dataset':
     """
     Load state of downstream task.
@@ -483,11 +531,17 @@ class Grewe(GreweAbstract):
                cache_path    : pathlib.Path,
                random_seed   : int,
                use_as_server : bool = False,
+               test_db       : pathlib.Path = None,
                **unused_kwargs,
                ) -> None:
     del unused_kwargs
     super(Grewe, self).__init__(
-      "Grewe", cache_path, downstream_data.GreweInstance, random_seed, use_as_server
+      "Grewe",
+      cache_path,
+      downstream_data.GreweInstance,
+      random_seed,
+      use_as_server,
+      test_db,
     )
     self.corpus_path = corpus_path
     self.corpus_db   = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)))
@@ -632,21 +686,6 @@ class Grewe(GreweAbstract):
       i4 = 0.0
     return [i1, i2, i3, i4]
 
-  def saveCheckpoint(self) -> None:
-    """
-    Store data generator.
-    """
-    if environment.WORLD_RANK == 0:
-      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
-        pickle.dump(
-          {
-            'data_generator': self.data_generator,
-            'rand_generator': self.rand_generator.get_state(),
-          },
-          outf
-        )
-    return
-
 class FeatureLessGrewe(GreweAbstract):
   """
   A feature-less implementation of Grewe's CPU vs GPU model.
@@ -670,27 +709,6 @@ class FeatureLessGrewe(GreweAbstract):
   def feature_space(self) -> str:
     return "HiddenState"
 
-  @property
-  def test_set(self) -> 'torch.Dataset':
-    if self.test_db:
-      if not self.test_dataset:
-        data = [x for x in self.test_db.get_valid_data(dataset = "GPGPU_benchmarks")]
-        features_iter = extractor.ExtractFeaturesIter([x.source for x in data], [self.feature_space])[self.feature_space]
-        test_data = []
-        for dp, features in tqdm.tqdm(zip(data, features_iter), total = len(data)):
-          test_data.append(
-            (
-              self.InputtoEncodedVector(features, dp.transferred_bytes, dp.local_size),
-              [self.TargetLabeltoID(dp.status)],
-              [int(dp.id)],
-            )
-          )
-        self.test_dataset = data_generator.ListTrainDataloader(test_data)
-        self.saveCheckpoint()
-      return self.test_dataset
-    else:
-      return None
-
   def __init__(self,
                corpus_path       : pathlib.Path,
                cache_path        : pathlib.Path,
@@ -701,7 +719,12 @@ class FeatureLessGrewe(GreweAbstract):
                ) -> None:
     del unused_kwargs
     super(FeatureLessGrewe, self).__init__(
-      "FeatureLessGrewe", cache_path, downstream_data.FeatureLessGreweInstance, random_seed, use_as_server
+      "FeatureLessGrewe",
+      cache_path,
+      downstream_data.FeatureLessGreweInstance,
+      random_seed,
+      use_as_server,
+      test_db,
     )
     self.corpus_path = corpus_path
     self.corpus_db   = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(self.corpus_path)))
@@ -716,11 +739,6 @@ class FeatureLessGrewe(GreweAbstract):
         'transferred_bytes': (1, 31), # 2**pow,
         'local_size'       : (1, 10),  # 2**pow,
       }
-      if test_db:
-        self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)), must_exist = True)
-      else:
-        self.test_db = None
-      self.test_dataset = None
     return
 
   def __repr__(self) -> str:
@@ -824,22 +842,6 @@ class FeatureLessGrewe(GreweAbstract):
       'transferred_bytes' : int(trb),
       'local_size'        : int(ls),
     }
-
-  def saveCheckpoint(self) -> None:
-    """
-    Store data generator.
-    """
-    if environment.WORLD_RANK == 0:
-      with open(self.cache_path / "downstream_task_dg.pkl", 'wb') as outf:
-        pickle.dump(
-          {
-            'data_generator' : self.data_generator,
-            'rand_generator' : self.rand_generator.get_state(),
-            'test_dataset'   : self.test_dataset,
-          },
-          outf
-        )
-    return
 
 TASKS = {
   "Grewe" : Grewe,
