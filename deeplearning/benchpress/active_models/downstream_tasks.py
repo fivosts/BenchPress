@@ -518,7 +518,8 @@ class Grewe(GreweAbstract):
     checkpointed = self.loadCheckpoint()
     if checkpointed:
       self.data_generator = checkpointed['data_generator']
-      self.rand_generator = checkpointed['rand_generator']
+      self.rand_generator = np.random.RandomState()
+      self.rand_generator.set_state(checkpointed['rand_generator'])
       self.dataset = self.data_generator.dataset
     else:
       self.rand_generator = np.random
@@ -640,7 +641,7 @@ class Grewe(GreweAbstract):
         pickle.dump(
           {
             'data_generator': self.data_generator,
-            'rand_generator': self.rand_generator,
+            'rand_generator': self.rand_generator.get_state(),
           },
           outf
         )
