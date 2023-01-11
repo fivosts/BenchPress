@@ -59,12 +59,12 @@ class InstCountFeatures(object):
       return ""
 
   @classmethod
-  def ExtractIRRawFeatures(cls, bytecode: str. **kwargs) -> str:
+  def ExtractIRRawFeatures(cls, bytecode: str, **kwargs) -> str:
     try:
       return opencl.CompileOptimizerIR(bytecode, INSTCOUNT)
     except ValueError:
       return ""
 
   @classmethod
-  def RawToDictFeats(cls, str_feats: str. **kwargs) -> typing.Dict[str, float]:
+  def RawToDictFeats(cls, str_feats: str, **kwargs) -> typing.Dict[str, float]:
     return {feat.split(' : ')[0]: int(feat.split(' : ')[1]) for feat in str_feats.split('\n') if ' : ' in feat}
