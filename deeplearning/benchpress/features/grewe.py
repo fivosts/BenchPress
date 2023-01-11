@@ -70,6 +70,24 @@ class GreweFeatures(object):
     return cls.RawToDictFeats(str_features)
 
   @classmethod
+  def ExtractFeaturesIter(cls,
+                          srcs: typing.List[str],
+                          header_file     : str = None,
+                          use_aux_headers : bool = True,
+                          extra_args      : typing.List[str] = [],
+                          ) -> typing.Iterator[typing.Dict[str, float]]:
+    """
+    Invokes clgen_features extractor on source code and return feature mappings
+    in dictionary format.
+
+    If the code has syntax errors, features will not be obtained and empty dict
+    is returned.
+    """
+    for src in srcs:
+      str_features = cls.ExtractRawFeatures(src, header_file = header_file, use_aux_headers = use_aux_headers, extra_args = extra_args)
+      yield cls.RawToDictFeats(str_features)
+
+  @classmethod
   def ExtractIRFeatures(cls, bytecode: str) -> typing.Dict[str, float]:
     """
     Bytecode input in text-level feature space makes no sense. Therefore this function is just a decoy.
