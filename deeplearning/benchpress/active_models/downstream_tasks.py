@@ -176,7 +176,7 @@ class GreweAbstract(DownstreamTask):
       random_seed,
       use_as_server,
     )
-    if use_as_server:
+    if not use_as_server:
       if test_db:
         self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)), must_exist = True)
       else:
