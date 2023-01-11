@@ -109,8 +109,9 @@ class torchBert(backends.BackendBase):
 
   @property
   def hidden_state_size(self):
-    # return self.config.architecture.max_position_embeddings * self.config.architecture.hidden_size
-    return self.config.architecture.hidden_size
+    # return self.config.architecture.max_position_embeddings * self.config.architecture.hidden_size ## Get hidden state as is.
+    # return self.config.architecture.hidden_size ## Get probs from prediction logits for existing token.
+    return ((self.config.architecture.max_position_embeddings // 8) - 1) * ((self.config.architecture.hidden_size // 8) - 1) ## Apply pooling to hidden state.
 
   def __repr__(self):
     return "BenchPress"
@@ -1083,12 +1084,16 @@ class torchBert(backends.BackendBase):
         TODO Research: Hidden states are collected from prediction_scores and have a shape of [seq_length x 1].
                       At each index lies the prob of the respective token in the input sequence.
         """
-        sequence_length = workload_input_ids.shape[-1]
-        hidden_states[idx: idx + real_batch_size] = prediction_scores[:, range(sequence_length), input_ids][range(real_batch_size), range(real_batch_size)].detach().cpu()
+        # sequence_length = workload_input_ids.shape[-1]
+        # hidden_states[idx: idx + real_batch_size] = prediction_scores[:, range(sequence_length), input_ids][range(real_batch_size), range(real_batch_size)].detach().cpu()
         """
         TODO Research: Hidden states are collected from the encoder's outputs [seq_len x hidden_size]. Flatten everything out.
         """
         # hidden_states[idx: idx + real_batch_size] = hidden_state.reshape((real_batch_size, -1)).detach().cpu()
+        """
+        TODO Research: Hidden states are collected from the encoder's input (seq_len x hidden_size) and then they are avg pooled to easily reduce dimensions.
+        """
+        hidden_states[idx: idx + real_batch_size] = self.torch.nn.AvgPool2d(16, stride = 8, count_include_pad = False)(hidden_state.detach()).reshape(real_batch_size, -1).cpu() # hidden_state.reshape((real_batch_size, -1)).detach().cpu()
         ###########################################
         bar.update(real_batch_size)
       assert not (self.torch.sum(hidden_states, dim = -1) == 0).any(), hidden_states
