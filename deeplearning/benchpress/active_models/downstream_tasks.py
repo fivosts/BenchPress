@@ -475,7 +475,7 @@ class GreweAbstract(DownstreamTask):
           {
             'data_generator': self.data_generator,
             'rand_generator': self.rand_generator.get_state(),
-            'test_dataset'   : self.test_dataset,
+            'test_dataset'  : self.test_dataset,
           },
           outf
         )
@@ -573,6 +573,7 @@ class Grewe(GreweAbstract):
     if checkpointed:
       self.data_generator = checkpointed['data_generator']
       self.rand_generator = np.random.RandomState()
+      self.test_dataset   = checkpointed['test_dataset']
       self.rand_generator.set_state(checkpointed['rand_generator'])
       self.dataset = self.data_generator.dataset
     else:
@@ -778,10 +779,11 @@ class FeatureLessGrewe(GreweAbstract):
     """
     samples = []
     samples_hash = set()
-    for x in range(num_samples):
+    for _ in range(num_samples):
+      random_values = self.rand_generator.uniform(-1, 1, self.static_features_size)
       fvec = {
-        k: self.rand_generator.random()
-        for k in self.static_features_labels
+        k: v
+        for k, v in zip(self.static_features_labels, random_values)
       }
       transferred_bytes = 2**self.rand_generator.randint(self.gen_bounds['transferred_bytes'][0], self.gen_bounds['transferred_bytes'][1])
       local_size        = 2**self.rand_generator.randint(self.gen_bounds['local_size'][0], self.gen_bounds['local_size'][1])
