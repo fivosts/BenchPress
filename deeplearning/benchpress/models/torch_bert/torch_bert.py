@@ -111,7 +111,7 @@ class torchBert(backends.BackendBase):
   def hidden_state_size(self):
     # return self.config.architecture.max_position_embeddings * self.config.architecture.hidden_size ## Get hidden state as is.
     # return self.config.architecture.hidden_size ## Get probs from prediction logits for existing token.
-    return ((self.config.architecture.max_position_embeddings // 8) - 1) * ((self.config.architecture.hidden_size // 8) - 1) ## Apply pooling to hidden state.
+    return ((self.config.architecture.max_position_embeddings // 16) - 1) * ((self.config.architecture.hidden_size // 16) - 1) ## Apply pooling to hidden state.
 
   def __repr__(self):
     return "BenchPress"
@@ -1093,7 +1093,7 @@ class torchBert(backends.BackendBase):
         """
         TODO Research: Hidden states are collected from the encoder's input (seq_len x hidden_size) and then they are avg pooled to easily reduce dimensions.
         """
-        hidden_states[idx: idx + real_batch_size] = self.torch.nn.AvgPool2d(16, stride = 8, count_include_pad = False)(hidden_state.detach()).reshape(real_batch_size, -1).cpu() # hidden_state.reshape((real_batch_size, -1)).detach().cpu()
+        hidden_states[idx: idx + real_batch_size] = self.torch.nn.AvgPool2d(32, stride = 16, count_include_pad = False)(hidden_state.detach()).reshape(real_batch_size, -1).cpu() # hidden_state.reshape((real_batch_size, -1)).detach().cpu()
         ###########################################
         bar.update(real_batch_size)
       return hidden_states
