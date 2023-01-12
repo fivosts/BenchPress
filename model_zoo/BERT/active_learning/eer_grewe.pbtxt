@@ -10,7 +10,7 @@
 working_dir: "AST" ## This path is relative to "workspace_dir", which is an app FLAG
 language_model {
   corpus {
-    local_tar_archive: "$PWD/../../corpus/corpus_250.tar.bz2"
+    local_tar_archive: "$PWD/../../corpus/ultimate_corpus.tar.bz2"
     tokenizer {
       token_type: "ast"
       token_list: "deeplearning/benchpress/corpuses/token_lists.json"
@@ -52,7 +52,7 @@ language_model {
     num_train_steps: 10000000
     num_warmup_steps: 20000
     sequence_length: 768
-    batch_size: 96
+    batch_size: 128
     max_predictions_per_seq: 1
     dupe_factor: 1
     masked_lm_prob: 0.4
@@ -84,33 +84,83 @@ sampler {
         active_learner {
           expected_error_reduction {
             head {
-              initial_learning_rate_micros: 2000
-              batch_size: 32
-              num_warmup_steps: 100
+              initial_learning_rate_micros: 500
+              batch_size: 16
+              num_warmup_steps: 0
               layer {
                 linear {
-                  in_features: 770
-                  out_features: 256
+                  in_features: 2211 # 36483 # 770 # 589826
+                  out_features: 16000
+                }
+              }
+              layer {
+                dropout {
+                  p: 0.1
+                }
+              }
+              layer {
+                act_fn {
+                  fn: "relu"
                 }
               }
               layer {
                 linear {
-                  in_features: 256
+                  in_features:  16000
+                  out_features: 4096
+                }
+              }
+              layer {
+                dropout {
+                  p: 0.1
+                }
+              }
+              layer {
+                act_fn {
+                  fn: "relu"
+                }
+              }
+              layer {
+                linear {
+                  in_features:  4096
+                  out_features: 1024
+                }
+              }
+              layer {
+                dropout {
+                  p: 0.1
+                }
+              }
+              layer {
+                act_fn {
+                  fn: "relu"
+                }
+              }
+              layer {
+                linear {
+                  in_features: 1024
+                  out_features: 512
+                }
+              }
+              layer {
+                linear {
+                  in_features: 512
                   out_features: 2
                 }
               }
             }
           }
           random_seed: 12345
-          num_train_steps: 0
+          num_train_steps: 1000000000
+          # downstream_task: "Grewe"
           downstream_task: "FeatureLessGrewe"
-          training_corpus: "/home/fivosts/PhD/Code/BenchPress/cldrive_cache.db"
-          # test_db: "/home/foivos/PhD/Code/BenchPress/cc3_gpgpu.db"
+          training_corpus: "/home/foivos/gpgpu_cldrive/benchpress_cldrive.db"
+          test_db: "/home/foivos/gpgpu_cldrive/ft3/1st_epoch/gpgpu_cldrive.db"
         }
-        active_search_depth: 60
-        active_search_width: 32
+        active_search_depth: 1
+        active_search_width: 4
         active_dropout_prob: 0.1
         batch_size_per_feed: 2
+        # feature_space: "GreweFeatures"
         feature_space: "HiddenState"
       }
       max_predictions_per_seq: 1
@@ -122,7 +172,7 @@ sampler {
     }
     start_text: "[START]kernel void [HOLE]}[END]"
   }
-  batch_size: 64
+  batch_size: 32
   sequence_length: 768
   temperature_micros: 700000  # = 0.8 real value
   termination_criteria {
