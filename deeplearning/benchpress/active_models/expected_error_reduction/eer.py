@@ -293,14 +293,13 @@ class ExpectedErrorReduction(backends.BackendBase):
           with self.torch.enable_grad():
             train_estimator.model.train()
             # epoch_iter = tqdm.auto.trange(self.training_opts.num_epochs, desc="Epoch", leave = False) if self.is_world_process_zero() else range(self.training_opts.num_epochs)
-            epoch = num_train_steps // self.training_opts.steps_per_epoch
             # In distributed mode, calling the set_epoch() method at
             # the beginning of each epoch before creating the DataLoader iterator
             # is necessary to make shuffling work properly across multiple epochs.
             # Otherwise, the same ordering will be always used.
 
             if self.pytorch.num_nodes > 1:
-              loader.sampler.set_epoch(epoch)
+              loader.sampler.set_epoch(current_step)
 
             batch_iter = tqdm.tqdm(batch_iterator, desc="Batch", leave = False) if self.is_world_process_zero() else batch_iterator
             for inputs in batch_iter:
@@ -343,7 +342,7 @@ class ExpectedErrorReduction(backends.BackendBase):
               try:
                 l.logger().info(
                   "EER: Step {} Loss: {}".format(
-                    current_step // self.training_opts.steps_per_epoch, train_hook.epoch_loss
+                    current_step, train_hook.epoch_loss
                   )
                 )
               except ZeroDivisionError:
@@ -408,6 +407,7 @@ class ExpectedErrorReduction(backends.BackendBase):
       # Setup iterator and accuracy metrics.
       batch_iter = tqdm.tqdm(iter(loader), desc = "Test Set", leave = False) if self.is_world_process_zero() else iter(loader)
       accuracy = {}
+      missed_idxs = {}
       with self.torch.no_grad():
         self.train.model.eval()
         if self.pytorch.num_nodes > 1:
@@ -441,6 +441,11 @@ class ExpectedErrorReduction(backends.BackendBase):
               accuracy[label] = [0, 0]
             accuracy[label][0] += int(self.torch.sum((output_label == id) & (target_ids == id)).cpu())
             accuracy[label][1] += int(self.torch.sum(target_ids == id).cpu())
+          for out, tar, idx in zip(step_out['output_label'], inputs['target_ids'], inputs['idx']):
+            if int(tar) != int(out):
+              if int(tar) not in missed_idxs:
+                missed_idxs[int(tar)] = []
+              missed_idxs[int(tar)].append(int(idx))
 
       # You may want to all gather that.
       epoch_accuracy = {
@@ -448,6 +453,7 @@ class ExpectedErrorReduction(backends.BackendBase):
       }
       distrib.barrier()
     l.logger().error("Total data: {},\nValidation stats: {}\n{}".format(len(test_set), epoch_accuracy, accuracy))
+    l.logger().error("Missed indices: {}".format(missed_idxs))
     return epoch_accuracy
 
   def Sample(self, sample_set: 'torch.Dataset') -> typing.List[typing.Dict[str, float]]:
