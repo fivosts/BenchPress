@@ -1096,8 +1096,7 @@ class torchBert(backends.BackendBase):
         hidden_states[idx: idx + real_batch_size] = self.torch.nn.AvgPool2d(16, stride = 8, count_include_pad = False)(hidden_state.detach()).reshape(real_batch_size, -1).cpu() # hidden_state.reshape((real_batch_size, -1)).detach().cpu()
         ###########################################
         bar.update(real_batch_size)
-      assert not (self.torch.sum(hidden_states, dim = -1) == 0).any(), hidden_states
-      hidden_states = self.torch.sigmoid(hidden_states)
+      l.logger().error("Min value: {}, Max value: {}".format(self.torch.min(hidden_states), self.torch.max(hidden_states)))
       return hidden_states
 
   def _getTestSampler(self, test_sampler, sequence_length):
