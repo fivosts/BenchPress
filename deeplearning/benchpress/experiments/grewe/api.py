@@ -148,18 +148,6 @@ def DriveSource(src        : str,
     feats      : Grewe Feature vector of source code.
     cldrive_db : Caches cldrive executions of source code.
   """
-  def median_of_list(lst: typing.List) -> int:
-    """
-    Return median of list
-    """
-    mid = len(lst) // 2
-    if len(lst) == 0:
-      return None
-    elif len(lst) % 2 == 0:
-      return (lst[mid] + lst[mid+1]) / 2 
-    else:
-      return lst[mid] / 2
-
   # for gsize in tqdm.tqdm([2**6, 2**7, 2**8, 2**10, 2**12, 2**14, 2**16, 2**18, 2**20], desc = "gsize", leave = False):
   for gsize in tqdm.tqdm([2**1, 2**2, 2**4, 2**8, 2**10, 2**12, 2**14, 2**16, 2**18, 2**20], desc = "gsize", leave = False):
     for lsize in tqdm.tqdm([2**1, 2**2, 2**3, 2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10], desc = "lsize", leave = False):
@@ -196,10 +184,10 @@ def DriveSource(src        : str,
             global_size          = gsize,
             local_size           = lsize,
             label                = cached.status,
-            cpu_transfer_time_ns = median_of_list([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan']),
-            cpu_kernel_time_ns   = median_of_list([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan']),
-            gpu_transfer_time_ns = median_of_list([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan']),
-            gpu_kernel_time_ns   = median_of_list([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan']),
+            cpu_transfer_time_ns = cldrive_db.reduce_execution_times(cached.cpu_transfer_time_ns),
+            cpu_kernel_time_ns   = cldrive_db.reduce_execution_times(cached.cpu_kernel_time_ns),
+            gpu_transfer_time_ns = cldrive_db.reduce_execution_times(cached.gpu_transfer_time_ns),
+            gpu_kernel_time_ns   = cldrive_db.reduce_execution_times(cached.gpu_kernel_time_ns),
           )
         else:
           yield None
@@ -240,10 +228,10 @@ def DriveSource(src        : str,
             global_size          = gsize,
             local_size           = lsize,
             label                = label,
-            cpu_transfer_time_ns = df[df['device'].str.contains("CPU")].transfer_time_ns.median(),
-            cpu_kernel_time_ns   = df[df['device'].str.contains("CPU")].kernel_time_ns.median(),
-            gpu_transfer_time_ns = df[df['device'].str.contains("GPU")].transfer_time_ns.median(),
-            gpu_kernel_time_ns   = df[df['device'].str.contains("GPU")].kernel_time_ns.median(),
+            cpu_transfer_time_ns = cldrive_db.reduce_execution_times(df[df['device'].str.contains("CPU")].transfer_time_ns),
+            cpu_kernel_time_ns   = cldrive_db.reduce_execution_times(df[df['device'].str.contains("CPU")].kernel_time_ns),
+            gpu_transfer_time_ns = cldrive_db.reduce_execution_times(df[df['device'].str.contains("GPU")].transfer_time_ns),
+            gpu_kernel_time_ns   = cldrive_db.reduce_execution_times(df[df['device'].str.contains("GPU")].kernel_time_ns),
           )
 
 @public.evaluator
