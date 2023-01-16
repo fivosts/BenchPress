@@ -58,6 +58,8 @@ def AssertConfigIsValid(config: active_learning_pb2.ActiveLearner) -> active_lea
   pbutil.AssertFieldIsSet(config, "training_corpus")
   pbutil.AssertFieldIsSet(config, "num_train_steps")
   pbutil.AssertFieldIsSet(config, "random_seed")
+  if config.downstream_task in {"Grewe", "FeatureLessGrewe"}:
+    pbutil.AssertFieldIsSet(config, "top_k")
   p = pathlib.Path(config.training_corpus).resolve()
   if not p.exists() and config.num_train_steps > 0:
     raise FileNotFoundError(p)
@@ -113,6 +115,7 @@ class Model(object):
       pathlib.Path(self.config.training_corpus).resolve(),
       self.cache_path / "downstream_task",
       self.config.random_seed,
+      top_k = self.config.top_k if self.config.HasField("top_k") else None,
       test_db = pathlib.Path(self.config.test_db).resolve() if self.config.HasField("test_db") else None
     )
 
