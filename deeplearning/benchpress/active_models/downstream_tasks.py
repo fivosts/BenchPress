@@ -166,6 +166,7 @@ class GreweAbstract(DownstreamTask):
                cache_path    : pathlib.Path,
                task_type     : typing.Callable,
                random_seed   : int,
+               top_k         : int,
                use_as_server : bool,
                test_db       : pathlib.Path = None,
                ) -> None:
@@ -177,6 +178,7 @@ class GreweAbstract(DownstreamTask):
       use_as_server,
     )
     if not use_as_server:
+      self.top_k = top_k
       if test_db:
         self.test_db = cldrive.CLDriveExecutions(url = "sqlite:///{}".format(str(test_db)), must_exist = True)
       else:
@@ -360,7 +362,6 @@ class GreweAbstract(DownstreamTask):
 
   def CollectRuntimeFeatures(self,
                              samples   : typing.List['ActiveSample'],
-                             top_k     : int,
                              tokenizer : 'tokenizers.TokenizerBase',
                             ) -> typing.List['ActiveSample']:
     """
@@ -370,8 +371,6 @@ class GreweAbstract(DownstreamTask):
     Args:
       samples:
         List of Active Samples collected from LM inference.
-      top_k:
-        Sort label-computed datapoints but update active learner only with top_k.
       tokenizer:
         Tokenizer.
     """
@@ -393,8 +392,8 @@ class GreweAbstract(DownstreamTask):
         new_samples = distrib.broadcast()
       distrib.barrier()
       new_samples = [JSON_to_ActiveSample(x) for x in new_samples]
-      if top_k != -1:
-        return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:top_k]
+      if self.top_k != -1:
+        return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:self.top_k]
       else:
         l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
         return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)
@@ -408,20 +407,19 @@ class GreweAbstract(DownstreamTask):
           if s.runtime_features['label'] in {"CPU", "GPU"}:
             total += 1
             new_samples.append(s)
-          if top_k != -1 and total >= top_k:
+          if self.top_k != -1 and total >= self.top_k:
             return new_samples
       return new_samples
 
   def UpdateDataGenerator(self,
                           new_samples     : typing.List['ActiveSample'],
                           target_features : typing.Dict[str, float],
-                          top_k           : int,
                           tokenizer       : 'tokenizers.TokenizerBase',
                           ) -> data_generator.ListTrainDataloader:
     """
     Collect new generated samples, find their runtime features and processs to a torch dataset.
     """
-    new_samples = self.CollectRuntimeFeatures(new_samples, top_k, tokenizer)
+    new_samples = self.CollectRuntimeFeatures(new_samples, tokenizer)
     self.UpdateDownstreamDatabase(new_samples, target_features, tokenizer)
     updated_dataset = [
       (
@@ -545,6 +543,7 @@ class Grewe(GreweAbstract):
                corpus_path   : pathlib.Path,
                cache_path    : pathlib.Path,
                random_seed   : int,
+               top_k         : int,
                use_as_server : bool = False,
                test_db       : pathlib.Path = None,
                **unused_kwargs,
@@ -555,6 +554,7 @@ class Grewe(GreweAbstract):
       cache_path,
       downstream_data.GreweInstance,
       random_seed,
+      top_k,
       use_as_server,
       test_db,
     )
@@ -729,6 +729,7 @@ class FeatureLessGrewe(GreweAbstract):
                corpus_path       : pathlib.Path,
                cache_path        : pathlib.Path,
                random_seed       : int,
+               top_k             : int,
                use_as_server     : bool = False,
                test_db           : pathlib.Path = None,
                **unused_kwargs,
@@ -739,6 +740,7 @@ class FeatureLessGrewe(GreweAbstract):
       cache_path,
       downstream_data.FeatureLessGreweInstance,
       random_seed,
+      top_k,
       use_as_server,
       test_db,
     )
