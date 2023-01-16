@@ -269,24 +269,15 @@ class GreweAbstract(DownstreamTask):
         "BenchPress",
         global_size = nrfeats['global_size'],
         local_size  = nrfeats['local_size'],
-        num_runs    = 1000,
+        num_runs    = 5000,
         timeout     = 60,
       )
-
-      def is_float(x):
-        try:
-          float(x)
-          return True
-        except ValueError:
-          return False
-
       nrfeats['label'] = cached.status
       if nrfeats['label'] in {"CPU", "GPU"}:
-        nrfeats['cpu_transfer_ns'] = sum([int(float(x)) for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.cpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
-        nrfeats['cpu_kernel_ns']   = sum([int(float(x)) for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.cpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
-        nrfeats['gpu_transfer_ns'] = sum([int(float(x)) for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)]) // len([x for x in cached.gpu_transfer_time_ns.split('\n') if x != 'nan' and is_float(x)])
-        nrfeats['gpu_kernel_ns']   = sum([int(float(x)) for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])   // len([x for x in cached.gpu_kernel_time_ns.split('\n') if x != 'nan' and is_float(x)])
-
+        nrfeats['cpu_transfer_ns'] = self.corpus_db.reduce_execution_times(cached.cpu_transfer_time_ns)
+        nrfeats['cpu_kernel_ns']   = self.corpus_db.reduce_execution_times(cached.cpu_kernel_time_ns)
+        nrfeats['gpu_transfer_ns'] = self.corpus_db.reduce_execution_times(cached.gpu_transfer_time_ns)
+        nrfeats['gpu_kernel_ns']   = self.corpus_db.reduce_execution_times(cached.gpu_kernel_time_ns)
       return s._replace(runtime_features = nrfeats)
 
     exp_tr_bytes = sample.runtime_features['transferred_bytes']
@@ -299,6 +290,11 @@ class GreweAbstract(DownstreamTask):
     new_samples  = []
     rejects      = []
     while not found and gsize <= 20:
+      if local_size > int(2**gsize):
+        # Local size can't be greater than global size.
+        gsize += 1
+        continue
+
       sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
       if sha256 in self.corpus_db.status_cache:
         cached = self.corpus_db.get_entry(code, "BenchPress", int(2**gsize), int(local_size))
@@ -310,13 +306,27 @@ class GreweAbstract(DownstreamTask):
           "BenchPress",
           global_size = int(2**gsize),
           local_size  = int(local_size),
-          num_runs    = 1000,
+          num_runs    = 20,
           timeout     = 60,
         )
       if cached is not None and cached.status in {"CPU", "GPU"}:
         ## If element execution has succeeeded.
         tr_bytes = cached.transferred_bytes
-        if not FLAGS.only_optimal_gsize:
+        if FLAGS.only_optimal_gsize:
+          ## only_optimal_size means you compute only one gsize combination.
+          ## The one that falls closest to the targeted transferred_bytes.
+          if tr_bytes < exp_tr_bytes or found_bytes is None or abs(exp_tr_bytes - tr_bytes) < abs(exp_tr_bytes - found_bytes):
+            ## If bytes still slide below than expected,
+            ## OR bytes are more than expected but it's the first successful execution,
+            ## OR if bytes just surpassed the expected tr bytes and the distance from target is closer than the previous tr_bytes,
+            ## Then update the optimal global size and the found bytes.
+            opt_gsize = gsize
+            found_bytes = tr_bytes
+          if tr_bytes >= exp_tr_bytes:
+            ## Set this to True only when you surpass the expected.
+            ## Only then you can be sure that you got as close as possible to the optimal.
+            found = True
+        else:
           s = create_sample(
               s    = sample,
               code = code,
@@ -338,22 +348,6 @@ class GreweAbstract(DownstreamTask):
               gs   = gsize,
             )
           )
-        tr_bytes = None
-      if FLAGS.only_optimal_gsize:
-        ## only_optimal_size means you compute only one gsize combination.
-        ## The one that falls closest to the targeted transferred_bytes.
-        if tr_bytes:
-          ## If tr_bytes is None, then execution has failed.
-          if tr_bytes < exp_tr_bytes:
-            opt_gsize   = gsize
-            found_bytes = tr_bytes
-          else:
-            ## The optimal gsize is found the first time tr_bytes surpasses exp_tr_bytes.
-            ## Then we check which one is closest (current or previous).
-            found = True
-            if found_bytes is None or abs(exp_tr_bytes - tr_bytes) < abs(exp_tr_bytes - found_bytes):
-              opt_gsize   = gsize
-              found_bytes = abs(exp_tr_bytes - tr_bytes)
       gsize += 1
     if FLAGS.only_optimal_gsize:
       ## If only the optimal size is needed and the execution has succeeded,
