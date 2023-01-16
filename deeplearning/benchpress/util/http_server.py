@@ -114,6 +114,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
 
   if handler.master_node:
     # 1. Read the pending queue from all peer nodes.
+    # A min heap is created that stores server nodes with their queue size.
     heap = []
     for add in handler.peers:
       size, sc = client_read_queue_size(add)
@@ -126,6 +127,8 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
     # 2. Create the schedule: dict[node_address -> list of workload]
     schedule = {}
     for entry in data:
+      # For every kernel to be computed.
+      # Pop the server with the least load.
       min_load = heapq.heappop(heap)
       size, address = min_load
       if address not in schedule:
