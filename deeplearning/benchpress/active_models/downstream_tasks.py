@@ -402,6 +402,7 @@ class GreweAbstract(DownstreamTask):
           else:
             top_k_codes.add(''.join([str(x) for x in s.sample]))
             return_samples.append(s)
+        l.logger().warn("Collected {} new samples from {} top_k code".format(len(new_samples), len(top_k_codes)))
         return s
       else:
         l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
