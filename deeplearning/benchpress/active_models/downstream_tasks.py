@@ -364,18 +364,30 @@ class GreweAbstract(DownstreamTask):
     """
     Collect the top_k samples that can run on CLDrive and set their global size
     to the appropriate value so it can match the transferred bytes.
+
+    Args:
+      samples:
+        List of Active Samples collected from LM inference.
+      top_k:
+        Sort label-computed datapoints but update active learner only with top_k.
+      tokenizer:
+        Tokenizer.
     """
     if FLAGS.use_http_server:
+      ## For server mode, master node, sleep while the backend is still working.
       if environment.WORLD_RANK == 0:
         new_samples = []
         while int(http_server.client_status_request()[1]) >= 300: # While the backend is WORKING
+          ## Backend is working.
           time.sleep(2)
         while int(http_server.client_status_request()[1]) != 200:
+          ## While more samples.
           new_samples += http_server.client_get_request()
           time.sleep(1)
         if environment.WORLD_SIZE > 1:
           distrib.broadcast(new_samples)
       else:
+        # Else synchronize with new data.
         new_samples = distrib.broadcast()
       distrib.barrier()
       new_samples = [JSON_to_ActiveSample(x) for x in new_samples]
@@ -385,6 +397,7 @@ class GreweAbstract(DownstreamTask):
         l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
         return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)
     else:
+      ## If not server mode, compute locally labels for each sample.
       new_samples = []
       total = 0
       for sample in tqdm.tqdm(sorted(samples, key = lambda x: x.score), total = len(samples), desc = "CLDrive", leave = False):
