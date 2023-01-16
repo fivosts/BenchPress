@@ -259,19 +259,10 @@ class GreweAbstract(DownstreamTask):
     """
     Overloaded function to compute runtime features for a single instance.
     """
-    def create_sample(s: 'ActiveSample', code: str, trb: int, gs: int) -> typing.List['ActiveSample']:
+    def create_sample(s: 'ActiveSample', cached: cldrive.CLDriveSample, trb: int, gs: int) -> typing.List['ActiveSample']:
       nrfeats = s.runtime_features
       nrfeats['transferred_bytes'] = trb
       nrfeats['global_size'] = int(2**gs)
-      cached = self.corpus_db.update_and_get(
-        code,
-        s.features,
-        "BenchPress",
-        global_size = nrfeats['global_size'],
-        local_size  = nrfeats['local_size'],
-        num_runs    = 5000,
-        timeout     = 60,
-      )
       nrfeats['label'] = cached.status
       if nrfeats['label'] in {"CPU", "GPU"}:
         nrfeats['cpu_transfer_ns'] = self.corpus_db.reduce_execution_times(cached.cpu_transfer_time_ns)
@@ -289,6 +280,7 @@ class GreweAbstract(DownstreamTask):
     code         = tokenizer.ArrayToCode(sample.sample)
     new_samples  = []
     rejects      = []
+    last_cached  = None
     while not found and gsize <= 20:
       if local_size > int(2**gsize):
         # Local size can't be greater than global size.
@@ -306,7 +298,7 @@ class GreweAbstract(DownstreamTask):
           "BenchPress",
           global_size = int(2**gsize),
           local_size  = int(local_size),
-          num_runs    = 20,
+          num_runs    = 10000,
           timeout     = 60,
         )
       if cached is not None and cached.status in {"CPU", "GPU"}:
@@ -322,16 +314,17 @@ class GreweAbstract(DownstreamTask):
             ## Then update the optimal global size and the found bytes.
             opt_gsize = gsize
             found_bytes = tr_bytes
+            last_cached = cached
           if tr_bytes >= exp_tr_bytes:
             ## Set this to True only when you surpass the expected.
             ## Only then you can be sure that you got as close as possible to the optimal.
             found = True
         else:
           s = create_sample(
-              s    = sample,
-              code = code,
-              trb  = tr_bytes,
-              gs   = gsize
+              s      = sample,
+              cached = cached,
+              trb    = tr_bytes,
+              gs     = gsize
             )
           if s.runtime_features['label'] in {"CPU", "GPU"}:
             new_samples.append(s)
@@ -342,10 +335,10 @@ class GreweAbstract(DownstreamTask):
         if store_rejects:
           rejects.append(
             create_sample(
-              s    = sample,
-              code = code,
-              trb  = exp_tr_bytes,
-              gs   = gsize,
+              s      = sample,
+              cached = cached,
+              trb    = exp_tr_bytes,
+              gs     = gsize,
             )
           )
       gsize += 1
@@ -353,11 +346,16 @@ class GreweAbstract(DownstreamTask):
       ## If only the optimal size is needed and the execution has succeeded,
       ## create a new copy of the sample
       if found_bytes:
-        s = create_sample(sample, code, found_bytes, opt_gsize)
+        s = create_sample(sample, last_cached, found_bytes, opt_gsize)
         if s.runtime_features['label'] in {"CPU", "GPU"}: ## This check is redundant, but better safe than sorry.
           new_samples = [s]
-      elif store_rejects:
-        rejects.append(s)
+        elif store_rejects:
+          rejects.append(
+            s      = sample,
+            cached = last_cached,
+            trb    = exp_tr_bytes,
+            gs     = gsize,
+          )
     return new_samples, rejects
 
   def CollectRuntimeFeatures(self,
