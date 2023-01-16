@@ -303,6 +303,7 @@ class GreweAbstract(DownstreamTask):
       if sha256 in self.corpus_db.status_cache:
         cached = self.corpus_db.get_entry(code, "BenchPress", int(2**gsize), int(local_size))
       else:
+        ## If not cached, compute.
         cached = self.corpus_db.update_and_get(
           code,
           sample.features,
@@ -313,6 +314,7 @@ class GreweAbstract(DownstreamTask):
           timeout     = 60,
         )
       if cached is not None and cached.status in {"CPU", "GPU"}:
+        ## If element execution has succeeeded.
         tr_bytes = cached.transferred_bytes
         if not FLAGS.only_optimal_gsize:
           s = create_sample(
@@ -326,6 +328,7 @@ class GreweAbstract(DownstreamTask):
           elif store_rejects:
             rejects.append(s)
       else:
+        ## If failed, store to rejects and set transferred bytes to None.
         if store_rejects:
           rejects.append(
             create_sample(
@@ -337,23 +340,30 @@ class GreweAbstract(DownstreamTask):
           )
         tr_bytes = None
       if FLAGS.only_optimal_gsize:
+        ## only_optimal_size means you compute only one gsize combination.
+        ## The one that falls closest to the targeted transferred_bytes.
         if tr_bytes:
+          ## If tr_bytes is None, then execution has failed.
           if tr_bytes < exp_tr_bytes:
             opt_gsize   = gsize
             found_bytes = tr_bytes
           else:
+            ## The optimal gsize is found the first time tr_bytes surpasses exp_tr_bytes.
+            ## Then we check which one is closest (current or previous).
             found = True
             if found_bytes is None or abs(exp_tr_bytes - tr_bytes) < abs(exp_tr_bytes - found_bytes):
               opt_gsize   = gsize
               found_bytes = abs(exp_tr_bytes - tr_bytes)
       gsize += 1
     if FLAGS.only_optimal_gsize:
+      ## If only the optimal size is needed and the execution has succeeded,
+      ## create a new copy of the sample
       if found_bytes:
         s = create_sample(sample, code, found_bytes, opt_gsize)
-        if s.runtime_features['label'] in {"CPU", "GPU"}:
+        if s.runtime_features['label'] in {"CPU", "GPU"}: ## This check is redundant, but better safe than sorry.
           new_samples = [s]
-        elif store_rejects:
-          rejects.append(s)
+      elif store_rejects:
+        rejects.append(s)
     return new_samples, rejects
 
   def CollectRuntimeFeatures(self,
