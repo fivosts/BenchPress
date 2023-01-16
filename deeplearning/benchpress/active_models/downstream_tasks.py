@@ -393,7 +393,16 @@ class GreweAbstract(DownstreamTask):
       distrib.barrier()
       new_samples = [JSON_to_ActiveSample(x) for x in new_samples]
       if self.top_k != -1:
-        return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)[:self.top_k]
+        ## Return only the results that come from the top_k code samples.
+        top_k_codes = set()
+        return_samples = []
+        for s in sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score):
+          if len(top_k_codes) > self.top_k:
+            break
+          else:
+            top_k_codes.add(''.join([str(x) for x in s.sample]))
+            return_samples.append(s)
+        return s
       else:
         l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
         return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)
@@ -403,9 +412,10 @@ class GreweAbstract(DownstreamTask):
       total = 0
       for sample in tqdm.tqdm(sorted(samples, key = lambda x: x.score), total = len(samples), desc = "CLDrive", leave = False):
         ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer)
+        if len(ret) > 0:
+          total += 1
         for s in ret:
           if s.runtime_features['label'] in {"CPU", "GPU"}:
-            total += 1
             new_samples.append(s)
           if self.top_k != -1 and total >= self.top_k:
             return new_samples
