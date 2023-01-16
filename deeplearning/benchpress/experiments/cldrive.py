@@ -305,6 +305,37 @@ class CLDriveExecutions(sqlutil.Database):
           CLDriveSample.status.in_({"CPU", "GPU"})
         ).yield_per(1000)
 
+  @classmethod
+  def reduce_execution_times(cls, exec_times: typing.List[typing.Any]) -> float:
+    """
+    This is the centralized method that reduces a list of execution time distribution, to a single float.
+    Policy can be average, median or anything else, but it has to happen through this method only, for consistency.
+    """
+    def is_float(x):
+      try:
+        float(x)
+        return True
+      except ValueError:
+        return False
+
+    def median_of_list(lst: typing.List) -> int:
+      """
+      Return median of list
+      """
+      mid = len(lst) // 2
+      if len(lst) == 0:
+        return None
+      elif len(lst) % 2 == 0:
+        return (lst[mid] + lst[mid+1]) / 2 
+      else:
+        return lst[mid] / 2
+    if isinstance(exec_times, str):
+      return median_of_list([int(float(x)) for x in exec_times.split('\n') if x != 'nan' and is_float(x)])
+    elif isinstance(exec_times, pd.Row):
+      return exec_times.median()
+    else:
+      raise NotImplementedError("Unsupported type: {}".format(type(exec_times)))
+
   def get_execution_times_ms(self, src: str, dataset: str, global_size: int, local_size: int) -> typing.Tuple[typing.List[int], typing.List[int], typing.List[int], typing.List[int]]:
     """
     Search code by hash and return lists with all different execution times.
