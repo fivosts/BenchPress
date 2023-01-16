@@ -981,7 +981,7 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
       if environment.WORLD_RANK == 0:
         self.saveCheckpoint()
       distrib.barrier()
-      self.feat_sampler.iter_benchmark(target_samples = total_cand, top_k = -1)
+      self.feat_sampler.iter_benchmark(target_samples = total_cand)
       return (np.repeat([org_inp], len(total_cand), axis = 0),
               np.repeat([org_ids], len(total_cand), axis = 0),
               [x.sample for x in total_cand],
