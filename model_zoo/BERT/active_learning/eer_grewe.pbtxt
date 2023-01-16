@@ -150,6 +150,7 @@ sampler {
             }
           }
           random_seed: 12345
+          top_k: 1
           num_train_steps: 1000000000
           # downstream_task: "Grewe"
           downstream_task: "FeatureLessGrewe"
