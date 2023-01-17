@@ -134,7 +134,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
       size, address = min_load
       if address not in schedule:
         schedule[address] = []
-      schedule[address].append([source, entry])
+      schedule[address].append(entry)
       heapq.heappush(heap, [size+1, address])
     # 3. For each compute node other than myself, do a write_message request.
     for node, workload in schedule.items():
