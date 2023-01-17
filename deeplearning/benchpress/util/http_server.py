@@ -170,8 +170,15 @@ def read_message() -> bytes:
     handler.backlog += [[source, r] for r in ret]
 
   if handler.master_node:
-    for peer in handler.peers:
-      ret += client_get_request(address = peer, servername = source)
+    queue = handler.peers
+    while queue:
+      peer = queue.pop(0)
+      sc = client_status_request()[1]
+      if sc < 300:
+        ret += client_get_request(address = peer, servername = source)
+      else:
+        queue.append(peer)
+        time.sleep(2)
   return bytes(json.dumps(ret), encoding="utf-8"), 200
 
 @app.route('/read_rejects', methods = ['GET'])
