@@ -119,7 +119,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
     for add in handler.peers:
       status, sc = client_read_queue_size(add)
       size = status['read_queue_size']
-      if sc != 200:
+      if sc < 200:
         l.logger().error("{}, {}".format(size, sc))
       else:
         heap.append([size, add])
@@ -301,7 +301,7 @@ def ping():
 
   data = flask.request.json
   handler.peers = [x for x in data['peers'] if x != handler.my_address] + [data['master']]
-  return ",".join(handler.peers)
+  return ",".join(handler.peers), 200
 
 @app.route('/', methods = ['GET', 'POST', 'PUT'])
 def index():
