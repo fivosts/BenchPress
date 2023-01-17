@@ -24,6 +24,7 @@ import math
 import functools
 import typing
 import tqdm
+import copy
 import multiprocessing
 import time
 import numpy as np
@@ -262,7 +263,7 @@ class GreweAbstract(DownstreamTask):
     Overloaded function to compute runtime features for a single instance.
     """
     def create_sample(s: 'ActiveSample', cached: cldrive.CLDriveSample, trb: int, gs: int) -> typing.List['ActiveSample']:
-      nrfeats = s.runtime_features
+      nrfeats = copy.deepcopy(s.runtime_features)
       nrfeats['transferred_bytes'] = trb
       nrfeats['global_size'] = int(2**gs)
       nrfeats['label'] = cached.status
