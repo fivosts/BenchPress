@@ -299,7 +299,6 @@ class GreweAbstract(DownstreamTask):
           num_runs    = 10000,
           timeout     = 60,
         )
-      l.logger().error(cached.global_size)
       if cached is not None and cached.status in {"CPU", "GPU"}:
         ## If element execution has succeeeded.
         tr_bytes = cached.transferred_bytes
@@ -476,9 +475,6 @@ class GreweAbstract(DownstreamTask):
           source, serialized   = self.read_queue.get()
           sample   = JSON_to_ActiveSample(serialized)
           ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
-          for x in ret:
-            l.logger().info(x.input_ids)
-            l.logger().warn(x.runtime_features)
           for x in ret:
             self.write_queues[source].append(ActiveSample_to_JSON(x))
           for x in rej:
@@ -841,9 +837,6 @@ class FeatureLessGrewe(GreweAbstract):
       extended_samples = []
       memo = {}
       for sample in new_samples:
-        l.logger().info(sample.sample)
-        l.logger().warn(sample.runtime_features)
-        input()
         key = ','.join([str(x) for x in sample.sample])
         if key not in memo:
           src = tokenizer.ArrayToCode(sample.sample)
