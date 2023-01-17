@@ -480,6 +480,9 @@ class GreweAbstract(DownstreamTask):
           sample   = JSON_to_ActiveSample(serialized)
           ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
           for x in ret:
+            l.logger().info(x.input_ids)
+            l.logger().warn(x.runtime_features)
+          for x in ret:
             self.write_queues[source].append(ActiveSample_to_JSON(x))
           for x in rej:
             self.reject_queues[source].append(ActiveSample_to_JSON(x))
@@ -841,8 +844,8 @@ class FeatureLessGrewe(GreweAbstract):
       extended_samples = []
       memo = {}
       for sample in new_samples:
-        l.logger().info(sample.input_ids)
-        l.logger().info(sample.runtime_features)
+        l.logger().info(sample.sample)
+        l.logger().warn(sample.runtime_features)
         input()
         key = ','.join([str(x) for x in sample.sample])
         if key not in memo:
