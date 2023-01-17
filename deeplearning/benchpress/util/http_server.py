@@ -160,9 +160,13 @@ def read_message() -> bytes:
     curl -X GET http://localhost:PORT/read_message
   """
   source = flask.request.headers.get("Server-Name")
-  ret = [r for r in handler.write_queues[source]]
-  handler.write_queues[source] = handler.manager.list()
-  handler.backlog += [[source, r] for r in ret]
+  if source not in handler.write_queues:
+    l.logger().warn("Source {} not in write_queues: {}".format(source, ', '.join(handler.write_queues.keys())))
+    ret = []
+  else:
+    ret = [r for r in handler.write_queues[source]]
+    handler.write_queues[source] = handler.manager.list()
+    handler.backlog += [[source, r] for r in ret]
 
   if handler.master_node:
     for peer in handler.peers:
@@ -179,7 +183,11 @@ def read_rejects() -> bytes:
     curl -X GET http://localhost:PORT/read_rejects
   """
   source = flask.request.headers.get("Server-Name")
-  ret = [r for r in handler.reject_queues[source]]
+  if source not in handler.reject_queues:
+    l.logger().warn("Source {} not in reject_queues: {}".format(source, ', '.join(handler.reject_queues.keys())))
+    ret = []
+  else:
+    ret = [r for r in handler.reject_queues[source]]
 
   if handler.master_node:
     for peer in handler.peers:
@@ -198,7 +206,12 @@ def read_reject_labels() -> bytes:
   source = flask.request.headers.get("Server-Name")
   if source is None:
     return "Server-Name is undefined", 404
-  ret = [r for r in handler.reject_queues[source]]
+  if source not in handler.reject_queues:
+    l.logger().warn("Source {} not in reject_queues: {}".format(source, ', '.join(handler.reject_queues.keys())))
+    ret = []
+  else:
+    ret = [r for r in handler.reject_queues[source]]
+  
   for c in ret:
     if c['runtime_features']['label'] not in labels:
       labels[c['runtime_features']['label']] = 1
@@ -248,12 +261,12 @@ def status():
 
   status = {
     'read_queue'        : 'EMPTY' if handler.read_queue.empty() else 'NOT_EMPTY',
-    'write_queue'       : 'EMPTY' if len(handler.write_queues[source]) == 0 else 'NOT_EMPTY',
-    'reject_queue'      : 'EMPTY' if len(handler.reject_queues[source]) == 0 else 'NOT_EMPTY',
+    'write_queue'       : 'EMPTY' if source not in handler.write_queues or len(handler.write_queues[source]) == 0 else 'NOT_EMPTY',
+    'reject_queue'      : 'EMPTY' if source not in handler.reject_queues or len(handler.reject_queues[source]) == 0 else 'NOT_EMPTY',
     'work_flag'         : 'WORKING' if handler.work_flag.value else 'IDLE',
     'read_queue_size'   : handler.read_queue.qsize(),
-    'write_queue_size'  : len(handler.write_queues[source]),
-    'reject_queue_size' : len(handler.reject_queues[source]),
+    'write_queue_size'  : -1 if source not in handler.write_queues else len(handler.write_queues[source]),
+    'reject_queue_size' : -1 if source not in handler.reject_queues else len(handler.reject_queues[source]),
   }
 
   if handler.master_node:
