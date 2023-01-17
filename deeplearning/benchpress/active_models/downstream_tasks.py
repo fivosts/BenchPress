@@ -396,17 +396,18 @@ class GreweAbstract(DownstreamTask):
         ## Return only the results that come from the top_k code samples.
         top_k_codes = set()
         return_samples = []
-        for s in sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score):
-          if len(top_k_codes) >= self.top_k:
-            break
-          else:
-            top_k_codes.add(''.join([str(x) for x in s.sample]))
+        for s in sorted([x for x in new_samples if x.runtime_features['label'] in {"CPU", "GPU"}], key = lambda x: x.score):
+          key = ''.join([str(x) for x in s.sample])
+          if key not in top_k_codes and len(top_k_codes) < self.top_k:
+            top_k_codes.add(key)
+            return_samples.append(s)
+          elif key in top_k_codes:
             return_samples.append(s)
         l.logger().warn("Collected {} new samples from {} top_k code".format(len(return_samples), len(top_k_codes)))
         return return_samples
       else:
         l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
-        return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)
+        return sorted([x for x in new_samples if x.runtime_features['label'] in {"CPU", "GPU"}], key = lambda x: x.score)
     else:
       ## If not server mode, compute locally labels for each sample.
       new_samples = []
