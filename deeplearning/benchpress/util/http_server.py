@@ -121,7 +121,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
       if sc != 200:
         l.logger().error("{}, {}".format(size, sc))
       else:
-        heap.append((size, add))
+        heap.append([size, add])
     heap.append([handler.read_queue.qsize(), handler.my_address])
     heapq.heapify(heap)
     # 2. Create the schedule: dict[node_address -> list of workload]
@@ -134,7 +134,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
       if address not in schedule:
         schedule[address] = []
       schedule[address].append([source, entry])
-      heapq.heappush(heap, (size+1, address))
+      heapq.heappush(heap, [size+1, address])
     # 3. For each compute node other than myself, do a write_message request.
     for node, workload in schedule.items():
       # If I need to add to my workload, just add to queue.
