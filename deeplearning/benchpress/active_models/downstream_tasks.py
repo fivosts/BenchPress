@@ -284,11 +284,6 @@ class GreweAbstract(DownstreamTask):
     rejects      = []
     last_cached  = None
     while not found and gsize <= 20:
-      if local_size > int(2**gsize):
-        # Local size can't be greater than global size.
-        gsize += 1
-        continue
-
       sha256 = crypto.sha256_str(code + "BenchPress" + str(2**gsize) + str(local_size))
       if sha256 in self.corpus_db.status_cache:
         cached = self.corpus_db.get_entry(code, "BenchPress", int(2**gsize), int(local_size))
@@ -303,6 +298,7 @@ class GreweAbstract(DownstreamTask):
           num_runs    = 10000,
           timeout     = 60,
         )
+      l.logger().error(cached.global_size)
       if cached is not None and cached.status in {"CPU", "GPU"}:
         ## If element execution has succeeeded.
         tr_bytes = cached.transferred_bytes
