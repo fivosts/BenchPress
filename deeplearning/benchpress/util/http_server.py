@@ -117,7 +117,7 @@ def write_message(): # Expects serialized json file, one list of dictionaries..
     # A min heap is created that stores server nodes with their queue size.
     heap = []
     for add in handler.peers:
-      size, sc = client_read_queue_size(add)
+      size, sc = client_read_queue_size(add)['read_queue_size']
       if sc != 200:
         l.logger().error("{}, {}".format(size, sc))
       else:
