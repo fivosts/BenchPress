@@ -747,10 +747,15 @@ class torchLMDataGenerator(lm_data_generator.MaskLMDataGenerator):
                                   self.feat_sampler.target_benchmark.name
                                 )
                               )
+    if len(self.feat_sampler.target_benchmark.features) > 100:
+      pretty_features = {k: round(v, 2) for k, v in list(self.feat_sampler.target_benchmark.features.items())[:50]}
+      pretty_features.update({k: round(v, 2) for k, v in list(self.feat_sampler.target_benchmark.features.items())[-50:]})
+    else:
+      pretty_features = {k: round(v, 2) for k, v in self.feat_sampler.target_benchmark.features.items()}
     l.logger().info(
       "{}Target features: {}{}".format(
         "Target benchmark: {}\n".format(self.feat_sampler.target_benchmark.name) if self.feat_sampler.target_benchmark.name != "" else "",
-        {k: round(v, 2) for k, v in self.feat_sampler.target_benchmark.features.items()},
+        pretty_features,
         "\nRuntime features: {}".format(self.feat_sampler.target_benchmark.runtime_features) if self.feat_sampler.target_benchmark.runtime_features else ""
       )
     )
