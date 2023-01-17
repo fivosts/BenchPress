@@ -476,8 +476,6 @@ class GreweAbstract(DownstreamTask):
         if not self.read_queue.empty():
           self.work_flag.value = True
           source, serialized   = self.read_queue.get()
-          l.logger().error(source)
-          l.logger().error(serialized)
           sample   = JSON_to_ActiveSample(serialized)
           ret, rej = self.CollectSingleRuntimeFeature(sample, tokenizer, store_rejects = True)
           for x in ret:
