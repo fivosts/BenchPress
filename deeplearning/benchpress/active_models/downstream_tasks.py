@@ -332,7 +332,7 @@ class GreweAbstract(DownstreamTask):
             new_samples.append(s)
           elif store_rejects:
             rejects.append(s)
-      else:
+      elif cached is not None:
         ## If failed, store to rejects and set transferred bytes to None.
         if store_rejects:
           rejects.append(
@@ -839,7 +839,10 @@ class FeatureLessGrewe(GreweAbstract):
       cur_sample_ep = self.downstream_data.sampling_epoch
       extended_samples = []
       memo = {}
+      l.logger().error(new_samples[:5])
+      l.logger().error(len(new_samples))
       for sample in new_samples:
+        l.logger().warn(sample)
         key = ','.join([str(x) for x in sample.sample])
         if key not in memo:
           src = tokenizer.ArrayToCode(sample.sample)
