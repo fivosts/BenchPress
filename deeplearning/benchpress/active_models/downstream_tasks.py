@@ -397,13 +397,13 @@ class GreweAbstract(DownstreamTask):
         top_k_codes = set()
         return_samples = []
         for s in sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score):
-          if len(top_k_codes) > self.top_k:
+          if len(top_k_codes) >= self.top_k:
             break
           else:
             top_k_codes.add(''.join([str(x) for x in s.sample]))
             return_samples.append(s)
-        l.logger().warn("Collected {} new samples from {} top_k code".format(len(new_samples), len(top_k_codes)))
-        return s
+        l.logger().warn("Collected {} new samples from {} top_k code".format(len(return_samples), len(top_k_codes)))
+        return return_samples
       else:
         l.logger().warn("Collected {} new samples from http server".format(len(new_samples)))
         return sorted([x for x in new_samples if x.runtime_features['label']], key = lambda x: x.score)
@@ -839,10 +839,10 @@ class FeatureLessGrewe(GreweAbstract):
       cur_sample_ep = self.downstream_data.sampling_epoch
       extended_samples = []
       memo = {}
-      l.logger().error(new_samples[:5])
-      l.logger().error(len(new_samples))
       for sample in new_samples:
-        l.logger().warn(sample)
+        l.logger().info(sample.input_ids)
+        l.logger().info(sample.runtime_features)
+        input()
         key = ','.join([str(x) for x in sample.sample])
         if key not in memo:
           src = tokenizer.ArrayToCode(sample.sample)
