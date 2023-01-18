@@ -18,9 +18,12 @@ Evaluation script for kernel execution using cldrive or similar drivers.
 import datetime
 import sqlite3
 import typing
+import json
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 
 from deeplearning.benchpress.util import sqlutil
 from deeplearning.benchpress.util import crypto
@@ -31,14 +34,6 @@ from absl import flags
 Base = declarative.declarative_base()
 
 FLAGS = flags.FLAGS
-
-class Data(Base):
-  __tablename__ = "sampling_results"
-  """
-  DB Table for concentrated validation results.
-  """
-  key     : str = sql.Column(sql.String(1024), primary_key=True)
-  results : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
 
 class QuizResult(Base, sqlutil.ProtoBackedMixin):
   """
@@ -90,27 +85,27 @@ class UserSession(Base, sqlutil.ProtoBackedMixin):
   """
   A database with statistics, indexed by the unique User ID.
   """
-  __tablename__ = "user_stats"
+  __tablename__ = "user_session"
   # entry id
-  id               : int = sql.Column(sql.Integer,    primary_key = True)
+  id               : int = sql.Column(sql.Integer, primary_key = True)
   # unique hash of cldrive execution.
   user_id          : str = sql.Column(sql.String(64), nullable = False, index = True)
   # Ips of one user.
-  user_ip          : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  user_ip          : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Software engineer or not ?
   engineer         : bool = sql.Column(sql.Boolean, unique = False, nullable = False)
   # Save the schedule for that user
-  schedule         : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  schedule         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Frequency distribution of encountered datasets
-  dataset_distr    : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  dataset_distr    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Frequency distribution of oracle labels
-  label_distr      : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  label_distr      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Predicted label distribution per dataset
-  prediction_distr : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  prediction_distr : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Total predictions made
   num_predictions  : int = sql.Column(sql.Integer,   nullable = False)
   # Accumulated session for this user.
-  session          : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  session          : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Date the quiz was performed.
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
@@ -128,13 +123,13 @@ class UserSession(Base, sqlutil.ProtoBackedMixin):
                ) -> 'UserSession':
     return UserSession(**{
       "user_id"          : user_id,
-      "user_ip"          : user_ip,
+      "user_ip"          : json.dumps(user_ip),
       "engineer"         : engineer,
-      "schedule"         : schedule,
-      "dataset_distr"    : dataset_distr,
-      "label_distr"      : label_distr,
-      "prediction_distr" : prediction_distr,
-      "session"          : session,
+      "schedule"         : json.dumps(schedule),
+      "dataset_distr"    : json.dumps(dataset_distr),
+      "label_distr"      : json.dumps(label_distr),
+      "prediction_distr" : json.dumps(prediction_distr),
+      "session"          : json.dumps(session),
       "num_predictions"  : num_predictions,
       "date_added"       : datetime.datetime.utcnow(),
     })
@@ -149,38 +144,38 @@ class TuringSession(Base, sqlutil.ProtoBackedMixin):
   # Total number of participants by unique ids.
   num_user_ids     : int = sql.Column(sql.Integer, nullable = False)
   # A list of all user IDs.
-  user_ids         : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  user_ids         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Ips of one user.
   num_user_ips     : int = sql.Column(sql.Integer, nullable = False)
   # A list of all user IPs.
-  user_ips         : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  user_ips         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Engineers distribution
-  engineer_distr   : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  engineer_distr   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Total predictions made per engineer and non engineer
-  num_predictions  : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  num_predictions  : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Predictions distribution per engineer and non engineer per dataset with accuracies.
-  prediction_distr : sql.Column(sql.ext.mutable.MutableDict.as_mutable(sql.dialects.postgresql.JSONB), nullable = False)
+  prediction_distr : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Date of assigned session.
   date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
 
   @classmethod
   def FromArgs(cls,
                num_user_ids     : int = 0,
-               user_ids         : typing.List[str] = [],
+               user_ids         : typing.List[str] = {},
                num_user_ips     : int = 0,
                user_ips         : typing.List[str] = [],
-               engineer_distr   : typing.Dict[int] = [],
+               engineer_distr   : typing.Dict[str, int] = [],
                num_predictions  : int = 0,
                prediction_distr : typing.Dict[str, typing.Dict[str, typing.Any]] = {},
                ) -> "TuringSession":
     return TuringSession(**{
       "num_user_ids"     : num_user_ids,
-      "user_ids"         : user_ids,
+      "user_ids"         : json.dumps(user_ids),
       "num_user_ips"     : num_user_ips,
-      "user_ips"         : user_ips,
-      "engineer_distr"   : engineer_distr,
-      "num_predictions"  : num_predictions,
-      "prediction_distr" : prediction_distr,
+      "user_ips"         : json.dumps(user_ips),
+      "engineer_distr"   : json.dumps(engineer_distr),
+      "num_predictions"  : json.dumps(num_predictions),
+      "prediction_distr" : json.dumps(prediction_distr),
       "date_added"       : datetime.datetime.utcnow(),
     })
 
@@ -214,6 +209,37 @@ class TuringDB(sqlutil.Database):
       exists = s.query(TuringSession).scalar() is not None
       if not exists:
         s.add(TuringSession.FromArgs())
+
+  def update_session(self, **kwargs) -> None:
+    """
+    Update session table with any new kwargs
+    """
+    with self.Session() as s:
+      session = s.query(TuringSession).first()
+      for key, value in kwargs.items():
+        if key == "user_ids":
+          usr_ids = json.loads(session.user_ids)
+          if value not in usr_ids:
+            session.user_ids = json.dumps(usr_ids + value)
+            session.num_user_ids += 1
+        elif key == "user_ips":
+          usr_ips = json.loads(session.user_ips)
+          if value not in usr_ips:
+            session.user_ips = json.dumps(usr_ips + value)
+            session.num_user_ips += 1
+        elif key == "engineer_distr":
+          eng_dist = json.loads(session.engineer_distr)
+          if value not in session.engineer_distr:
+            eng_dist[value] = 0
+          else:
+            eng_dist[value] += 1
+          session.engineer_dist = json.dumps(eng_dist)
+        elif key == "num_predictions":
+          pred_dist = json.loads(session.num_predictions)
+          if value[0] not in pred_dist:
+            pred_dist[value[0]] += value[1]
+          session.num_predictions = json.dumps(pred_dist)
+    return
 
   def init_user(self, user_id: str, user_ip: str, engineer: bool, schedule: typing.List[str]) -> None:
     """
