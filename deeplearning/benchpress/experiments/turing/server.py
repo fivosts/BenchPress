@@ -41,7 +41,7 @@ class FlaskHandler(object):
     self.schedule = None
     return
 
-  def set_params(self, databases: typing.List[typing.Tuple[str, str, typing.List[str]]], workspace: pathlib.Path):
+  def set_params(self, databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]], workspace: pathlib.Path) -> None:
     self.databases = databases
     self.workspace = workspace
     self.results_db = db.TuringDB(url = "sqlite:///{}".format(workspace / "turing_results.db"))
@@ -118,7 +118,7 @@ def index():
     quiz()
   return "OK\n", 200
 
-def serve(databases: typing.List[typing.Tuple[str, str, typing.List[str]]],
+def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
           http_port: int = None,
           host_address: str = '0.0.0.0'
           ) -> None:
@@ -151,3 +151,17 @@ def serve(databases: typing.List[typing.Tuple[str, str, typing.List[str]]],
   except Exception as e:
     raise e
   return
+
+
+serve(
+  databases = {
+    "BenchPress": {
+      "label": "robot",
+      "code" : ["src_A", "src_B"],
+    },
+    "GitHub": {
+      "label": "human",
+      "code" : ["src_C", "src_D"],
+    }
+  }
+)
