@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import portpicker
+import pathlib
 import queue
 import multiprocessing
 import waitress
@@ -24,32 +25,26 @@ import time
 import flask
 import heapq
 
+import numpy as np
 from absl import flags
 
+from deeplearning.benchpress.util.turing import db
 from deeplearning.benchpress.util import logging as l
-from deeplearning.benchpress.util import environment
 
 app = flask.Flask(__name__)
 
 class FlaskHandler(object):
   def __init__(self):
-    self.read_queue   = None
-    self.write_queues = None
-    self.reject_queue = None
-    self.peers        = None
-    self.backlog      = None
+    self.databases = None
+    self.workspace = None
+    self.results_db = None
+    self.schedule = None
     return
 
-  def set_params(self, read_queue, write_queues, reject_queues, manager, work_flag):
-    self.read_queue    = read_queue
-    self.write_queues  = write_queues
-    self.work_flag     = work_flag
-    self.reject_queues = reject_queues
-    self.my_address    = "http://{}:{}".format(FLAGS.http_server_ip_address, FLAGS.http_port)
-    self.peers         = ["http://{}".format(s) for s in FLAGS.http_server_peers]
-    self.master_node   = True if self.peers else False
-    self.manager       = manager
-    self.backlog       = []
+  def set_params(self, databases: typing.List[typing.Tuple[str, str, typing.List[str]]], workspace: pathlib.Path):
+    self.databases = databases
+    self.workspace = workspace
+    self.results_db = db.TuringDB(url = "sqlite:///{}".format(workspace / "turing_results.db"))
     return
 
 handler = FlaskHandler()
@@ -59,8 +54,19 @@ def quiz():
   """
   Give a quiz.
   """
-  sample_question = None ## Sample a random question from a round robin database.
-  return flask.render_template("quiz.html", data = sample_question)
+  ## Get schedule from cookies.
+  schedule = flask.request.cookies.get("schedule").split(',')
+  ## Pop database.
+  db = schedule.pop(0)
+  name, hor, data = db
+  ## Sample datapoint.
+  question = data[np.random.RandomState().randint(0, len(data) - 1)]
+  ## RR-add to the end.
+  schedule.append(db)
+  ## Update cookies.
+  resp = flask.render_template("quiz.html", data = [name, hor, question])
+  resp.set_cookies("schedule", ','.join([schedule]))
+  return resp
 
 @app.route('/start')
 def start():
@@ -68,6 +74,11 @@ def start():
   Ask if person knows software.
   """
   ## Create a round robin schedule of held databases.
+  schedule = flask.request.cookies.get("schedule")
+  if schedule is None:
+    schedule = np.random.shuffle([x for x, _, _ in handler.databases])
+    resp = flask.make_response(flask.render_template("start.html"))
+    resp.set_cookie("schedule", ','.join([schedule]))
   return flask.render_template("start.html")
 
 @app.route('/start', methods = ['POST'])
@@ -84,7 +95,6 @@ def index():
   """
   Main status page of turing test dashboard.
   """
-  ## DO I need to handle any data here ?
   return flask.render_template("index.html")
 
 @app.route('/', methods = ['POST'])
@@ -92,30 +102,46 @@ def index():
   """
   Get input from "START" button.
   """
-  text = flask.request.form['text']
-  processed_text = text.upper()
-  return processed_text
+  software = flask.request.cookies.get("engineer")
+  if software is None:
+    text = flask.request.form['text']
+    processed_text = text.upper()
+    # start()
+    return processed_text
+  else:
+    ## Go directly to quizzing.
+    pass
 
+def serve(databases: typing.List[typing.Tuple[str, str, typing.List[str]]],
+          http_port: int = None,
+          host_address: str = '0.0.0.0'
+          ) -> None:
+  """
+  Serving function for Turing test quiz dashboard.
+  Receive a list of databases. Each entry specifies:
+    a) Name of database
+    b) Data
+    c) Human or Robot
+  """
+  try:
+    if http_port is None:
+      http_port = portpicker.pick_unused_port()
+    ## Setup handler.
+    handler.set_params(databases)
+    ## Pretty print hostname.
+    hostname = subprocess.check_output(
+      ["hostname", "-i"],
+      stderr = subprocess.STDOUT,
+    ).decode("utf-8").replace("\n", "").split(' ')
+    if len(hostname) == 2:
+      ips = "ipv4: {}, ipv6: {}".format(hostname[1], hostname[0])
+    else:
+      ips = "ipv4: {}".format(hostname[0])
+    l.logger().warn("Server Public IP: {}:{}".format(ips, http_port))
 
-def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocessing.Value, multiprocessing.Queue, typing.Dict, typing.Dict]:
-  """
-  This is an easy wrapper to start server from parent routine.
-  Starts a new process or thread and returns all the multiprocessing
-  elements needed to control the server.
-  """
-  m = multiprocessing.Manager()
-  rq, wqs, rjqs = multiprocessing.Queue(), m.dict(), m.dict()
-  wf = multiprocessing.Value('i', False)
-  p = multiprocessing.Process(
-    target = http_serve,
-    kwargs = {
-      'read_queue'    : rq,
-      'write_queues'  : wqs,
-      'reject_queues' : rjqs,
-      'work_flag'     : wf,
-      'manager'       : m,
-    }
-  )
-  p.daemon = True
-  p.start()
-  return p, wf, rq, wqs, rjqs
+    waitress.serve(app, host = host_address, port = http_port)
+  except KeyboardInterrupt:
+    return
+  except Exception as e:
+    raise e
+  return
