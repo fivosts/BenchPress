@@ -14,22 +14,30 @@
 # limitations under the License.
 import portpicker
 import pathlib
-import queue
-import multiprocessing
 import waitress
 import subprocess
-import json
 import typing
-import requests
-import time
 import flask
-import heapq
+import uuid
+import datetime
 
 import numpy as np
-from absl import flags
 
-from deeplearning.benchpress.util.turing import db
+from absl import app as absl_app
+
+from deeplearning.benchpress.experiments.turing import db
 from deeplearning.benchpress.util import logging as l
+
+
+"""
+TODO list:
+
+1) Encrypt cookies.
+2) Append to session database.
+3) Append to user database.
+4) Append to quiz database.
+5) Make all urls viewable as home.
+"""
 
 app = flask.Flask(__name__)
 
@@ -44,7 +52,8 @@ class FlaskHandler(object):
   def set_params(self, databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]], workspace: pathlib.Path) -> None:
     self.databases = databases
     self.workspace = workspace
-    self.results_db = db.TuringDB(url = "sqlite:///{}".format(workspace / "turing_results.db"))
+    self.session_db = db.TuringDB(url = "sqlite:///{}".format(workspace / "turing_results.db"))
+    self.session_db.init_session()
     return
 
 handler = FlaskHandler()
@@ -58,15 +67,15 @@ def quiz():
   ## Get schedule from cookies.
   schedule = flask.request.cookies.get("schedule").split(',')
   ## Pop database.
-  db = schedule.pop(0)
-  name, hor, data = db
+  db_name = schedule.pop(0)
+  label, data = handler.databases[db_name]["label"], handler.databases[db_name]["code"]
   ## Sample datapoint.
   question = data[np.random.RandomState().randint(0, len(data) - 1)]
   ## RR-add to the end.
-  schedule.append(db)
+  schedule.append(db_name)
   ## Update cookies.
-  resp = flask.render_template("quiz.html", data = [name, hor, question])
-  resp.set_cookies("schedule", ','.join([schedule]))
+  resp = flask.make_response(flask.render_template("quiz.html", data = [db_name, label, question]))
+  resp.set_cookie("schedule", ','.join(schedule))
   return resp
 
 @app.route('/start')
@@ -77,46 +86,71 @@ def start():
   ## Create a round robin schedule of held databases.
   l.logger().info("Start")
   schedule = flask.request.cookies.get("schedule")
+  print("Cookie schedule: ", schedule)
   if schedule is None:
-    schedule = np.random.shuffle([x for x, _, _ in handler.databases])
+    schedule = list(handler.databases.keys())
+    np.random.RandomState().shuffle(schedule)
     resp = flask.make_response(flask.render_template("start.html"))
-    resp.set_cookie("schedule", ','.join([schedule]))
-  return flask.render_template("start.html")
+    resp.set_cookie("schedule", ','.join(schedule))
+  else:
+    # my schedule cookie is cached, so go straight to quiz.
+    return quiz()
 
-@app.route('/start', methods = ['POST'])
-def index():
-  """
-  Receive input from yes/no software question.
-  """
-  l.logger().info("Start POST")
-  text = flask.request.form['text']
-  processed_text = text.upper()
-  return processed_text
+@app.route('/submit', methods = ["POST"])
+def submit():
+  l.logger().info("Submit")
+  if "start" in flask.request.form:
+    software = flask.request.cookies.get("engineer")
+    l.logger().error("Software cookie: {}".format(software))
+    if software is None:
+      return start()
+    else:
+      return quiz()
+  return flask.render_template("index.html")
 
 @app.route('/')
 def index():
   """
-  Main status page of turing test dashboard.
+  Render the home page of the test.
   """
   l.logger().info("Index")
-  return flask.render_template("index.html")
+  ## Create response
+  resp = flask.make_response(flask.render_template("index.html"))
+  ## Load user id, or create a new one if no cookie exists.
+  user_id = flask.request.cookies.get("user_id")
+  if user_id is None:
+    user_id = uuid.uuid4()
+    resp.set_cookie("user_id", str(user_id))
+  ## Assign a new IP anyway.
+  user_ip = "XX.XX.XX.XX"
+  resp.set_cookie("user_ip", str(user_ip))
+  ## Update session database with new user.
+  handler.session_db.update_session(user_ids = user_id, user_ips = user_ip, date_added = datetime.datetime.utcnow())
+  return resp
 
-@app.route('/', methods = ['POST'])
-def index():
-  """
-  Get input from "START" button.
-  """
-  l.logger().info("Index POST")
-  software = flask.request.cookies.get("engineer")
-  button = flask.request.form['start']
-  print(button)
-  if software is None:
-    # start()
-    return processed_text
-  else:
-    ## Go directly to quizzing.
-    quiz()
-  return "OK\n", 200
+
+"""
+  num_user_ids     : int = sql.Column(sql.Integer, nullable = False)
+  # A list of all user IDs.
+  user_ids         : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
+  # Ips of one user.
+  num_user_ips     : int = sql.Column(sql.Integer, nullable = False)
+  # A list of all user IPs.
+  user_ips         : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
+  # Engineers distribution
+  engineer_distr   : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
+  # Total predictions made per engineer and non engineer
+  num_predictions  : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
+  # Predictions distribution per engineer and non engineer per dataset with accuracies.
+  prediction_distr : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
+  # Date of assigned session.
+  date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+
+
+"""
+
+
+
 
 def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
           http_port: int = None,
@@ -133,7 +167,7 @@ def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
     if http_port is None:
       http_port = portpicker.pick_unused_port()
     ## Setup handler.
-    handler.set_params(databases)
+    handler.set_params(databases, pathlib.Path("./").resolve())
     ## Pretty print hostname.
     hostname = subprocess.check_output(
       ["hostname", "-i"],
@@ -153,15 +187,24 @@ def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
   return
 
 
-serve(
-  databases = {
-    "BenchPress": {
-      "label": "robot",
-      "code" : ["src_A", "src_B"],
+
+
+def main(*args, **kwargs):
+
+  serve(
+    databases = {
+      "BenchPress": {
+        "label": "robot",
+        "code" : ["src_A", "src_B"],
+      },
+      "GitHub": {
+        "label": "human",
+        "code" : ["src_C", "src_D"],
+      }
     },
-    "GitHub": {
-      "label": "human",
-      "code" : ["src_C", "src_D"],
-    }
-  }
-)
+    http_port = 40822
+  )
+
+
+if __name__ == "__main__":
+  absl_app.run(main)
