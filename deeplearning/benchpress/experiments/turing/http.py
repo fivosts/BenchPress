@@ -54,6 +54,7 @@ def quiz():
   """
   Give a quiz.
   """
+  l.logger().info("quiz")
   ## Get schedule from cookies.
   schedule = flask.request.cookies.get("schedule").split(',')
   ## Pop database.
@@ -74,6 +75,7 @@ def start():
   Ask if person knows software.
   """
   ## Create a round robin schedule of held databases.
+  l.logger().info("Start")
   schedule = flask.request.cookies.get("schedule")
   if schedule is None:
     schedule = np.random.shuffle([x for x, _, _ in handler.databases])
@@ -86,6 +88,7 @@ def index():
   """
   Receive input from yes/no software question.
   """
+  l.logger().info("Start POST")
   text = flask.request.form['text']
   processed_text = text.upper()
   return processed_text
@@ -95,6 +98,7 @@ def index():
   """
   Main status page of turing test dashboard.
   """
+  l.logger().info("Index")
   return flask.render_template("index.html")
 
 @app.route('/', methods = ['POST'])
@@ -102,15 +106,17 @@ def index():
   """
   Get input from "START" button.
   """
+  l.logger().info("Index POST")
   software = flask.request.cookies.get("engineer")
+  button = flask.request.form['start']
+  print(button)
   if software is None:
-    text = flask.request.form['text']
-    processed_text = text.upper()
     # start()
     return processed_text
   else:
     ## Go directly to quizzing.
-    pass
+    quiz()
+  return "OK\n", 200
 
 def serve(databases: typing.List[typing.Tuple[str, str, typing.List[str]]],
           http_port: int = None,
