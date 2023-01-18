@@ -125,7 +125,7 @@ def index():
   user_ip = "XX.XX.XX.XX"
   resp.set_cookie("user_ip", str(user_ip))
   ## Update session database with new user.
-  handler.session_db.update_session(user_ids = user_id, user_ips = user_ip, date_added = datetime.datetime.utcnow())
+  handler.session_db.update_session(user_ids = str(user_id), user_ips = user_ip, date_added = datetime.datetime.utcnow())
   return resp
 
 
