@@ -54,14 +54,22 @@ class FlaskHandler(object):
 
 handler = FlaskHandler()
 
-@app.route('/', methods = ['GET', 'POST', 'PUT'])
+@app.route('/')
 def index():
   """
   Main status page of turing test dashboard.
   """
-  
-  return flask.render_template("index.html", data = multi_status)
+  ## DO I need to handle any data here ?
+  return flask.render_template("index.html")
 
+@app.route('/', methods = ['POST'])
+def index():
+  """
+  Main status page of turing test dashboard.
+  """
+  text = flask.request.form['text']
+  processed_text = text.upper()
+  return processed_text
 
 
 def start_server_process() -> typing.Tuple[multiprocessing.Process, multiprocessing.Value, multiprocessing.Queue, typing.Dict, typing.Dict]:
