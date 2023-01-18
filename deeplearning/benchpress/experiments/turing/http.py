@@ -54,6 +54,31 @@ class FlaskHandler(object):
 
 handler = FlaskHandler()
 
+@app.route('/quiz')
+def quiz():
+  """
+  Give a quiz.
+  """
+  sample_question = None ## Sample a random question from a round robin database.
+  return flask.render_template("quiz.html", data = sample_question)
+
+@app.route('/start')
+def start():
+  """
+  Ask if person knows software.
+  """
+  ## Create a round robin schedule of held databases.
+  return flask.render_template("start.html")
+
+@app.route('/start', methods = ['POST'])
+def index():
+  """
+  Receive input from yes/no software question.
+  """
+  text = flask.request.form['text']
+  processed_text = text.upper()
+  return processed_text
+
 @app.route('/')
 def index():
   """
@@ -65,7 +90,7 @@ def index():
 @app.route('/', methods = ['POST'])
 def index():
   """
-  Main status page of turing test dashboard.
+  Get input from "START" button.
   """
   text = flask.request.form['text']
   processed_text = text.upper()
