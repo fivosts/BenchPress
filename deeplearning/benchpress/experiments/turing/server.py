@@ -87,14 +87,14 @@ def start():
   l.logger().info("Start")
   schedule = flask.request.cookies.get("schedule")
   print("Cookie schedule: ", schedule)
+  resp = flask.make_response(flask.render_template("start.html"))
   if schedule is None:
     schedule = list(handler.databases.keys())
     np.random.RandomState().shuffle(schedule)
-    resp = flask.make_response(flask.render_template("start.html"))
     resp.set_cookie("schedule", ','.join(schedule))
-  else:
-    # my schedule cookie is cached, so go straight to quiz.
-    return quiz()
+    ## TODO: Add schedule to database for User.
+  return resp
+
 
 @app.route('/submit', methods = ["POST"])
 def submit():
@@ -119,10 +119,11 @@ def index():
   ## Load user id, or create a new one if no cookie exists.
   user_id = flask.request.cookies.get("user_id")
   if user_id is None:
+    # Create user ID.
     user_id = uuid.uuid4()
     resp.set_cookie("user_id", str(user_id))
   ## Assign a new IP anyway.
-  user_ip = "XX.XX.XX.XX"
+  user_ip = flask.request.remote_addr
   resp.set_cookie("user_ip", str(user_ip))
   ## Update session database with new user.
   handler.session_db.update_session(user_ids = str(user_id), user_ips = user_ip, date_added = datetime.datetime.utcnow())
