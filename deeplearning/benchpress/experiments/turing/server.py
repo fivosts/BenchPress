@@ -96,6 +96,7 @@ def submit_quiz():
   Capture quiz submission and redirect.
   """
   ## Save entry to databases right here.
+  l.logger().error("Submit quiz.")
   prediction = "human" if "human" in flask.request.form else "robot"
   user_id  = handler.get_cookie("user_id")
   user_ip  = handler.get_cookie("user_ip")
@@ -112,7 +113,10 @@ def submit_quiz():
       user_ip    = user_ip,
       engineer   = engineer,
     )
-  except TypeError:
+  except TypeError as e:
+    print(e)
+    raise e
+    l.logger().error("Caught exception.")
     return flask.redirect(flask.url_for('quiz'))
   ## Clear cache for current quiz.
   resp = flask.redirect(flask.url_for('quiz'))
@@ -121,6 +125,7 @@ def submit_quiz():
 
 @app.route('/submit_quiz', methods = ["GET", "PUT"])
 def submit_quiz_override():
+  l.logger().error("quiz override.")
   return flask.redirect(flask.url_for('quiz'))
 
 @app.route('/quiz')
@@ -141,12 +146,18 @@ def quiz():
   ## Read cache. IF quiz exists in cache, force user to answer this.
   quiz_cache = handler.get_cookie("quiz_cache")
   if quiz_cache is not None:
+    l.logger().error("Cached quiz.")
     resp = flask.make_response(
       flask.render_template(
         "quiz.html",
         data = [quiz_cache["dataset"], quiz_cache["code"], quiz_cache["label"]])
     )
   else:
+    l.logger().error("New quiz.")
+    ## Avoid new users going directly to quiz URL.
+    user_id = handler.get_cookie("user_id")
+    if user_id is None:
+      return flask.redirect(flask.url_for('index'))
     ## Get schedule from cookies.
     schedule = handler.get_cookie("schedule")
     ## Pop database.
@@ -180,9 +191,10 @@ def submit_engineer():
     sets:
       engineer
   """
-  l.logger().critical(flask.request.form)
+  l.logger().critical("submit engineer")
   engineer = handler.get_cookie("engineer")
   if engineer is not None:
+    l.logger().critical("skip engineer")
     return flask.redirect(flask.url_for('index'))
   user_id  = handler.get_cookie("user_id")
   user_ip  = handler.get_cookie("user_ip")
@@ -206,6 +218,7 @@ def submit_engineer():
 
 @app.route('/submit_engineer', methods = ["GET", "PUT"])
 def submit_engineer_override():
+  l.logger().critical("submit engineer override")
   return flask.redirect(flask.url_for('index'))
 
 @app.route('/start')
