@@ -94,11 +94,16 @@ def submit_engineer():
   Read input from engineer survey question.
   """
   l.logger().critical(flask.request.form)
+  user_id  = flask.request.cookies.get("user_id")
   if "yes" in flask.request.form:
     engineer = True
   else:
     engineer = False
   ## TODO: Save the engineer information associated with user id.
+  handler.results_db.update_user(
+    user_id = user_id,
+    engineer = engineer,
+  )
   resp = flask.redirect(flask.url_for('quiz'))
   resp.set_cookie("engineer", str(engineer))
   return resp
@@ -110,6 +115,8 @@ def start():
   """
   ## Create a round robin schedule of held databases.
   l.logger().info("Start")
+  user_id  = flask.request.cookies.get("user_id")
+  user_ip  = flask.request.cookies.get("user_ip")
   schedule = flask.request.cookies.get("schedule")
   print("Cookie schedule: ", schedule)
   resp = flask.make_response(flask.render_template("start.html"))
@@ -118,8 +125,12 @@ def start():
     np.random.RandomState().shuffle(schedule)
     resp.set_cookie("schedule", ','.join(schedule))
     ## TODO: Add schedule to database for User.
+    handler.results_db.update_user(
+      user_id = user_id,
+      user_ip = user_ip,
+      schedule = schedule,
+    )
   return resp
-
 
 @app.route('/submit', methods = ["POST"])
 def submit():
@@ -151,7 +162,11 @@ def index():
   user_ip = flask.request.remote_addr
   resp.set_cookie("user_ip", str(user_ip))
   ## Update session database with new user.
-  handler.session_db.update_session(user_ids = str(user_id), user_ips = user_ip, date_added = datetime.datetime.utcnow())
+  handler.session_db.update_session(
+    user_ids = str(user_id),
+    user_ips = user_ip,
+    date_added = datetime.datetime.utcnow()
+  )
   return resp
 
 

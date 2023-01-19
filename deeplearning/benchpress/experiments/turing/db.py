@@ -214,7 +214,7 @@ class TuringDB(sqlutil.Database):
     """
     Update session table with any new kwargs
     """
-    with self.Session() as s:
+    with self.Session(commit = True) as s:
       session = s.query(TuringSession).first()
       for key, value in kwargs.items():
         if key == "user_ids":
