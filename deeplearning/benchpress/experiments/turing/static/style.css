@@ -7,7 +7,7 @@ body {
   padding: 50px;
 }
 
-.div_index, .div_start, .div_quiz {
+.div_index, .div_start, .div_quiz, .div_score {
   width: 80%;
   background-color: #252526;
   margin-left: auto;
@@ -16,7 +16,7 @@ body {
   max-width: 1000px;
 }
 
-.main_index, .main_start, .main_quiz {
+.main_index, .main_start, .main_quiz, .main_score {
   text-align: center;
 }
 

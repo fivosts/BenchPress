@@ -199,6 +199,23 @@ class TuringDB(sqlutil.Database):
     super(TuringDB, self).__init__(url, Base, must_exist = must_exist)
     self._status_cache = None
 
+  def get_user_accuracy(self, user_id: str, min_attempts: int) -> float:
+    """
+    Get accuracy of player, so long they've done at least min attempts.
+    """
+    with self.Session() as s:
+      user = s.query(UserSession).filter_by(user_id = user_id).first()
+      correct, total = 0, 0
+      for dataset, data in json.loads(user.prediction_distr).items():
+        for label, amount in data["predictions"].items():
+          total += amount
+          if label == data["label"]:
+            correct += amount
+    if total >= min_attempts:
+      return correct / total
+    else:
+      return None
+
   def init_session(self) -> None:
     """
     TuringSession table must have only one entry.

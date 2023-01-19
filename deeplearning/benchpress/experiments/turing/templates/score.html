@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Human or Robot Survey</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}" />
+  </head>
+  <body class="body_score">
+    <script src="{{url_for('static', filename='prism.js')}}"></script>
+    <div class="div_score">
+      <main class="main_score">
+        <h1>Score</h1>
+        <p>Your accuracy is defined as the amount of correct predictions over your total predictions.</p>
+        <p>Your accuracy is: {{ data }}</p>
+      </main>
+      <footer></footer>
+    </div>
+  </body>
+</html>
