@@ -51,7 +51,7 @@ class QuizResult(Base, sqlutil.ProtoBackedMixin):
   # Prediction from user.
   prediction : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # User ID that made prediction.
-  used_id    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  user_id    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Ip of the user.
   user_ip    : str = sql.Column(sql.Integer,   nullable = False)
   # User was software engineer ?
@@ -74,7 +74,7 @@ class QuizResult(Base, sqlutil.ProtoBackedMixin):
       "code"       : code,
       "label"      : label,
       "prediction" : prediction,
-      "used_id"    : user_id,
+      "user_id"    : user_id,
       "user_ip"    : user_ip,
       "engineer"   : engineer,
       "date_added" : datetime.datetime.utcnow(),
@@ -99,10 +99,10 @@ class UserSession(Base, sqlutil.ProtoBackedMixin):
   dataset_distr    : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Frequency distribution of oracle labels
   label_distr      : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
-  # Predicted label distribution per dataset
+  # Predicted labels distribution per dataset
   prediction_distr : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Total predictions made
-  num_predictions  : int = sql.Column(sql.Integer,   nullable = False)
+  num_predictions  : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Accumulated session for this user.
   session          : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
   # Date the quiz was performed.
@@ -115,9 +115,9 @@ class UserSession(Base, sqlutil.ProtoBackedMixin):
                schedule         : typing.List[str],
                user_ip          : typing.List[str] = [],
                dataset_distr    : typing.Dict[str, int] = {},
-               label_distr      : typing.Dict[str, int] = {},
-               prediction_distr : typing.Dict[str, int] = {},
-               num_predictions  : int = 0,
+               label_distr      : typing.Dict[str, int] = {"human": 0, "robot": 0},
+               prediction_distr : typing.Dict[str, typing.Dict[str, typing.Any]] = {},
+               num_predictions  : typing.Dict[str, int] = {},
                session          : typing.List[typing.Dict[str, typing.Any]] = [],
                ) -> 'UserSession':
     return UserSession(**{
@@ -129,7 +129,7 @@ class UserSession(Base, sqlutil.ProtoBackedMixin):
       "label_distr"      : json.dumps(label_distr, indent = 2),
       "prediction_distr" : json.dumps(prediction_distr, indent = 2),
       "session"          : json.dumps(session, indent = 2),
-      "num_predictions"  : num_predictions,
+      "num_predictions"  : json.dumps(num_predictions, indent = 2),
       "date_added"       : datetime.datetime.utcnow(),
     })
 
@@ -164,7 +164,7 @@ class TuringSession(Base, sqlutil.ProtoBackedMixin):
                num_user_ips     : int = 0,
                user_ips         : typing.List[str] = [],
                engineer_distr   : typing.Dict[str, int] = {"engineer": 0, "non-engineer": 0},
-               num_predictions  : typing.Dict[str, int] = {"engineer": 0, "non-engineer": 0},
+               num_predictions  : typing.Dict[str, int] = {"engineer": {}, "non-engineer": {}},
                prediction_distr : typing.Dict[str, typing.Dict[str, typing.Any]] = {"engineer": {}, "non-engineer": {}},
                ) -> "TuringSession":
     return TuringSession(**{
@@ -235,23 +235,29 @@ class TuringDB(sqlutil.Database):
           session.engineer_distr = json.dumps(eng_dist, indent = 2)
         elif key == "num_predictions":
           pred_dist = json.loads(session.num_predictions)
-          if value[0] not in pred_dist:
-            pred_dist[value[0]] += value[1]
+          engineer = "engineer" if kwargs.get("engineer") else "non-engineer"
+          dname, freq = value
+          if dname not in pred_dist[engineer]:
+            pred_dist[engineer][dname] = freq
+          else:
+            pred_dist[engineer][dname] += freq
           session.num_predictions = json.dumps(pred_dist, indent = 2)
         elif key == "prediction_distr":
           cur_distr = json.loads(session.prediction_distr)
-          engineer = "engineer" if kwargs.get("engineer") else "non-engineer"
-          for dname, labels in value.items():
-            if dname not in cur_distr[engineer]:
-              cur_distr[engineer][dname] = {"human": 0, "robot": 0}
-            for lb in labels:
-              if lb == "human":
-                cur_distr[engineer][dname]["human"] += 1
-              else:
-                cur_distr[engineer][dname]["robot"] += 1
+          for eng, attrs in value.items():
+            engineer = "engineer" if eng else "non-engineer"
+            print(attrs)
+            for dname, attrs2 in attrs.items():
+              if dname not in cur_distr[engineer]:
+                cur_distr[engineer][dname] = {
+                  "label": attrs2["label"],
+                  "predictions": {
+                    "human": 0,
+                    "robot": 0,
+                  }
+                }
+              cur_distr[engineer][dname]["predictions"][attrs2["predictions"]] += 1
           session.prediction_distr = json.dumps(cur_distr, indent = 2)
-        else:
-          raise ValueError(key)
     return
 
   def update_user(self, user_id: str, **kwargs) -> None:
@@ -286,33 +292,35 @@ class TuringDB(sqlutil.Database):
             user.schedule = json.dumps(value, indent = 2)
           elif key == "dataset_distr":
             cur_distr = json.loads(user.dataset_distr)
-            for dname, freq in value.items():
-              if dname not in cur_distr:
-                cur_distr[dname] = freq
-              else:
-                cur_distr[dname] += freq
+            if value not in cur_distr:
+              cur_distr[value] = 1
+            else:
+              cur_distr[value] += 1
             user.dataset_distr = json.dumps(cur_distr, indent = 2)
           elif key == "label_distr":
             cur_distr = json.loads(user.label_distr)
-            for label, freq in value.items():
-              if label not in cur_distr:
-                cur_distr[label] = freq
-              else:
-                cur_distr[label] += freq
+            cur_distr[value] += 1
             user.label_distr = json.dumps(cur_distr, indent = 2)
           elif key == "prediction_distr":
             cur_distr = json.loads(user.prediction_distr)
-            for dname, labels in value.items():
+            for dname, attrs in value.items():
               if dname not in cur_distr:
-                cur_distr[dname] = {"human": 0, "robot": 0}
-              for lb in labels:
-                if lb == "human":
-                  cur_distr[dname]["human"] += 1
-                else:
-                  cur_distr[dname]["robot"] += 1
+                cur_distr[dname] = {
+                  "label": attrs["label"],
+                  "predictions": {
+                    "human": 0,
+                    "robot": 0,
+                  }
+                }
+              cur_distr[dname]["predictions"][attrs["predictions"]] += 1
             user.prediction_distr = json.dumps(cur_distr, indent = 2)
           elif key == "num_predictions":
-            user.num_predictions += value
+            cur_num_preds = json.loads(user.num_predictions)
+            if value not in cur_num_preds:
+              cur_num_preds[value] = 1
+            else:
+              cur_num_preds[value] += 1
+            user.cur_num_preds = json.dumps(cur_num_preds, indent = 2)
           elif key == "session":
             user.session = json.dumps(json.loads(user.session) + [value], indent = 2)
     return
@@ -340,4 +348,34 @@ class TuringDB(sqlutil.Database):
           engineer   = engineer,
         )
       )
+    self.update_user(
+      user_id = user_id,
+      dataset_distr = dataset,
+      label_distr = label,
+      prediction_distr = {
+        dataset: {
+          "label": label,
+          "predictions": prediction,
+        }
+      },
+      num_predictions = dataset,
+      session = {
+        "dataset"    : dataset,
+        "code"       : code,
+        "label"      : label,
+        "prediction" : prediction,
+      }
+    )
+    self.update_session(
+      engineer = engineer,
+      num_predictions = [dataset, 1],
+      prediction_distr = {
+        engineer: {
+          dataset: {
+            "label": label,
+            "predictions": prediction
+          }
+        }
+      }
+    )
     return
