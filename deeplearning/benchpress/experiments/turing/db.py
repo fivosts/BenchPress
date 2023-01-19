@@ -320,7 +320,7 @@ class TuringDB(sqlutil.Database):
               cur_num_preds[value] = 1
             else:
               cur_num_preds[value] += 1
-            user.cur_num_preds = json.dumps(cur_num_preds, indent = 2)
+            user.num_predictions = json.dumps(cur_num_preds, indent = 2)
           elif key == "session":
             user.session = json.dumps(json.loads(user.session) + [value], indent = 2)
     return
