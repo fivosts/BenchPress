@@ -16,6 +16,10 @@ body {
   max-width: 1000px;
 }
 
+.main_index {
+  text-align: center;
+}
+
 form {
   width: 60vw;
   max-width: 500px;
