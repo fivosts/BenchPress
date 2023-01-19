@@ -2,12 +2,12 @@ body {
   margin: 0;
   background-color: 	#101011;
   color: white;
-  font-family: Tahoma;
+  font-family: monospace;
   font-size: 16px;
   padding: 50px;
 }
 
-.div_index {
+.div_index, .div_start, .div_quiz {
   width: 80%;
   background-color: #252526;
   margin-left: auto;
@@ -16,8 +16,16 @@ body {
   max-width: 1000px;
 }
 
-.main_index {
+.main_index, .main_start, .main_quiz {
   text-align: center;
+}
+
+pre {
+  width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  display: inline-block;
+
 }
 
 form {
@@ -26,4 +34,46 @@ form {
   min-width: 300px;
   margin: 0 auto;
   padding-bottom: 2em;
+}
+
+input[type="submit"] {
+  display: block;
+  width: 60%;
+  margin: 1em auto;
+  height: 2em;
+  font-size: 1.1rem;
+  background-color: #3b3b4f;
+  border-color: white;
+  min-width: 300px;
+}
+
+/* Google Fonts */
+@import url(https://fonts.googleapis.com/css?family=Anonymous+Pro);
+
+
+.line-1{
+    position: relative;
+    top: 50%;  
+    width: 24em;
+    margin: 0 auto;
+    border-right: 2px solid rgba(255,255,255,.75);
+    font-size: 180%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    transform: translateY(-50%);    
+}
+
+/* Animation */
+.anim-typewriter{
+  animation: typewriter 4s steps(44) 1s 1 normal both,
+             blinkTextCursor 500ms steps(44) infinite normal;
+}
+@keyframes typewriter{
+  from{width: 0;}
+  to{width: 24em;}
+}
+@keyframes blinkTextCursor{
+  from{border-right-color: rgba(255,255,255,.75);}
+  to{border-right-color: transparent;}
 }
