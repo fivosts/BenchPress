@@ -40,6 +40,7 @@ TODO list:
 """
 
 app = flask.Flask(__name__)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = -1
 
 class FlaskHandler(object):
   def __init__(self):
