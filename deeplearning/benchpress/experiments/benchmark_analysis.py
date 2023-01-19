@@ -22,10 +22,11 @@ from sklearn.decomposition import PCA
 from deeplearning.benchpress.experiments import public
 from deeplearning.benchpress.experiments import clsmith
 from deeplearning.benchpress.experiments import workers
+from deeplearning.benchpress.experiments import distance_score
+from deeplearning.benchpress.experiments.turing import server
 from deeplearning.benchpress.samplers import samples_database
 from deeplearning.benchpress.corpuses import encoded
 from deeplearning.benchpress.util import plotter
-from deeplearning.benchpress.util.turing import http
 
 @public.evaluator
 def AnalyzeTarget(**kwargs) -> None:
@@ -261,13 +262,14 @@ def HumanLikeness(**kwargs) -> None:
   Initialize a dashboard webpage that creates a Turing quiz for users.
   Human or Robot ?
   """
-  db_groups      = kwargs.get('db_groups')
-  target         = kwargs.get('targets')
-  feature_space  = kwargs.get('feature_space')
-  top_k          = kwargs.get('top_k')
-  unique_code    = kwargs.get('unique_code', False)
-  plot_config    = kwargs.get('plot_config')
   workspace_path = kwargs.get('workspace_path') / "human_likely"
   workspace_path.mkdir(exist_ok = True, parents = True)
-  http.serve()
+  groups = distance_score.MinScore(**kwargs)
+  data = {
+    db_name: {
+      "label": "human" if db_name=="GitHub" else "robot",
+      "code": [s for b in code[2] for s in b],
+    } for db_name, code in groups.items()
+  }
+  server.serve(databases = data, workspace_path = workspace_path)
   return
