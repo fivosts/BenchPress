@@ -161,7 +161,7 @@ class TuringSession(Base, sqlutil.ProtoBackedMixin):
   @classmethod
   def FromArgs(cls,
                num_user_ids     : int = 0,
-               user_ids         : typing.List[str] = {},
+               user_ids         : typing.List[str] = [],
                num_user_ips     : int = 0,
                user_ips         : typing.List[str] = [],
                engineer_distr   : typing.Dict[str, int] = [],
@@ -220,12 +220,12 @@ class TuringDB(sqlutil.Database):
         if key == "user_ids":
           usr_ids = json.loads(session.user_ids)
           if value not in usr_ids:
-            session.user_ids = json.dumps(usr_ids + value)
+            session.user_ids = json.dumps(usr_ids + [value])
             session.num_user_ids += 1
         elif key == "user_ips":
           usr_ips = json.loads(session.user_ips)
           if value not in usr_ips:
-            session.user_ips = json.dumps(usr_ips + value)
+            session.user_ips = json.dumps(usr_ips + [value])
             session.num_user_ips += 1
         elif key == "engineer_distr":
           eng_dist = json.loads(session.engineer_distr)

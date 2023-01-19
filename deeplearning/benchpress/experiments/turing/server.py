@@ -58,6 +58,16 @@ class FlaskHandler(object):
 
 handler = FlaskHandler()
 
+@app.route('/submit_quiz', methods = ["POST"])
+def submit_quiz():
+  """
+  Capture quiz submission and redirect.
+  """
+  ## Save entry to databases right here.
+  prediction = "human" if "human" in flask.request.form else "robot"
+  print(prediction)
+  return flask.redirect(flask.url_for('quiz'))
+
 @app.route('/quiz')
 def quiz():
   """
@@ -76,6 +86,21 @@ def quiz():
   ## Update cookies.
   resp = flask.make_response(flask.render_template("quiz.html", data = [db_name, label, question]))
   resp.set_cookie("schedule", ','.join(schedule))
+  return resp
+
+@app.route('/submit_engineer', methods = ["POST"])
+def submit_engineer():
+  """
+  Read input from engineer survey question.
+  """
+  l.logger().critical(flask.request.form)
+  if "yes" in flask.request.form:
+    engineer = True
+  else:
+    engineer = False
+  ## TODO: Save the engineer information associated with user id.
+  resp = flask.redirect(flask.url_for('quiz'))
+  resp.set_cookie("engineer", str(engineer))
   return resp
 
 @app.route('/start')
@@ -100,13 +125,13 @@ def start():
 def submit():
   l.logger().info("Submit")
   if "start" in flask.request.form:
-    software = flask.request.cookies.get("engineer")
-    l.logger().error("Software cookie: {}".format(software))
-    if software is None:
-      return start()
+    engineer = flask.request.cookies.get("engineer")
+    l.logger().error("Software cookie: {}".format(engineer))
+    if engineer is None:
+      return flask.redirect(flask.url_for('start'))
     else:
-      return quiz()
-  return flask.render_template("index.html")
+      return flask.redirect(flask.url_for('quiz'))
+  return flask.redirect(flask.url_for('index'))
 
 @app.route('/')
 def index():

@@ -6,19 +6,9 @@
     <body>
         <h1>Quiz heading.</h1>
         <p>This is the code right here</p>
-        <form id="quiz_label" action="submit_quiz">
-            <button for="quiz_label" type="submit">HUMAN</button>
-            <button for="quiz_label" type="submit">ROBOT</button>
+        <form id="quiz_label" action="submit_quiz" method = "post">
+            <button for="quiz_label" name="human" type="submit">HUMAN</button>
+            <button for="quiz_label" name="robot" type="submit">ROBOT</button>
         </form>
     </body>
 </html>
-<script>
-    /* If browser back button was used, flush cache */
-    (function () {
-        window.onpageshow = function(event) {
-            if (event.persisted) {
-                window.location.reload();
-            }
-        };
-    })();
-</script>
