@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-    </head>
-    <body>
+  <head>
+    <meta charset="utf-8">
+    <title>Human or Robot Survey</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}" />
+  </head>
+  <body class="body_start">
+    <div class="div_start">
+      <main class="main_start">
         <h1>Let's Start</h1>
         <p>First, have you ever written code ?</p>
         <form action="submit_engineer" method = "post">
-            <button for="submit_engineer" name="yes" type="submit">Yes</button>
-            <button for="submit_engineer" name="no" type="submit">No</button>
+          <button for="submit_engineer" name="yes" type="submit">Yes</button>
+          <button for="submit_engineer" name="no" type="submit">No</button>
         </form>
-
-    </body>
+      </main>
+      <footer>Foivos Tsimpourlas for BenchPress, 2023</footer>
+    </div>
+  </body>
 </html>

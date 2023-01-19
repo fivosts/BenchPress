@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <title>Human or Robot Survey</title>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}" />
-    </head>
-    <body class="body_index">
-      <div class="div_index">
-        <main class="main_index">
-          <h1>BenchPress Survey</h1>
-          <p>Human or Robot ?</p>
-          <form id="start_button" action = "submit" method = "post">
-            <input type="submit" name="start" value = "START" />
-          </form>
-        </main>
-        <footer>Foivos Tsimpourlas 2023 for BenchPress</footer>
-      </div>
-    </body>
-
+  <head>
+    <meta charset="utf-8">
+    <title>Human or Robot Survey</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static',filename='prism.css') }}" />
+  </head>
+  <body class="body_index">
+    <script src="{{url_for('static', filename='prism.js')}}"></script>
+    <div class="div_index">
+      <main class="main_index">
+        <h1>BenchPress Survey</h1>
+        <p>Human or Robot ?</p>
+        <form id="start_button" action = "submit" method = "post">
+          <input type="submit" name="start" value = "START" />
+        </form>
+      </main>
+      <footer>Foivos Tsimpourlas 2023 for BenchPress</footer>
+    </div>
+  </body>
 </html>

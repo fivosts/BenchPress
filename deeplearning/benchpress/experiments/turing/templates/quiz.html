@@ -1,14 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-    </head>
-    <body>
-        <h1>Quiz heading.</h1>
+  <head>
+    <meta charset="utf-8">
+    <title>Human or Robot Survey</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static',filename='prism.css') }}" />
+  </head>
+  <body class="body_quiz">
+    <script src="{{url_for('static', filename='prism.js')}}"></script>
+    <div class="div_quiz">
+      <main class="main_quiz">
+        <h1>Human Or Robot ?</h1>
         <p>This is the code right here</p>
+<pre><code class="language-opencl">kernel void A(int *x, float *b){
+  while (true) {
+    b[0] = get_global_id(x[0]);
+  }
+  return;
+}</code></pre>
         <form id="quiz_label" action="submit_quiz" method = "post">
-            <button for="quiz_label" name="human" type="submit">HUMAN</button>
-            <button for="quiz_label" name="robot" type="submit">ROBOT</button>
+          <button for="quiz_label" name="human" type="submit">HUMAN</button>
+          <button for="quiz_label" name="robot" type="submit">ROBOT</button>
         </form>
-    </body>
+      </main>
+      <footer></footer>
+    </div>
+  </body>
 </html>
