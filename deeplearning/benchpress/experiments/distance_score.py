@@ -67,7 +67,7 @@ def KAverageScore(**kwargs) -> None:
         dbg.db_type == active_feed_database.ActiveFeedDatabase
       ):
       raise ValueError("Scores require SamplesDatabase or EncodedContentFiles but received", dbg.db_type)
-    groups[dbg.group_name] = ([], [])
+    groups[dbg.group_name] = ([], [], [])
     for benchmark in tqdm.tqdm(benchmarks, total = len(benchmarks), desc = "Benchmarks"):
       groups[dbg.group_name][0].append(benchmark.name)
       # Find shortest distances.
@@ -76,7 +76,8 @@ def KAverageScore(**kwargs) -> None:
       else:
         get_data = lambda x: dbg.get_data_features(x)
 
-      distances = workers.SortedDistances(get_data(feature_space), benchmark.features, feature_space)
+      src_distances = workers.SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
+      distances = [d for _, _, d in src_distances]
       # Compute target's distance from O(0,0)
       assert len(distances) != 0, "Sorted src list for {} is empty!".format(dbg.group_name)
       avg_dist = sum(distances[:top_k]) / top_k
@@ -86,6 +87,7 @@ def KAverageScore(**kwargs) -> None:
         target_origin_dists[benchmark.name] = max(math.sqrt(sum([x**2 for x in benchmark.features.values()])), avg_dist)
 
       groups[dbg.group_name][1].append(avg_dist)
+      groups[dbg.group_name][2].append([s for s, _, _ in src_distances[:top_k]])
 
   for group_name, tup in groups.items():
     bench_names, raw_dists = tup
@@ -98,7 +100,7 @@ def KAverageScore(**kwargs) -> None:
     path = workspace_path,
     **plot_config if plot_config else {},
   )
-  return
+  return groups
 
 @public.evaluator
 def MinScore(**kwargs) -> None:
@@ -108,8 +110,7 @@ def MinScore(**kwargs) -> None:
   """
   if 'top_k' in kwargs:
     del kwargs['top_k']
-  KAverageScore(top_k = 1, unique_code = False, **kwargs)
-  return
+  return KAverageScore(top_k = 1, unique_code = False, **kwargs)
 
 @public.evaluator
 def AnalyzeBeamSearch(**kwargs) -> None:
