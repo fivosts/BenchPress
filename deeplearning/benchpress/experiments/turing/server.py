@@ -66,6 +66,7 @@ def submit_quiz():
   ## Save entry to databases right here.
   prediction = "human" if "human" in flask.request.form else "robot"
   print(prediction)
+  handler.results_db.add_quiz()
   return flask.redirect(flask.url_for('quiz'))
 
 @app.route('/quiz')
