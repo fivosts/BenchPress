@@ -68,7 +68,6 @@ class QuizResult(Base, sqlutil.ProtoBackedMixin):
                user_id    : str,
                user_ip    : typing.List[int],
                engineer   : bool,
-               date_added : datetime.datetime,
                ) -> "QuizResult":
     return QuizResult(**{
       "dataset"    : dataset,
@@ -326,12 +325,11 @@ class TuringDB(sqlutil.Database):
                user_id    : str,
                user_ip    : typing.List[int],
                engineer   : bool,
-               date_added : datetime.datetime,
                ) -> None:
     """
     Add new quiz instance to DB
     """
-    with self.Session() as s:
+    with self.Session(commit = True) as s:
       s.add(QuizResult.FromArgs(
           dataset = dataset,
           code       = code,
@@ -340,7 +338,6 @@ class TuringDB(sqlutil.Database):
           user_id    = user_id,
           user_ip    = user_ip,
           engineer   = engineer,
-          date_added = date_added,
         )
       )
     return
