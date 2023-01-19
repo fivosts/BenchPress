@@ -45,7 +45,7 @@ class FlaskHandler(object):
   def __init__(self):
     self.databases = None
     self.workspace = None
-    self.results_db = None
+    self.session_db = None
     self.schedule = None
     return
 
@@ -54,6 +54,30 @@ class FlaskHandler(object):
     self.workspace = workspace
     self.session_db = db.TuringDB(url = "sqlite:///{}".format(workspace / "turing_results.db"))
     self.session_db.init_session()
+    return
+  
+  def get_cookie(self, key: str) -> typing.Any:
+    resp = flask.request.cookies.get(key)
+    if resp is None:
+      return resp
+    elif key == "schedule":
+      return resp.split(',')
+    elif key == "engineer":
+      return bool(resp)
+    elif key in {"user_id", "user_ip"}:
+      return str(resp)
+    else:
+      raise ValueError(key)
+
+  def set_cookie(self, resp, **kwargs) -> None:
+    for key, val in kwargs.items():
+      if key == "schedule":
+        pr_val = ','.join(val)
+      elif key in {"user_id", "user_ip", "engineer"}:
+        pr_val = str(val)
+      else:
+        raise ValueError(key)
+      resp.set_cookie(key, pr_val)
     return
 
 handler = FlaskHandler()
@@ -66,7 +90,7 @@ def submit_quiz():
   ## Save entry to databases right here.
   prediction = "human" if "human" in flask.request.form else "robot"
   print(prediction)
-  handler.results_db.add_quiz()
+  handler.session_db.add_quiz()
   return flask.redirect(flask.url_for('quiz'))
 
 @app.route('/quiz')
@@ -76,7 +100,7 @@ def quiz():
   """
   l.logger().info("quiz")
   ## Get schedule from cookies.
-  schedule = flask.request.cookies.get("schedule").split(',')
+  schedule = handler.get_cookie("schedule")
   ## Pop database.
   db_name = schedule.pop(0)
   label, data = handler.databases[db_name]["label"], handler.databases[db_name]["code"]
@@ -86,7 +110,7 @@ def quiz():
   schedule.append(db_name)
   ## Update cookies.
   resp = flask.make_response(flask.render_template("quiz.html", data = [db_name, label, question]))
-  resp.set_cookie("schedule", ','.join(schedule))
+  handler.set_cookie(resp, schedule = schedule)
   return resp
 
 @app.route('/submit_engineer', methods = ["POST"])
@@ -95,18 +119,24 @@ def submit_engineer():
   Read input from engineer survey question.
   """
   l.logger().critical(flask.request.form)
-  user_id  = flask.request.cookies.get("user_id")
-  if "yes" in flask.request.form:
-    engineer = True
-  else:
-    engineer = False
+  user_id  = handler.get_cookie("user_id")
+  user_ip  = handler.get_cookie("user_ip")
+  schedule = handler.get_cookie("schedule")
+  engineer = "yes" in flask.request.form
   ## TODO: Save the engineer information associated with user id.
-  handler.results_db.update_user(
+  handler.session_db.update_user(
     user_id = user_id,
+    user_ip = user_ip,
+    schedule = schedule,
     engineer = engineer,
   )
+  handler.session_db.update_session(
+    user_ids = str(user_id),
+    user_ips = user_ip,
+    engineer_distr = engineer,
+  )
   resp = flask.redirect(flask.url_for('quiz'))
-  resp.set_cookie("engineer", str(engineer))
+  handler.set_cookie(resp, engineer = engineer)
   return resp
 
 @app.route('/start')
@@ -116,28 +146,25 @@ def start():
   """
   ## Create a round robin schedule of held databases.
   l.logger().info("Start")
-  user_id  = flask.request.cookies.get("user_id")
-  user_ip  = flask.request.cookies.get("user_ip")
-  schedule = flask.request.cookies.get("schedule")
+  user_id  = handler.get_cookie("user_id")
+  user_ip  = handler.get_cookie("user_ip")
+  schedule = handler.get_cookie("schedule")
   print("Cookie schedule: ", schedule)
   resp = flask.make_response(flask.render_template("start.html"))
   if schedule is None:
     schedule = list(handler.databases.keys())
     np.random.RandomState().shuffle(schedule)
-    resp.set_cookie("schedule", ','.join(schedule))
-    ## TODO: Add schedule to database for User.
-    handler.results_db.update_user(
-      user_id = user_id,
-      user_ip = user_ip,
-      schedule = schedule,
-    )
+    handler.set_cookie(resp, schedule = schedule)
+  handler.session_db.update_session(
+    user_ips = user_ip,
+  )
   return resp
 
 @app.route('/submit', methods = ["POST"])
 def submit():
   l.logger().info("Submit")
   if "start" in flask.request.form:
-    engineer = flask.request.cookies.get("engineer")
+    engineer = handler.get_cookie("engineer")
     l.logger().error("Software cookie: {}".format(engineer))
     if engineer is None:
       return flask.redirect(flask.url_for('start'))
@@ -154,45 +181,16 @@ def index():
   ## Create response
   resp = flask.make_response(flask.render_template("index.html"))
   ## Load user id, or create a new one if no cookie exists.
-  user_id = flask.request.cookies.get("user_id")
+  user_id = handler.get_cookie("user_id")
   if user_id is None:
     # Create user ID.
     user_id = uuid.uuid4()
-    resp.set_cookie("user_id", str(user_id))
+    handler.set_cookie(resp, user_id = user_id)
+
   ## Assign a new IP anyway.
   user_ip = flask.request.remote_addr
-  resp.set_cookie("user_ip", str(user_ip))
-  ## Update session database with new user.
-  handler.session_db.update_session(
-    user_ids = str(user_id),
-    user_ips = user_ip,
-    date_added = datetime.datetime.utcnow()
-  )
+  handler.set_cookie(resp, user_ip = user_ip)
   return resp
-
-
-"""
-  num_user_ids     : int = sql.Column(sql.Integer, nullable = False)
-  # A list of all user IDs.
-  user_ids         : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
-  # Ips of one user.
-  num_user_ips     : int = sql.Column(sql.Integer, nullable = False)
-  # A list of all user IPs.
-  user_ips         : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
-  # Engineers distribution
-  engineer_distr   : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
-  # Total predictions made per engineer and non engineer
-  num_predictions  : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
-  # Predictions distribution per engineer and non engineer per dataset with accuracies.
-  prediction_distr : sql.Column(MutableDict.as_mutable(JSONB), nullable = False)
-  # Date of assigned session.
-  date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
-
-
-"""
-
-
-
 
 def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
           http_port: int = None,
