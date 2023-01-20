@@ -266,9 +266,6 @@ class TuringDB(sqlutil.Database):
           cur_distr = json.loads(session.prediction_distr)
           for eng, attrs in value.items():
             engineer = "engineer" if eng else "non-engineer"
-            print(value)
-            print(session.prediction_distr)
-            print()
             for dname, attrs2 in attrs.items():
               if dname not in cur_distr[engineer]:
                 cur_distr[engineer][dname] = {
@@ -327,9 +324,6 @@ class TuringDB(sqlutil.Database):
             user.label_distr = json.dumps(cur_distr, indent = 2)
           elif key == "prediction_distr":
             cur_distr = json.loads(user.prediction_distr)
-            print(value)
-            print(cur_distr)
-            input()
             for dname, attrs in value.items():
               if dname not in cur_distr:
                 cur_distr[dname] = {
