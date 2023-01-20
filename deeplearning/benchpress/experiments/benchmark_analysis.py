@@ -268,7 +268,8 @@ def HumanLikeness(**kwargs) -> None:
   """
   workspace_path = kwargs.get('workspace_path') / "human_likely"
   workspace_path.mkdir(exist_ok = True, parents = True)
-  blob_name = "human_like_{}".format('_'.join([kwargs.get("target")] + list(groups.keys())))
+  db_groups = kwargs.get('db_groups')
+  blob_name = "human_like_{}".format('_'.join([kwargs.get("target")] + [dbg.group_name for dbg in db_groups]))
 
   def preprocess(text):
     r = opencl.ExtractOnlySingleKernels(
@@ -281,7 +282,7 @@ def HumanLikeness(**kwargs) -> None:
     else:
       return None
 
-  if not (workspace_path / "{}.json").exists():
+  if not (workspace_path / "{}.json".format(blob_name)).exists():
     data = {}
     for feat_space in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
       kwargs["feature_space"] = feat_space
