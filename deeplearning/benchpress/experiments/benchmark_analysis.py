@@ -268,19 +268,26 @@ def HumanLikeness(**kwargs) -> None:
   """
   workspace_path = kwargs.get('workspace_path') / "human_likely"
   workspace_path.mkdir(exist_ok = True, parents = True)
-  groups = distance_score.MinScore(**kwargs)
   preprocessors = lambda x: opencl.ClangFormat(opencl.SequentialNormalizeIdentifiers(
         opencl.ExtractSingleKernelsHeaders(
         opencl.InvertKernelSpecifier(
         opencl.StripDoubleUnderscorePrefixes(
         opencl.ClangPreprocessWithShim(
         c.StripIncludes(x)))))))
-  data = {
-    db_name: {
-      "label": "human" if db_name=="GitHub" else "robot",
-      "code": [preprocessors(s) for b in code[2] for s in b],
-    } for db_name, code in groups.items()
-  }
+
+  data = {}
+  for feat_space in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
+    kwargs["feature_space"] = feat_space
+    groups = distance_score.MinScore(**kwargs)
+    for db_name, code in groups.items():
+      if db_name not in data:
+        data[db_name] = {
+          "label": "human" if db_name=="GitHub" else "robot",
+          "code" : [preprocessors(s) for b in code[2] for s in b],
+        }
+      else:
+        data[db_name]["code"] += [preprocessors(s) for b in code[2] for s in b]
+
   with open(workspace_path / "data.pkl", 'wb') as outf:
     pickle.dump(data, outf)
   with open(workspace_path / "data.json", 'w') as outf:
