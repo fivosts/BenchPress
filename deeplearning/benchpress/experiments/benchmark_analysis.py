@@ -270,14 +270,18 @@ def HumanLikeness(**kwargs) -> None:
   workspace_path.mkdir(exist_ok = True, parents = True)
   blob_name = "human_like_{}".format('_'.join([kwargs.get("target")] + list(groups.keys())))
 
-  if not (workspace_path / "{}.json").exists():
-    preprocessors = lambda x: opencl.ClangFormat(opencl.SequentialNormalizeIdentifiers(
-          opencl.ExtractOnlySingleKernels(
-          opencl.InvertKernelSpecifier(
-          opencl.StripDoubleUnderscorePrefixes(
-          opencl.ClangPreprocessWithShim(
-          c.StripIncludes(x)))))[0]))
+  def preprocess(text):
+    r = opencl.ExtractOnlySingleKernels(
+        opencl.InvertKernelSpecifier(
+        opencl.StripDoubleUnderscorePrefixes(
+        opencl.ClangPreprocessWithShim(
+        c.StripIncludes(text)))))
+    if len(r) > 0:
+      return opencl.ClangFormat(opencl.SequentialNormalizeIdentifiers(r[0]))
+    else:
+      return None
 
+  if not (workspace_path / "{}.json").exists():
     data = {}
     for feat_space in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
       kwargs["feature_space"] = feat_space
@@ -286,13 +290,13 @@ def HumanLikeness(**kwargs) -> None:
         if db_name not in data:
           data[db_name] = {
             "label": "human" if db_name=="GitHub" else "robot",
-            "code" : set([preprocessors(s) for b in code[2] for s in b]),
+            "code" : set([preprocess(s) for b in code[2] for s in b]),
           }
         else:
           data[db_name]["code"].update([preprocessors(s) for b in code[2] for s in b])
 
     for db_name in data.keys():
-      data[db_name]["code"] = list(data[db_name]["code"])
+      data[db_name]["code"] = list([x for x in data[db_name]["code"] if x])
 
     with open(workspace_path / "{}.pkl".format(blob_name), 'wb') as outf:
       pickle.dump(data, outf)
