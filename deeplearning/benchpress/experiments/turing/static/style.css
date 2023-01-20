@@ -4,7 +4,7 @@ html {
 }
 
 body {
-  position: sticky;
+  position: relative;
   background-color:	#101011;
   color: rgba(0, 248, 8, 0.701);
   font-family: "Lucida Console", "Courier New", monospace;
@@ -98,7 +98,7 @@ p {
 }
 
 pre {
-  width: 50%;
+  width: 80%;
   margin-left: auto;
   margin-right: auto;
   display: inline-block;

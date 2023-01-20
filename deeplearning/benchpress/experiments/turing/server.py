@@ -49,6 +49,7 @@ class FlaskHandler(object):
     self.workspace = None
     self.session_db = None
     self.schedule = None
+    self.user_cache = None
     return
 
   def set_params(self, databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]], workspace: pathlib.Path) -> None:
@@ -56,6 +57,7 @@ class FlaskHandler(object):
     self.workspace = workspace
     self.session_db = db.TuringDB(url = "sqlite:///{}".format(workspace / "turing_results.db"))
     self.session_db.init_session()
+    self.user_cache = {}
     return
   
   def get_cookie(self, key: str) -> typing.Any:
@@ -105,10 +107,15 @@ def submit_quiz():
   l.logger().error("Submit quiz.")
   prediction = "human" if "human" in flask.request.form else "robot"
   user_id  = handler.get_cookie("user_id")
-  user_ip  = handler.get_cookie("user_ip")
-  engineer = handler.get_cookie("engineer")
-  schedule = handler.get_cookie("schedule")
-  quiz_cache = handler.get_cookie("quiz_cache")
+  # user_ip  = handler.get_cookie("user_ip")
+  # engineer = handler.get_cookie("engineer")
+  # schedule = handler.get_cookie("schedule")
+  # quiz_cache = handler.get_cookie("quiz_cache")
+
+  user_ip = handler.user_cache[user_id].get("user_ip", None)
+  engineer = handler.user_cache[user_id].get("engineer", None)
+  schedule = handler.user_cache[user_id].get("schedule", None)
+  quiz_cache = handler.user_cache[user_id].get("quiz_cache", None)
 
   try:
     handler.session_db.add_quiz(
@@ -128,7 +135,8 @@ def submit_quiz():
     return flask.redirect(flask.url_for('quiz'))
   ## Clear cache for current quiz.
   resp = flask.redirect(flask.url_for('quiz'))
-  handler.set_cookie(resp, quiz_cache = "", expires = 0)
+  # handler.set_cookie(resp, quiz_cache = "", expires = 0)
+  del handler.user_cache[user_id]["quiz_cache"]
   return resp
 
 @app.route('/submit_quiz', methods = ["GET", "PUT"])
@@ -152,22 +160,26 @@ def quiz():
   """
   l.logger().info("quiz")
   ## Read cache. IF quiz exists in cache, force user to answer this.
-  quiz_cache = handler.get_cookie("quiz_cache")
+  user_id = handler.get_cookie("user_id")
+  # quiz_cache = handler.get_cookie("quiz_cache")
+  quiz_cache = handler.user_cache[user_id].get("quiz_cache", None)
   if quiz_cache is not None:
     l.logger().error("Cached quiz.")
     resp = flask.make_response(
       flask.render_template(
         "quiz.html",
-        data = [quiz_cache["dataset"], quiz_cache["code"], quiz_cache["label"]])
+        # data = [quiz_cache["dataset"], quiz_cache["code"], quiz_cache["label"]])
+        data = quiz_cache["code"]
+      )
     )
   else:
     l.logger().error("New quiz.")
     ## Avoid new users going directly to quiz URL.
-    user_id = handler.get_cookie("user_id")
     if user_id is None:
       return flask.redirect(flask.url_for('index'))
     ## Get schedule from cookies.
-    schedule = handler.get_cookie("schedule")
+    # schedule = handler.get_cookie("schedule")
+    schedule = handler.user_cache[user_id].get("schedule", None)
     ## Pop database.
     dataset = schedule.pop(0)
     label, data = handler.databases[dataset]["label"], handler.databases[dataset]["code"]
@@ -179,11 +191,14 @@ def quiz():
     resp = flask.make_response(
       flask.render_template(
         "quiz.html",
-        data = [dataset, label, code]
+        # data = [dataset, label, code]
+        data = code
       )
     )
-    handler.set_cookie(resp, schedule = schedule)
-    handler.set_cookie(resp, quiz_cache = {"dataset": dataset, "code": code, "label": label})
+    # handler.set_cookie(resp, schedule = schedule)
+    handler.user_cache[user_id]["schedule"] = schedule
+    # handler.set_cookie(resp, quiz_cache = {"dataset": dataset, "code": code, "label": label})
+    handler.user_cache[user_id]["quiz_cache"] = {"dataset": dataset, "code": code, "label": label}
   return resp
 
 @app.route('/submit_engineer', methods = ["POST"])
@@ -200,13 +215,16 @@ def submit_engineer():
       engineer
   """
   l.logger().critical("submit engineer")
-  engineer = handler.get_cookie("engineer")
+  user_id  = handler.get_cookie("user_id")
+  # engineer = handler.get_cookie("engineer")
+  engineer = handler.user_cache[user_id].get("engineer", None)
   if engineer is not None:
     l.logger().critical("skip engineer")
     return flask.redirect(flask.url_for('index'))
-  user_id  = handler.get_cookie("user_id")
-  user_ip  = handler.get_cookie("user_ip")
-  schedule = handler.get_cookie("schedule")
+  # user_ip  = handler.get_cookie("user_ip")
+  # schedule = handler.get_cookie("schedule")
+  user_ip = handler.user_cache[user_id].get("user_ip", None)
+  schedule = handler.user_cache[user_id].get("schedule", None)
   engineer = "yes" in flask.request.form
   ## TODO: Save the engineer information associated with user id.
   handler.session_db.update_user(
@@ -221,7 +239,8 @@ def submit_engineer():
     engineer_distr = engineer,
   )
   resp = flask.redirect(flask.url_for('quiz'))
-  handler.set_cookie(resp, engineer = engineer)
+  # handler.set_cookie(resp, engineer = engineer)
+  handler.user_cache[user_id]["engineer"] = engineer
   return resp
 
 @app.route('/submit_engineer', methods = ["GET", "PUT"])
@@ -245,18 +264,23 @@ def start():
   """
   ## Create a round robin schedule of held databases.
   l.logger().info("Start")
-  engineer = handler.get_cookie("engineer")
+  user_id  = handler.get_cookie("user_id")
+  # engineer = handler.get_cookie("engineer")
+  engineer = handler.user_cache[user_id].get("engineer", None)
   if engineer is not None:
     return flask.redirect(flask.url_for('index'))
-  user_id  = handler.get_cookie("user_id")
-  user_ip  = handler.get_cookie("user_ip")
-  schedule = handler.get_cookie("schedule")
+  # user_ip  = handler.get_cookie("user_ip")
+  # schedule = handler.get_cookie("schedule")
+  user_ip = handler.user_cache[user_id].get("user_ip", None)
+  schedule = handler.user_cache[user_id].get("schedule", None)
+
   print("Cookie schedule: ", schedule)
   resp = flask.make_response(flask.render_template("start.html"))
   if schedule is None:
     schedule = list(handler.databases.keys())
     np.random.RandomState().shuffle(schedule)
-    handler.set_cookie(resp, schedule = schedule)
+    handler.user_cache[user_id]["schedule"] = schedule
+    # handler.set_cookie(resp, schedule = schedule)
   handler.session_db.update_session(
     user_ips = user_ip,
   )
@@ -272,7 +296,7 @@ def score():
   if accuracy is None:
     return flask.render_template("score_null.html")
   else:
-    return flask.render_template("score.html", data=accuracy)
+    return flask.render_template("score.html", data = "{}%".format(int(100 * accuracy)))
 
 @app.route('/submit', methods = ["POST"])
 def submit():
@@ -284,8 +308,10 @@ def submit():
       engineer
   """
   l.logger().info("Submit")
+  user_id = handler.get_cookie("user_id")
   if "start" in flask.request.form:
-    engineer = handler.get_cookie("engineer")
+    # engineer = handler.get_cookie("engineer")
+    engineer = handler.user_cache[user_id].get("engineer", None)
     l.logger().error("Software cookie: {}".format(engineer))
     if engineer is None:
       return flask.redirect(flask.url_for('start'))
@@ -316,7 +342,10 @@ def index():
     handler.set_cookie(resp, user_id = user_id)
   ## Assign a new IP anyway.
   user_ip = flask.request.remote_addr
-  handler.set_cookie(resp, user_ip = user_ip)
+  handler.user_cache[str(user_id)] = {
+    "user_ip": user_ip,
+  }
+  # handler.set_cookie(resp, user_ip = user_ip)
   return resp
 
 def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
