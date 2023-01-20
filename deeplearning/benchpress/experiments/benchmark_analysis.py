@@ -16,6 +16,8 @@
 Target benchmark analysis evaluator.
 """
 import tqdm
+import pickle
+import json
 import sklearn
 from sklearn.decomposition import PCA
 
@@ -279,5 +281,9 @@ def HumanLikeness(**kwargs) -> None:
       "code": [preprocessors(s) for b in code[2] for s in b],
     } for db_name, code in groups.items()
   }
+  with open(workspace_path / "data.pkl", 'wb') as outf:
+    pickle.dump(data, outf)
+  with open(workspace_path / "data.json", 'w') as outf:
+    json.dump(data, indent = 2)
   server.serve(databases = data, workspace_path = workspace_path)
   return
