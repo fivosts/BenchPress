@@ -50,6 +50,10 @@ OPTION(BUILD_SRCIROR
       "Select to build srciror mutator."
       OFF
 )
+OPTION(BUILD_LITE
+      "Select to build a lite version, where system dependencies and compilers are not required."
+      OFF
+)
 
 function(find_binaries)
 
@@ -403,6 +407,51 @@ function(setup_python)
   set(PYTHON ${PYTHON_ENV} PARENT_SCOPE)
 endfunction()
 
+function(benchpress_lite)
+  ## Skip the generation of system related paths, make only python files executable.
+
+  get_target_property(DASHBOARD_STATIC    dashboard_static    path)
+  get_target_property(DASHBOARD_TEMPLATES dashboard_templates path)
+
+  string(CONCAT BENCHPRESS
+    "#######################################\n"
+    "#      Auto generated bash binary     #\n"
+    "# -----------  BENCHPRESS ----------- #\n"
+    "#           Not to be edited          #\n"
+    "# if you want to explicitly execute a #\n"
+    "# specific python script instead of   #\n"
+    "# the main booting point of the app,  #\n"
+    "# then export path of desired script  #\n"
+    "# in BENCHPRESS_BINARY var as a       #\n"
+    "# relative path from root, e.g.       #\n"
+    "# path/to/my_script.py                #\n"
+    "#######################################\n"
+    "#!$(which bash)\n"
+    "PYTHON_BINARY="                         ${PYTHON}  "\n"
+    "if [[ -z \"$BENCHPRESS_BINARY\" ]]\; then\n"
+    "  BENCHPRESS_BINARY="                   ${CMAKE_CURRENT_SOURCE_DIR}/${APP_PATH} "/benchpress.py\n"
+    "elif [[ \"$BENCHPRESS_BINARY\" == \"cmd\" ]]\; then\n"
+    "  BENCHPRESS_BINARY=\"\"\n"
+    "else\n"
+    "  BENCHPRESS_BINARY="                   ${CMAKE_CURRENT_SOURCE_DIR}/ "$BENCHPRESS_BINARY" "\n"
+    "fi\n"
+    "export DASHBOARD_TEMPLATES="            ${DASHBOARD_TEMPLATES} "\n"
+    "export DASHBOARD_STATIC="               ${DASHBOARD_STATIC} "\n"
+    "export LITE_BUILD="                     "1" "\n"
+    "eval PYTHONPATH="                       ${CMAKE_CURRENT_SOURCE_DIR} " $PYTHON_BINARY $BENCHPRESS_BINARY \"$@\"\n"
+    "unset DASHBOARD_TEMPLATES\n"
+    "unset DASHBOARD_STATIC\n"
+    "unset LITE_BUILD\n"
+  )
+  file(
+    WRITE ${CMAKE_BINARY_DIR}/${APP_PATH}/benchpress ${BENCHPRESS}
+  )
+  add_custom_target(benchpress ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/${APP_PATH}/benchpress ${CMAKE_CURRENT_SOURCE_DIR}/benchpress
+    COMMAND chmod 551 ${CMAKE_CURRENT_SOURCE_DIR}/benchpress
+  )
+  endfunction()
+
 function(benchpress)
 
   ### Auto-generates benchpress binary that initializes app environment and deploys app.
@@ -505,11 +554,19 @@ function(benchpress)
 endfunction()
 
 find_binaries()
-install_external_deps()
+if (NOT BUILD_LITE)
+  install_external_deps()
+endif()
 setup_python()
 add_subdirectory(${APP_PATH}/dashboard)
 add_subdirectory(${APP_PATH}/data)
-add_subdirectory(${APP_PATH}/features)
-add_subdirectory(${APP_PATH}/preprocessors)
+if (NOT BUILD_LITE)
+  add_subdirectory(${APP_PATH}/features)
+  add_subdirectory(${APP_PATH}/preprocessors)
+endif()
 add_subdirectory(${APP_PATH}/proto)
-benchpress()
+if (NOT BUILD_LITE)
+  benchpress()
+else()
+  benchpress_lite()
+endif()

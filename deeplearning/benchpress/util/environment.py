@@ -67,4 +67,6 @@ try:
   if "NCCL_SOCKET_IFNAME" not in os.environ:
     os.environ["NCCL_SOCKET_IFNAME"] = ifcfg.default_interface()['device']
 except Exception as e:
-  raise e
+  lite = os.environ.get("LITE_BUILD", 0)
+  if lite == 0:
+    raise e
