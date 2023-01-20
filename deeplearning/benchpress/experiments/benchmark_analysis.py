@@ -269,7 +269,7 @@ def HumanLikeness(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path') / "human_likely"
   workspace_path.mkdir(exist_ok = True, parents = True)
   db_groups = kwargs.get('db_groups')
-  blob_name = "human_like_{}".format('_'.join([kwargs.get('targets')] + [dbg.group_name for dbg in db_groups]))
+  blob_name = "human_like_{}".format('_'.join([kwargs.get('targets').target] + [dbg.group_name for dbg in db_groups]))
 
   def preprocess(text):
     r = opencl.ExtractOnlySingleKernels(
