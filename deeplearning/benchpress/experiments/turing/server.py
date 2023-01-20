@@ -102,8 +102,6 @@ def submit_quiz():
   """
   ## Save entry to databases right here.
   l.logger().error("Submit quiz.")
-  if "score" in flask.request.form:
-    return results()
   prediction = "human" if "human" in flask.request.form else "robot"
   user_id  = handler.get_cookie("user_id")
   user_ip  = handler.get_cookie("user_ip")
@@ -261,8 +259,8 @@ def start():
   )
   return resp
 
-@app.route('/results', methods = ["POST"])
-def results():
+@app.route('/score')
+def score():
   """
   Check player's current accuracy.
   """
@@ -272,10 +270,6 @@ def results():
     return flask.render_template("score_null.html")
   else:
     return flask.render_template("score.html", data=accuracy)
-
-@app.route('/results', methods = ["GET", "PUT"])
-def results_override():
-  return flask.redirect(flask.url_for("quiz"))
 
 @app.route('/submit', methods = ["POST"])
 def submit():
