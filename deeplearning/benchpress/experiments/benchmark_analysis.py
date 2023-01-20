@@ -291,9 +291,10 @@ def HumanLikeness(**kwargs) -> None:
   for db_name in data.keys():
     data[db_name]["code"] = list(data[db_name]["code"])
 
-  with open(workspace_path / "data.pkl", 'wb') as outf:
+  blob_name = "human_like_{}".format('_'.join([kwargs.get("target")] + list(groups.keys())))
+  with open(workspace_path / "{}.pkl".format(blob_name), 'wb') as outf:
     pickle.dump(data, outf)
-  with open(workspace_path / "data.json", 'w') as outf:
+  with open(workspace_path / "{}.json".format(blob_name), 'w') as outf:
     json.dump(data, outf, indent = 2)
   server.serve(databases = data, workspace_path = workspace_path, http_port=40822)
   return
