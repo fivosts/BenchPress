@@ -24,6 +24,8 @@ from deeplearning.benchpress.experiments import clsmith
 from deeplearning.benchpress.experiments import workers
 from deeplearning.benchpress.experiments import distance_score
 from deeplearning.benchpress.experiments.turing import server
+from deeplearning.benchpress.preprocessors import opencl
+from deeplearning.benchpress.preprocessors import c
 from deeplearning.benchpress.samplers import samples_database
 from deeplearning.benchpress.corpuses import encoded
 from deeplearning.benchpress.util import plotter
@@ -265,10 +267,16 @@ def HumanLikeness(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path') / "human_likely"
   workspace_path.mkdir(exist_ok = True, parents = True)
   groups = distance_score.MinScore(**kwargs)
+  preprocessors = lambda x: opencl.ClangFormat(opencl.SequentialNormalizeIdentifiers(
+        opencl.ExtractSingleKernelsHeaders(
+        opencl.InvertKernelSpecifier(
+        opencl.StripDoubleUnderscorePrefixes(
+        opencl.ClangPreprocessWithShim(
+        c.StripIncludes(x)))))))
   data = {
     db_name: {
       "label": "human" if db_name=="GitHub" else "robot",
-      "code": [s for b in code[2] for s in b],
+      "code": [preprocessors(s) for b in code[2] for s in b],
     } for db_name, code in groups.items()
   }
   server.serve(databases = data, workspace_path = workspace_path)
