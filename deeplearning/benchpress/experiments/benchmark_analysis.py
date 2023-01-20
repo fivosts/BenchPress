@@ -288,6 +288,9 @@ def HumanLikeness(**kwargs) -> None:
       else:
         data[db_name]["code"].update([preprocessors(s) for b in code[2] for s in b])
 
+  for db_name in data.keys():
+    data[db_name]["code"] = list(data[db_name]["code"])
+
   with open(workspace_path / "data.pkl", 'wb') as outf:
     pickle.dump(data, outf)
   with open(workspace_path / "data.json", 'w') as outf:
