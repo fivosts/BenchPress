@@ -273,7 +273,7 @@ def HumanLikeness(**kwargs) -> None:
         opencl.InvertKernelSpecifier(
         opencl.StripDoubleUnderscorePrefixes(
         opencl.ClangPreprocessWithShim(
-        c.StripIncludes(x)))))))
+        c.StripIncludes(x)))))[0]))
 
   data = {}
   for feat_space in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
@@ -291,6 +291,6 @@ def HumanLikeness(**kwargs) -> None:
   with open(workspace_path / "data.pkl", 'wb') as outf:
     pickle.dump(data, outf)
   with open(workspace_path / "data.json", 'w') as outf:
-    json.dump(data, indent = 2)
+    json.dump(data, outf, indent = 2)
   server.serve(databases = data, workspace_path = workspace_path)
   return
