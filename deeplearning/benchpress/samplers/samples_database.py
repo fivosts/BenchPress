@@ -14,6 +14,7 @@
 # limitations under the License.
 """A module for databases of BenchPress samples."""
 import contextlib
+import sys
 import datetime
 import typing
 import multiprocessing
@@ -261,9 +262,9 @@ def merge_databases(dbs: typing.List[SamplesDatabase], out_db: SamplesDatabase) 
   for db in dbs:
     data = db.get_data
     for dp in data:
-      if dp.hash not in sdir:
+      if dp.sha256 not in sdir:
         dp.id = new_id
-        sdir[dp.hash] = dp
+        sdir[dp.sha256] = dp
         new_id += 1
   with out_db.Session() as s:
     for dp in sdir.values():
@@ -467,11 +468,11 @@ def initMain(*args, **kwargs):
   #   raise FileNotFoundError(tokenizer_path)
   # tokenizer = tokenizers.TokenizerBase.FromFile(tokenizer_path)
 
-  # merge_databases(dbs, out_db)
+  merge_databases(dbs, out_db)
   # modernize_samples_db(dbs[0], out_db)
   # modernize_clgen_tokenizer(dbs[0], out_db, tokenizer)
   # to_unique_samples(dbs[0], out_db)
-  extract_features(dbs[0], out_db)
+  # extract_features(dbs[0], out_db)
   return
 
 if __name__ == "__main__":
