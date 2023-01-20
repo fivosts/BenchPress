@@ -1,0 +1,32 @@
+workspace: "get_human_likely/results"
+tokenizer: "get_human_likely/backup_tokenizer.pkl"
+evaluator {
+  human_likely {
+    target: "rodinia"
+    db_group {
+      group_name: "BenchPress"
+      db_type: "SamplesDatabase"
+      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely_data/benchpress_all.db"
+    }
+    db_group {
+      group_name: "BenchPress_directed"
+      db_type: "SamplesDatabase"
+      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely_data/benchpress_directed_all.db"
+    }
+    db_group {
+      group_name: "CLgen"
+      db_type: "SamplesDatabase"
+      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely_data/clgen.db"
+    }
+    db_group {
+      group_name: "GitHub"
+      db_type: "EncodedContentFiles"
+      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely_data/github.db"
+    }
+    db_group {
+      group_name: "CLSmith"
+      db_type: "CLSmithDatabase"
+      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely_data/clsmith.db"
+    }
+  }
+}
