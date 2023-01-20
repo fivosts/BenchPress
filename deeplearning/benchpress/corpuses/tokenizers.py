@@ -98,7 +98,7 @@ class TokenizerBase(object):
       with open(path, "rb") as infile:
         return pickle.load(infile)
     except ModuleNotFoundError:
-      l.logger().error("Outdated path tokenizer found. Will create an alias to unpickle it.")
+      l.logger().warn("Outdated path tokenizer found. Will create an alias to unpickle it.")
       import sys
       import deeplearning
       import deeplearning.benchpress
