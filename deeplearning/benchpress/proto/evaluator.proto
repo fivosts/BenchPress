@@ -133,7 +133,6 @@ message FeaturesDistribution {
 // Per target benchmark, print the best candidates among each database group.
 message HumanLikeness {
   optional string               target        = 1;
-  optional string               feature_space = 2;
   optional int32                top_k         = 3;
   repeated DatabasesGroups      db_group      = 4;
   optional PlotterConfiguration plot_config   = 5;
