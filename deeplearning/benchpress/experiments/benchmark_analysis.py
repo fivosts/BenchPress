@@ -283,10 +283,10 @@ def HumanLikeness(**kwargs) -> None:
       if db_name not in data:
         data[db_name] = {
           "label": "human" if db_name=="GitHub" else "robot",
-          "code" : [preprocessors(s) for b in code[2] for s in b],
+          "code" : set([preprocessors(s) for b in code[2] for s in b]),
         }
       else:
-        data[db_name]["code"] += [preprocessors(s) for b in code[2] for s in b]
+        data[db_name]["code"].update([preprocessors(s) for b in code[2] for s in b])
 
   with open(workspace_path / "data.pkl", 'wb') as outf:
     pickle.dump(data, outf)
