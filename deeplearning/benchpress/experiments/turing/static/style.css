@@ -14,7 +14,7 @@ body {
   min-height: 500px;
 }
 
-.div_index, .div_start, .div_quiz, .div_score .div_score_null {
+.div_index, .div_start, .div_quiz, .div_score, .div_score_null {
   width: 70%;
   height: 100%;
   background-color: #252526;
@@ -24,7 +24,7 @@ body {
   top: 0;
 }
 
-.main_index, .main_start, .main_quiz, .main_score .main_score_null {
+.main_index, .main_start, .main_quiz, .main_score, .main_score_null {
   text-align: center;
   height: 96%;
   /* background-color: #555556; */
