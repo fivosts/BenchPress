@@ -120,6 +120,7 @@ class UserSession(Base, sqlutil.ProtoBackedMixin):
                num_predictions  : typing.Dict[str, int] = {},
                session          : typing.List[typing.Dict[str, typing.Any]] = [],
                ) -> 'UserSession':
+    l.logger().critical(prediction_distr)
     return UserSession(**{
       "user_id"          : user_id,
       "user_ip"          : json.dumps(user_ip, indent = 2),
@@ -265,7 +266,9 @@ class TuringDB(sqlutil.Database):
           cur_distr = json.loads(session.prediction_distr)
           for eng, attrs in value.items():
             engineer = "engineer" if eng else "non-engineer"
-            print(attrs)
+            print(value)
+            print(session.prediction_distr)
+            print()
             for dname, attrs2 in attrs.items():
               if dname not in cur_distr[engineer]:
                 cur_distr[engineer][dname] = {
@@ -324,6 +327,9 @@ class TuringDB(sqlutil.Database):
             user.label_distr = json.dumps(cur_distr, indent = 2)
           elif key == "prediction_distr":
             cur_distr = json.loads(user.prediction_distr)
+            print(value)
+            print(cur_distr)
+            input()
             for dname, attrs in value.items():
               if dname not in cur_distr:
                 cur_distr[dname] = {
@@ -333,7 +339,7 @@ class TuringDB(sqlutil.Database):
                     "robot": 0,
                   }
                 }
-              for k, v in attrs["predictions"]:
+              for k, v in attrs["predictions"].items():
                 cur_distr[dname]["predictions"][k] += v
             user.prediction_distr = json.dumps(cur_distr, indent = 2)
           elif key == "num_predictions":
@@ -375,13 +381,13 @@ class TuringDB(sqlutil.Database):
     self.update_user(
       user_id = user_id,
       dataset_distr = {dataset: 1},
-      label_distr = {label: 1},
+      label_distr = {label: 1, "human" if label == "robot" else "robot" : 0},
       engineer = engineer,
       schedule = schedule,
       prediction_distr = {
         dataset: {
           "label": label,
-          "predictions": {prediction: 1},
+          "predictions": {prediction: 1, "human" if prediction == "robot" else "robot" : 0},
         }
       },
       num_predictions = {dataset: 1},
