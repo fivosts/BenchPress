@@ -20,6 +20,7 @@ import typing
 import flask
 import uuid
 import json
+import sys
 
 import numpy as np
 
@@ -106,6 +107,7 @@ def submit_quiz():
   user_id  = handler.get_cookie("user_id")
   user_ip  = handler.get_cookie("user_ip")
   engineer = handler.get_cookie("engineer")
+  schedule = handler.get_cookie("schedule")
   quiz_cache = handler.get_cookie("quiz_cache")
 
   try:
@@ -117,6 +119,7 @@ def submit_quiz():
       user_id    = user_id,
       user_ip    = user_ip,
       engineer   = engineer,
+      schedule   = schedule,
     )
   except TypeError as e:
     print(e)
@@ -353,19 +356,11 @@ def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
 
 def main(*args, **kwargs):
 
+  dbs = json.load(open(sys.argv[1], 'r'))
   serve(
-    databases = {
-      "BenchPress": {
-        "label": "robot",
-        "code" : ["src_A", "src_B"],
-      },
-      "GitHub": {
-        "label": "human",
-        "code" : ["src_C", "src_D"],
-      }
-    },
-    workspace_path=pathlib.Path('./').resolve(),
-    http_port = 40822,
+    databases      = dbs,
+    workspace_path = pathlib.Path(sys.argv[2]).resolve(),
+    http_port      = 40822,
   )
 
 

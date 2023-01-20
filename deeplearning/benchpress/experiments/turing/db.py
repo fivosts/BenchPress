@@ -232,6 +232,8 @@ class TuringDB(sqlutil.Database):
     """
     with self.Session(commit = True) as s:
       session = s.query(TuringSession).first()
+      if session is None:
+        self.init_session()
       for key, value in kwargs.items():
         if key == "user_ids":
           usr_ids = json.loads(session.user_ids)
@@ -309,14 +311,16 @@ class TuringDB(sqlutil.Database):
             user.schedule = json.dumps(value, indent = 2)
           elif key == "dataset_distr":
             cur_distr = json.loads(user.dataset_distr)
-            if value not in cur_distr:
-              cur_distr[value] = 1
-            else:
-              cur_distr[value] += 1
+            for k, v in value.items():
+              if k not in cur_distr:
+                cur_distr[k] = v
+              else:
+                cur_distr[k] += v
             user.dataset_distr = json.dumps(cur_distr, indent = 2)
           elif key == "label_distr":
             cur_distr = json.loads(user.label_distr)
-            cur_distr[value] += 1
+            for k, v in value.items():
+              cur_distr[k] += v
             user.label_distr = json.dumps(cur_distr, indent = 2)
           elif key == "prediction_distr":
             cur_distr = json.loads(user.prediction_distr)
@@ -329,17 +333,19 @@ class TuringDB(sqlutil.Database):
                     "robot": 0,
                   }
                 }
-              cur_distr[dname]["predictions"][attrs["predictions"]] += 1
+              for k, v in attrs["predictions"]:
+                cur_distr[dname]["predictions"][k] += v
             user.prediction_distr = json.dumps(cur_distr, indent = 2)
           elif key == "num_predictions":
             cur_num_preds = json.loads(user.num_predictions)
-            if value not in cur_num_preds:
-              cur_num_preds[value] = 1
-            else:
-              cur_num_preds[value] += 1
+            for k, v in value.items():
+              if k not in cur_num_preds:
+                cur_num_preds[k] = v
+              else:
+                cur_num_preds[k] += v
             user.num_predictions = json.dumps(cur_num_preds, indent = 2)
           elif key == "session":
-            user.session = json.dumps(json.loads(user.session) + [value], indent = 2)
+            user.session = json.dumps(json.loads(user.session) + value, indent = 2)
     return
 
   def add_quiz(self,
@@ -350,7 +356,8 @@ class TuringDB(sqlutil.Database):
                user_id    : str,
                user_ip    : typing.List[int],
                engineer   : bool,
-               ) -> None:
+               schedule   : typing.List[str],
+               ) -> int:
     """
     Add new quiz instance to DB
     """
@@ -367,21 +374,23 @@ class TuringDB(sqlutil.Database):
       )
     self.update_user(
       user_id = user_id,
-      dataset_distr = dataset,
-      label_distr = label,
+      dataset_distr = {dataset: 1},
+      label_distr = {label: 1},
+      engineer = engineer,
+      schedule = schedule,
       prediction_distr = {
         dataset: {
           "label": label,
-          "predictions": prediction,
+          "predictions": {prediction: 1},
         }
       },
-      num_predictions = dataset,
-      session = {
+      num_predictions = {dataset: 1},
+      session = [{
         "dataset"    : dataset,
         "code"       : code,
         "label"      : label,
         "prediction" : prediction,
-      }
+      }]
     )
     self.update_session(
       engineer = engineer,
@@ -395,4 +404,4 @@ class TuringDB(sqlutil.Database):
         }
       }
     )
-    return
+    return 0
