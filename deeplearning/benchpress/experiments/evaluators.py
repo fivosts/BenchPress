@@ -445,7 +445,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         lambda x: x in benchmarks.targets,
         "target {} not found".format(ev.human_likeness.target),
       )
-      pbutil.AssertFieldIsSet(ev.human_likeness, "feature_space")
       pbutil.AssertFieldConstraint(
         ev.human_likeness,
         "top_k",
@@ -1015,9 +1014,6 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
-      # Gather feature spaces if applicable.
-      if sev.HasField("feature_space"):
-        kw_args['feature_space'] = sev.feature_space
       # Gather plotter configuration
       if sev.HasField("plot_config"):
         kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
