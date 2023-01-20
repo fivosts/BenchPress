@@ -132,7 +132,6 @@ class Sample(Base, sqlutil.ProtoBackedMixin):
     without much fuss ? This function is for you!
     """
     return Sample(**{
-      "id"                     : id,
       "sha256"                 : crypto.sha256_str(text),
       "train_step"             : -1,
       "encoded_text"           : "",
@@ -260,7 +259,7 @@ def merge_databases(dbs: typing.List[SamplesDatabase], out_db: SamplesDatabase) 
   sdir = {}
   new_id = 0
   for db in dbs:
-    data = db.get_data
+    data = [x for x in db.get_data]
     for dp in data:
       if dp.sha256 not in sdir:
         dp.id = new_id
@@ -268,7 +267,7 @@ def merge_databases(dbs: typing.List[SamplesDatabase], out_db: SamplesDatabase) 
         new_id += 1
   with out_db.Session() as s:
     for dp in sdir.values():
-      s.add(dp)
+      s.add(Sample.FromArgsLite(0, dp.text, dp.feature_vector, dp.compile_status))
     s.commit()
   return
 
