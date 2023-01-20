@@ -269,7 +269,7 @@ def HumanLikeness(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path') / "human_likely"
   workspace_path.mkdir(exist_ok = True, parents = True)
   preprocessors = lambda x: opencl.ClangFormat(opencl.SequentialNormalizeIdentifiers(
-        opencl.ExtractSingleKernelsHeaders(
+        opencl.ExtractOnlySingleKernels(
         opencl.InvertKernelSpecifier(
         opencl.StripDoubleUnderscorePrefixes(
         opencl.ClangPreprocessWithShim(

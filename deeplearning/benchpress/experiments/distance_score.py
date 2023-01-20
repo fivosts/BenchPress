@@ -95,7 +95,7 @@ def KAverageScore(**kwargs) -> None:
       groups[group_name][1][idx] = 100 * ( (target_origin_dists[bench_name] - raw_dist ) / target_origin_dists[bench_name])
 
   plotter.GrouppedBars(
-    groups = groups,
+    groups = {dbname: (c[0], c[1]) for dbname, c in groups.items()},
     plot_name = "avg_{}_dist_{}_{}".format(top_k, feature_space.replace("Features", "Features"), '-'.join([dbg.group_name for dbg in db_groups])),
     path = workspace_path,
     **plot_config if plot_config else {},
