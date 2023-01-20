@@ -1,23 +1,100 @@
-body {
-  margin: 0;
-  background-color: 	#101011;
-  color: white;
-  font-family: monospace;
-  font-size: 16px;
-  padding: 50px;
+html {
+  height: 100%;
+  top: 0;
 }
 
-.div_index, .div_start, .div_quiz, .div_score {
-  width: 80%;
+body {
+  position: sticky;
+  background-color:	#101011;
+  color: rgba(0, 248, 8, 0.701);
+  font-family: "Lucida Console", "Courier New", monospace;
+  font-size: 24px;
+  margin-top: -32px;
+  height: 100%;
+  min-height: 500px;
+}
+
+.div_index, .div_start, .div_quiz, .div_score .div_score_null {
+  width: 70%;
+  height: 100%;
   background-color: #252526;
   margin-left: auto;
   margin-right: auto;
-  padding: 20px;
   max-width: 1000px;
+  top: 0;
 }
 
-.main_index, .main_start, .main_quiz, .main_score {
+.main_index, .main_start, .main_quiz, .main_score .main_score_null {
   text-align: center;
+  height: 96%;
+  /* background-color: #555556; */
+}
+
+h1 {
+  position: relative;
+  padding-top: 120px;
+}
+
+h2 {
+  position: relative;
+  width: 100%;
+  font-size: 40px;
+  padding-top: 40px;
+  font-family: cursive;
+  font-style: italic;
+}
+
+a {
+  color: rgba(0, 248, 8, 0.701);;
+  font-style: bold;
+}
+
+a:visited {
+  color: rgba(0, 248, 8, 0.701);;
+}
+
+a:hover {
+  color: brown;
+}
+
+a:active {
+  color: brown;
+}
+
+ul {
+  text-align: center;
+  list-style-type: none;
+}
+
+li:before {
+  content: "->";
+  padding-right: 8px;
+  color: white;
+}
+
+li {
+  width: 70%;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+  padding-top: 20px;
+}
+
+p {
+  /* position: relative; */
+  width: 70%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-top: 40px;
+}
+
+.whisper {
+  width: 70%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-top: 40px;
+  font-size: 18px;
+  font-style: italic;
 }
 
 pre {
@@ -36,15 +113,46 @@ form {
   padding-bottom: 2em;
 }
 
+footer {
+  text-align: right;
+  font-size: 18px;
+}
+
 input[type="submit"] {
   display: block;
-  width: 60%;
+  width: 5%;
   margin: 1em auto;
   height: 2em;
-  font-size: 1.1rem;
-  background-color: #3b3b4f;
-  border-color: white;
+  font-size: 40px;
+  font-style: bold;
+  color:#252526;
+  background-color: rgb(177, 174, 174);;
+  border-color: rgba(0, 248, 8, 0.701);
   min-width: 300px;
+}
+
+button {
+  display: inline-block;
+  width: 20%;
+  margin: 2em 3em;
+  height: 2em;
+  font-size: 20px;
+  font-style: bold;
+  color:#252526;
+  background-color: rgb(177, 174, 174);;
+  border-color: rgba(0, 248, 8, 0.701);
+}
+
+button:hover {
+  color: #252526;
+  background-color: rgba(0, 248, 8, 0.701);
+  border-color: rgb(177, 174, 174);
+}
+
+input[type="submit"]:hover {
+  color: #252526;
+  background-color: rgba(0, 248, 8, 0.701);
+  border-color: rgb(177, 174, 174);
 }
 
 /* Google Fonts */
