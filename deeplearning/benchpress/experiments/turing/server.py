@@ -68,7 +68,11 @@ class FlaskHandler(object):
     elif key in {"user_id", "user_ip"}:
       return str(resp)
     elif key == "quiz_cache":
-      return json.loads(resp)
+      try:
+        return json.loads(resp)
+      except Exception as e:
+        l.logger().error(resp)
+        raise e
     else:
       raise ValueError(key)
 
@@ -319,6 +323,7 @@ def index():
   return resp
 
 def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
+          workspace_path: pathlib.Path,
           http_port: int = None,
           host_address: str = '0.0.0.0'
           ) -> None:
@@ -333,7 +338,7 @@ def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
     if http_port is None:
       http_port = portpicker.pick_unused_port()
     ## Setup handler.
-    handler.set_params(databases, pathlib.Path("./").resolve())
+    handler.set_params(databases, workspace_path)
     ## Pretty print hostname.
     hostname = subprocess.check_output(
       ["hostname", "-i"],
@@ -365,7 +370,8 @@ def main(*args, **kwargs):
         "code" : ["src_C", "src_D"],
       }
     },
-    http_port = 40822
+    workspace_path=pathlib.Path('./').resolve(),
+    http_port = 40822,
   )
 
 
