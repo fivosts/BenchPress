@@ -268,33 +268,36 @@ def HumanLikeness(**kwargs) -> None:
   """
   workspace_path = kwargs.get('workspace_path') / "human_likely"
   workspace_path.mkdir(exist_ok = True, parents = True)
-  preprocessors = lambda x: opencl.ClangFormat(opencl.SequentialNormalizeIdentifiers(
-        opencl.ExtractOnlySingleKernels(
-        opencl.InvertKernelSpecifier(
-        opencl.StripDoubleUnderscorePrefixes(
-        opencl.ClangPreprocessWithShim(
-        c.StripIncludes(x)))))[0]))
-
-  data = {}
-  for feat_space in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
-    kwargs["feature_space"] = feat_space
-    groups = distance_score.MinScore(**kwargs)
-    for db_name, code in groups.items():
-      if db_name not in data:
-        data[db_name] = {
-          "label": "human" if db_name=="GitHub" else "robot",
-          "code" : set([preprocessors(s) for b in code[2] for s in b]),
-        }
-      else:
-        data[db_name]["code"].update([preprocessors(s) for b in code[2] for s in b])
-
-  for db_name in data.keys():
-    data[db_name]["code"] = list(data[db_name]["code"])
-
   blob_name = "human_like_{}".format('_'.join([kwargs.get("target")] + list(groups.keys())))
-  with open(workspace_path / "{}.pkl".format(blob_name), 'wb') as outf:
-    pickle.dump(data, outf)
-  with open(workspace_path / "{}.json".format(blob_name), 'w') as outf:
-    json.dump(data, outf, indent = 2)
-  server.serve(databases = data, workspace_path = workspace_path, http_port=40822)
+
+  if not (workspace_path / "{}.json").exists():
+    preprocessors = lambda x: opencl.ClangFormat(opencl.SequentialNormalizeIdentifiers(
+          opencl.ExtractOnlySingleKernels(
+          opencl.InvertKernelSpecifier(
+          opencl.StripDoubleUnderscorePrefixes(
+          opencl.ClangPreprocessWithShim(
+          c.StripIncludes(x)))))[0]))
+
+    data = {}
+    for feat_space in {"GreweFeatures", "AutophaseFeatures", "InstCountFeatures"}:
+      kwargs["feature_space"] = feat_space
+      groups = distance_score.MinScore(**kwargs)
+      for db_name, code in groups.items():
+        if db_name not in data:
+          data[db_name] = {
+            "label": "human" if db_name=="GitHub" else "robot",
+            "code" : set([preprocessors(s) for b in code[2] for s in b]),
+          }
+        else:
+          data[db_name]["code"].update([preprocessors(s) for b in code[2] for s in b])
+
+    for db_name in data.keys():
+      data[db_name]["code"] = list(data[db_name]["code"])
+
+    with open(workspace_path / "{}.pkl".format(blob_name), 'wb') as outf:
+      pickle.dump(data, outf)
+    with open(workspace_path / "{}.json".format(blob_name), 'w') as outf:
+      json.dump(data, outf, indent = 2)
+
+  server.serve(databases = json.load(open(workspace_path / "{}.json".format(blob_name), 'r')), workspace_path = workspace_path, http_port=40822)
   return
