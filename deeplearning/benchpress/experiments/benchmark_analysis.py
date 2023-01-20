@@ -295,5 +295,5 @@ def HumanLikeness(**kwargs) -> None:
     pickle.dump(data, outf)
   with open(workspace_path / "data.json", 'w') as outf:
     json.dump(data, outf, indent = 2)
-  server.serve(databases = data, workspace_path = workspace_path)
+  server.serve(databases = data, workspace_path = workspace_path, http_port=40822)
   return
