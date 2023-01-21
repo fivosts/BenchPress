@@ -29,17 +29,6 @@ from absl import app as absl_app
 from deeplearning.benchpress.experiments.turing import db
 from deeplearning.benchpress.util import logging as l
 
-
-"""
-TODO list:
-
-1) Encrypt cookies.
-2) Append to session database.
-3) Append to user database.
-4) Append to quiz database.
-5) Make all urls viewable as home.
-"""
-
 app = flask.Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = -1
 
@@ -107,10 +96,8 @@ def submit_quiz():
   l.logger().error("Submit quiz.")
   prediction = "human" if "human" in flask.request.form else "robot"
   user_id  = handler.get_cookie("user_id")
-  # user_ip  = handler.get_cookie("user_ip")
-  # engineer = handler.get_cookie("engineer")
-  # schedule = handler.get_cookie("schedule")
-  # quiz_cache = handler.get_cookie("quiz_cache")
+  if user_id is None or user_id not in handler.user_cache:
+    return flask.redirect(flask.url_for('index'))
 
   user_ip = handler.user_cache[user_id].get("user_ip", None)
   engineer = handler.user_cache[user_id].get("engineer", None)
@@ -134,10 +121,8 @@ def submit_quiz():
     l.logger().error("Caught exception.")
     return flask.redirect(flask.url_for('quiz'))
   ## Clear cache for current quiz.
-  resp = flask.redirect(flask.url_for('quiz'))
-  # handler.set_cookie(resp, quiz_cache = "", expires = 0)
   del handler.user_cache[user_id]["quiz_cache"]
-  return resp
+  return flask.redirect(flask.url_for('quiz'))
 
 @app.route('/submit_quiz', methods = ["GET", "PUT"])
 def submit_quiz_override():
@@ -161,24 +146,23 @@ def quiz():
   l.logger().info("quiz")
   ## Read cache. IF quiz exists in cache, force user to answer this.
   user_id = handler.get_cookie("user_id")
-  # quiz_cache = handler.get_cookie("quiz_cache")
+  l.logger().warn(handler.user_cache)
+  set_user_id = False
+  if user_id is None or user_id not in handler.user_cache:
+    return flask.redirect(flask.url_for('index'))
   quiz_cache = handler.user_cache[user_id].get("quiz_cache", None)
   if quiz_cache is not None:
     l.logger().error("Cached quiz.")
     resp = flask.make_response(
       flask.render_template(
         "quiz.html",
-        # data = [quiz_cache["dataset"], quiz_cache["code"], quiz_cache["label"]])
         data = quiz_cache["code"]
       )
     )
   else:
     l.logger().error("New quiz.")
     ## Avoid new users going directly to quiz URL.
-    if user_id is None:
-      return flask.redirect(flask.url_for('index'))
     ## Get schedule from cookies.
-    # schedule = handler.get_cookie("schedule")
     schedule = handler.user_cache[user_id].get("schedule", None)
     ## Pop database.
     dataset = schedule.pop(0)
@@ -191,14 +175,13 @@ def quiz():
     resp = flask.make_response(
       flask.render_template(
         "quiz.html",
-        # data = [dataset, label, code]
         data = code
       )
     )
-    # handler.set_cookie(resp, schedule = schedule)
     handler.user_cache[user_id]["schedule"] = schedule
-    # handler.set_cookie(resp, quiz_cache = {"dataset": dataset, "code": code, "label": label})
     handler.user_cache[user_id]["quiz_cache"] = {"dataset": dataset, "code": code, "label": label}
+  if set_user_id:
+    handler.set_cookie(resp, user_id = user_id)
   return resp
 
 @app.route('/submit_engineer', methods = ["POST"])
@@ -216,13 +199,14 @@ def submit_engineer():
   """
   l.logger().critical("submit engineer")
   user_id  = handler.get_cookie("user_id")
-  # engineer = handler.get_cookie("engineer")
+  if user_id is None:
+    user_id = uuid.uuid4()
+    handler.user_cache[user_id] = {}
+    handler.set_cookie(resp, user_id = user_id)
   engineer = handler.user_cache[user_id].get("engineer", None)
   if engineer is not None:
     l.logger().critical("skip engineer")
     return flask.redirect(flask.url_for('index'))
-  # user_ip  = handler.get_cookie("user_ip")
-  # schedule = handler.get_cookie("schedule")
   user_ip = handler.user_cache[user_id].get("user_ip", None)
   schedule = handler.user_cache[user_id].get("schedule", None)
   engineer = "yes" in flask.request.form
@@ -238,10 +222,8 @@ def submit_engineer():
     user_ips = user_ip,
     engineer_distr = engineer,
   )
-  resp = flask.redirect(flask.url_for('quiz'))
-  # handler.set_cookie(resp, engineer = engineer)
   handler.user_cache[user_id]["engineer"] = engineer
-  return resp
+  return flask.redirect(flask.url_for('quiz'))
 
 @app.route('/submit_engineer', methods = ["GET", "PUT"])
 def submit_engineer_override():
@@ -265,26 +247,23 @@ def start():
   ## Create a round robin schedule of held databases.
   l.logger().info("Start")
   user_id  = handler.get_cookie("user_id")
-  # engineer = handler.get_cookie("engineer")
+  if user_id is None or user_id not in handler.user_cache:
+    return flask.redirect(flask.url_for('index'))
   engineer = handler.user_cache[user_id].get("engineer", None)
   if engineer is not None:
     return flask.redirect(flask.url_for('index'))
-  # user_ip  = handler.get_cookie("user_ip")
-  # schedule = handler.get_cookie("schedule")
   user_ip = handler.user_cache[user_id].get("user_ip", None)
   schedule = handler.user_cache[user_id].get("schedule", None)
 
   print("Cookie schedule: ", schedule)
-  resp = flask.make_response(flask.render_template("start.html"))
   if schedule is None:
     schedule = list(handler.databases.keys())
     np.random.RandomState().shuffle(schedule)
     handler.user_cache[user_id]["schedule"] = schedule
-    # handler.set_cookie(resp, schedule = schedule)
   handler.session_db.update_session(
     user_ips = user_ip,
   )
-  return resp
+  return flask.make_response(flask.render_template("start.html"))
 
 @app.route('/score')
 def score():
@@ -292,11 +271,13 @@ def score():
   Check player's current accuracy.
   """
   user_id = handler.get_cookie("user_id")
+  if user_id is None or user_id not in handler.user_cache:
+    return flask.redirect(flask.url_for('index'))
   accuracy = handler.session_db.get_user_accuracy(user_id = user_id, min_attempts = 10)
   if accuracy is None:
-    return flask.render_template("score_null.html")
+    return flask.make_response(flask.render_template("score_null.html"))
   else:
-    return flask.render_template("score.html", data = "{}%".format(int(100 * accuracy)))
+    return flask.make_response(flask.render_template("score.html", data = "{}%".format(int(100 * accuracy))))
 
 @app.route('/submit', methods = ["POST"])
 def submit():
@@ -309,15 +290,18 @@ def submit():
   """
   l.logger().info("Submit")
   user_id = handler.get_cookie("user_id")
+  if user_id is None or user_id not in handler.user_cache:
+    return flask.redirect(flask.url_for('index'))
   if "start" in flask.request.form:
-    # engineer = handler.get_cookie("engineer")
     engineer = handler.user_cache[user_id].get("engineer", None)
     l.logger().error("Software cookie: {}".format(engineer))
     if engineer is None:
-      return flask.redirect(flask.url_for('start'))
+      resp = flask.make_response(flask.redirect(flask.url_for('start')))
     else:
-      return flask.redirect(flask.url_for('quiz'))
-  return flask.redirect(flask.url_for('index'))
+      resp = flask.make_response(flask.redirect(flask.url_for('quiz')))
+  else:
+    resp = flask.make_response(flask.redirect(flask.url_for('index')))
+  return resp
 
 @app.route('/')
 def index():
@@ -345,7 +329,6 @@ def index():
   handler.user_cache[str(user_id)] = {
     "user_ip": user_ip,
   }
-  # handler.set_cookie(resp, user_ip = user_ip)
   return resp
 
 def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
@@ -391,7 +374,6 @@ def main(*args, **kwargs):
     workspace_path = pathlib.Path(sys.argv[2]).resolve(),
     http_port      = 40822,
   )
-
 
 if __name__ == "__main__":
   absl_app.run(main)
