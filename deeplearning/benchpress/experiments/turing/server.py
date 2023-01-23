@@ -164,13 +164,22 @@ def quiz():
     ## Avoid new users going directly to quiz URL.
     ## Get schedule from cookies.
     schedule = handler.user_cache[user_id].get("schedule", None)
-    ## Pop database.
-    dataset = schedule.pop(0)
+    ## Introduce a little bit of randomness to dataset selection.
+    dropout = np.random.RandomState().random()
+    if dropout <= 0.3:
+      ## Pick a random dataset instead.
+      dropout = True
+      dataset = np.random.randint(0, len(schedule))
+    else:
+      ## Pop database.
+      dropout = False
+      dataset = schedule.pop(0)
     label, data = handler.databases[dataset]["label"], handler.databases[dataset]["code"]
     ## Sample datapoint.
     code = data[np.random.RandomState().randint(0, len(data) - 1)]
-    ## RR-add to the end.
-    schedule.append(dataset)
+    if not dropout:
+      ## RR-add to the end.
+      schedule.append(dataset)
     ## Update cookies.
     resp = flask.make_response(
       flask.render_template(
