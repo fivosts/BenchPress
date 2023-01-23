@@ -213,9 +213,9 @@ class TuringDB(sqlutil.Database):
           if label == data["label"]:
             correct += amount
     if total >= min_attempts:
-      return correct / total
+      return correct / total, total
     else:
-      return None
+      return None, total
 
   def init_session(self) -> None:
     """

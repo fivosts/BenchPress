@@ -282,10 +282,12 @@ def score():
   user_id = handler.get_cookie("user_id")
   if user_id is None or user_id not in handler.user_cache:
     return flask.redirect(flask.url_for('index'))
-  accuracy = handler.session_db.get_user_accuracy(user_id = user_id, min_attempts = 10)
-  if accuracy is None:
+  last_total = handler.user_cache[user_id].get("last_total", 0)
+  accuracy, total = handler.session_db.get_user_accuracy(user_id = user_id, min_attempts = 10)
+  if accuracy is None or (0 < total - last_total < 10):
     return flask.make_response(flask.render_template("score_null.html"))
   else:
+    handler.user_cache[user_id]["last_total"] = total
     return flask.make_response(flask.render_template("score.html", data = "{}%".format(int(100 * accuracy))))
 
 @app.route('/submit', methods = ["POST"])
