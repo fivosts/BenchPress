@@ -169,7 +169,7 @@ def quiz():
     if dropout <= 0.3:
       ## Pick a random dataset instead.
       dropout = True
-      dataset = np.random.randint(0, len(schedule) - 1)
+      dataset = np.random.RandomState().randint(0, len(schedule) - 1)
     else:
       ## Pop database.
       dropout = False
