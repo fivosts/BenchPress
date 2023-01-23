@@ -370,7 +370,7 @@ def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
       ips = "ipv4: {}".format(hostname[0])
     l.logger().warn("Server Public IP: {}:{}".format(ips, http_port))
 
-    waitress.serve(app, host = host_address, port = http_port)
+    waitress.serve(app, host = host_address, port = http_port, threads = 32)
   except KeyboardInterrupt:
     return
   except Exception as e:
