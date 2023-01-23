@@ -12,6 +12,21 @@
       <main class="main_index">
         <h1>Programming Survey</h1>
         <h2>Human or AI ?</h2>
+
+
+
+<!-- 
+
+        <pre style='text-align: left'><code id="malakia">kernel void A(int a){
+  int a = 0;
+}</code></pre>
+
+ -->
+
+
+
+
+
         <p>This is a survey for <a target="_blank" href="https://github.com/fivosts/BenchPress">BenchPress: A Deep Active Benchmark Generator</a></p>
         <ul class="directives">
           <li>You will be shown an OpenCL kernel.</li>
@@ -25,5 +40,31 @@
       </main>
       <footer>&copy; Copyright 2023 Foivos Tsimpourlas</footer>
     </div>
+    <!-- <script>
+    a = document.getElementById("malakia")
+    code = ""
+    console.log(a)
+    setInterval(function () {a.text += "kernel"}, 1000);
+
+
+  function myStopFunction() {
+    clearTimeout(myTimeout);
+  }
+
+    </script> -->
+  <script type="text/javascript" src="{{url_for('static', filename='typewriter.js')}}"></script>
+  <script>
+    var typewriter = setupTypewriter(document.getElementById("malakia"));
+
+    typewriter.parseHtml(document.getElementById("malakia"));
+
+    typewriter.setTypeSpeed(300);
+
+    typewriter.scrollLock(true);
+
+    typewriter.clearScreen();
+
+    typewriter.type();
+  </script>
   </body>
 </html>
