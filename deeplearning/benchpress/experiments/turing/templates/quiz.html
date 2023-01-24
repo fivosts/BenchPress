@@ -11,6 +11,7 @@
     <div class="div_quiz">
       <main class="main_quiz">
         <h1>Human Or Robot ?</h1>
+        <!-- <pre style='text-align: left'><code class="language-opencl" id="code_writer">{{ data }}</code></pre> -->
         <pre><code class="language-opencl">{{ data }}</code></pre>
         <form id="quiz_label" action="submit_quiz" method = "post">
           <button for="quiz_label" name="human" type="submit">HUMAN</button>
@@ -20,5 +21,14 @@
       </main>
       <footer>Foivos Tsimpourlas for BenchPress, 2023</footer>
     </div>
+    <script type="text/javascript" src="{{url_for('static', filename='typewriter.js')}}"></script>
+    <script>
+      var typewriter = setupTypewriter(document.getElementById("code_writer"));
+      typewriter.parseHtml(document.getElementById("code_writer"));
+      typewriter.setTypeSpeed(10000);
+      typewriter.scrollLock(true);
+      typewriter.clearScreen();
+      typewriter.type();
+    </script>
   </body>
 </html>

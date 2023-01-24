@@ -2,28 +2,28 @@
 
 var seperators = [";", ",",".", ":", "[", "]", "{", "}", "(", ")"];
 var seperatorColor = "#950096";
-var functionColor = "blue";
-var keywords = ["var", "new", "for", "if", "else", "while", "break", "continue", "return", "class", "struct", "function", "goto", "static", "public", "private", "protected", "void"]; //...
-var keywordColor = "red";
-var stringColor = "yellow";
+var functionColor = "#6196cc";
+var keywords = ["global", "ulong", "local", "kernel", "void", "var", "new", "for", "if", "else", "while", "break", "continue", "return", "class", "struct", "function", "goto", "static", "public", "private", "protected", "void"]; //...
+var keywordColor = "#cc99cd"; // OK
+var stringColor = "#7ec699"; // OK
 var escapeCharacters = ["\\n", "\\t", "\\'", '\\"', "\\\\"];
 var escapeCharacterColor = "violet";
-var operators = ["&&", "||", "!==", "===", "=", "+", "-", "!", "*", "/", "%", "|", "&", "~", "^", "<", ">", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "|="];
-var operatorColor = "red";
+var operators = ["&&", "||", ">=", "<=", "==", "!==", "!=", "===", "=", "+", "-", "!", "*", "/", "%", "|", "&", "~", "^", "<", ">", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "|="];
+var operatorColor = "#67cdcc";
 var unaryOperators = ["++", "--"];
-var unaryOperatorColor = "red";
-var numberColor = "violet"
+var unaryOperatorColor = "#67cdcc";
+var numberColor = "#f08d49"
 var booleans = ["true", "false", "True", "False"];
-var booleanColor = "magenta";
+var booleanColor = "#f08d49";
 var specialValues = ["null", "undefined"];
-var specialValueColor = "violet";
-var primitiveTypes = ["int", "char", "bool", "boolean", "float", "double", "short", "long", "byte"];
-var primitiveTypeColor = "magenta";
+var specialValueColor = "#f08d49";
+var primitiveTypes = ["const", "unsigned", "int", "char", "bool", "boolean", "float", "double", "short", "long", "byte"];
+var primitiveTypeColor = "#cc99cd";
 var otherTypes = ["String", "string"];
-var otherTypeColor = "blue";
-var functionDeclarationColor = "green"
-var declarationParameterColor = "orange";
-var commentColor = "gray";
+var otherTypeColor = "#cc99cd";
+var functionDeclarationColor = "#f08d49"
+var declarationParameterColor = "#f08d49";
+var commentColor = "#999";
 var singleLineComment = "//";
 var multiLineComment = "/*";
 var multiLineCommentEnd = "*/";
@@ -436,7 +436,7 @@ function parseString (str) {
     function setupTypewriter(documentObject) {
         var typewriter = {
             destinationDocumentObject: documentObject,
-            typeSpeed: 100,
+            typeSpeed: 1,
             isRunning: false,
             tokens: [],
             textColor: "white",
@@ -452,7 +452,7 @@ function parseString (str) {
                 this.textColor = color;
             },
             setTypeSpeed: function (newSpeed) {
-                if (newSpeed < 0 || newSpeed > 1000) return;
+                if (newSpeed < 0 || newSpeed > 10000) return;
                 this.typewriterSpeed = newSpeed;
             },
             stop: function () {

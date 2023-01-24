@@ -13,18 +13,17 @@
         <h1>Programming Survey</h1>
         <h2>Human or AI ?</h2>
 
-
-
 <!-- 
+        <pre style='text-align: left'><code class="language-opencl" id="code_writer">kernel void NN(global LatLong *locs, global float *d_distances) {
+int gID = get_global_id(0);
+          
+if (gID < nR) {
+   global LatLong *LL = locs+gID;
 
-        <pre style='text-align: left'><code id="malakia">kernel void A(int a){
-  int a = 0;
-}</code></pre>
-
- -->
-
-
-
+   global float *dist=d_distances+gID;
+   *dist = (float)sqrt((lat-LL->lat)*(lat-LL->lat)+(lng-LL->lng)*(lng-LL->lng));
+}
+}</code></pre> -->
 
 
         <p>This is a survey for <a target="_blank" href="https://github.com/fivosts/BenchPress">BenchPress: A Deep Active Benchmark Generator</a></p>
@@ -40,25 +39,13 @@
       </main>
       <footer>&copy; Copyright 2023 Foivos Tsimpourlas</footer>
     </div>
-    <!-- <script>
-    a = document.getElementById("malakia")
-    code = ""
-    console.log(a)
-    setInterval(function () {a.text += "kernel"}, 1000);
-
-
-  function myStopFunction() {
-    clearTimeout(myTimeout);
-  }
-
-    </script> -->
   <script type="text/javascript" src="{{url_for('static', filename='typewriter.js')}}"></script>
   <script>
-    var typewriter = setupTypewriter(document.getElementById("malakia"));
+    var typewriter = setupTypewriter(document.getElementById("code_writer"));
 
-    typewriter.parseHtml(document.getElementById("malakia"));
+    typewriter.parseHtml(document.getElementById("code_writer"));
 
-    typewriter.setTypeSpeed(300);
+    typewriter.setTypeSpeed(50000);
 
     typewriter.scrollLock(true);
 

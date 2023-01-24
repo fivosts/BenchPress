@@ -346,6 +346,8 @@ def index():
         'engineer': is_engineer,
         'schedule': schedule,
       }
+    else:
+      handler.user_cache[user_id] = {}
   ## Assign a new IP anyway.
   user_ip = flask.request.remote_addr
   handler.user_cache[user_id]["user_ip"] = user_ip
