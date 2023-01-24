@@ -11,7 +11,7 @@
     <script src="{{url_for('static', filename='prism.js')}}"></script>
     <div class="div_quiz">
       <main class="main_quiz">
-        <h1>Human Or AI ?</h1>
+        <h1><a href="{{ url_for('index') }}" class="title_url">Human or AI ?</a></h1>
         <!-- <pre style='text-align: left'><code class="language-opencl" id="code_writer">{{ data }}</code></pre> -->
         <pre><code class="language-opencl">{{ data }}</code></pre>
         <form id="quiz_label" action="submit_quiz" method = "post">
