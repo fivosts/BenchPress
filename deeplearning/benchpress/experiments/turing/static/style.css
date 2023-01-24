@@ -88,6 +88,11 @@ p {
   padding-top: 40px;
 }
 
+.quiz_options {
+  display: block;
+  padding-bottom: 20px;
+}
+
 .whisper {
   width: 70%;
   margin-left: auto;
@@ -102,15 +107,14 @@ pre {
   margin-left: auto;
   margin-right: auto;
   display: inline-block;
-
 }
 
 form {
+  position: relative;
   width: 60vw;
   max-width: 500px;
   min-width: 300px;
   margin: 0 auto;
-  padding-bottom: 2em;
 }
 
 footer {
@@ -125,8 +129,8 @@ input[type="submit"] {
   height: 2em;
   font-size: 40px;
   font-style: bold;
-  color:#252526;
-  background-color: rgb(177, 174, 174);;
+  color:rgba(0, 248, 8, 0.701);;
+  background-color: rgb(53, 51, 51);;
   border-color: rgba(0, 248, 8, 0.701);
   min-width: 300px;
 }
@@ -138,21 +142,21 @@ button {
   height: 2em;
   font-size: 20px;
   font-style: bold;
-  color:#252526;
-  background-color: rgb(177, 174, 174);;
+  color:rgba(0, 248, 8, 0.701);;
+  background-color: rgb(53, 51, 51);;
   border-color: rgba(0, 248, 8, 0.701);
 }
 
 button:hover {
   color: #252526;
   background-color: rgba(0, 248, 8, 0.701);
-  border-color: rgb(177, 174, 174);
+  border-color: rgb(53, 51, 51);;
 }
 
 input[type="submit"]:hover {
   color: #252526;
   background-color: rgba(0, 248, 8, 0.701);
-  border-color: rgb(177, 174, 174);
+  border-color: rgb(53, 51, 51);;
 }
 
 /* Google Fonts */

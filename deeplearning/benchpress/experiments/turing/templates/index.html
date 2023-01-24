@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Human or Robot Survey</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human or AI</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static',filename='prism.css') }}" />
   </head>
@@ -10,8 +11,8 @@
     <script src="{{url_for('static', filename='prism.js')}}"></script>
     <div class="div_index">
       <main class="main_index">
-        <h1>Programming Survey</h1>
-        <h2>Human or AI ?</h2>
+        <h1>Human Or AI ?</h1>
+        <!-- <h2>Human or AI ?</h2> -->
 
 <!-- 
         <pre style='text-align: left'><code class="language-opencl" id="code_writer">kernel void NN(global LatLong *locs, global float *d_distances) {
@@ -26,7 +27,6 @@ if (gID < nR) {
 }</code></pre> -->
 
 
-        <p>This is a survey for <a target="_blank" href="https://github.com/fivosts/BenchPress">BenchPress: A Deep Active Benchmark Generator</a></p>
         <ul class="directives">
           <li>You will be shown an OpenCL kernel.</li>
           <li>Predict if it is human or AI generated.</li>
@@ -35,7 +35,8 @@ if (gID < nR) {
         <form id="start_button" action = "submit" method = "post">
           <input type="submit" name="start" value = "GO!" />
         </form>
-        <p class="whisper">Exit any time you want, also resume later!</p>
+        <!-- <p class="whisper">Exit any time you want, also resume later!</p> -->
+        <p class="whisper">A survey for <a target="_blank" href="https://github.com/fivosts/BenchPress">BenchPress: A Deep Active Benchmark Generator</a></p>
       </main>
       <footer>&copy; Copyright 2023 Foivos Tsimpourlas</footer>
     </div>

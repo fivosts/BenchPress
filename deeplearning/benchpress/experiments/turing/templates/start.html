@@ -2,14 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Human or Robot Survey</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human or AI</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='style.css') }}" />
   </head>
   <body class="body_start">
     <div class="div_start">
       <main class="main_start">
         <h1>Awesome!</h1>
-        <p>First, have you ever programmed ?</p>
+        <p>Are you familiar with programming ?</p>
         <form action="submit_engineer" method = "post">
           <button for="submit_engineer" name="yes" type="submit">Yes</button>
           <button for="submit_engineer" name="no" type="submit">No</button>

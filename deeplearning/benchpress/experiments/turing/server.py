@@ -399,3 +399,5 @@ def main(*args, **kwargs):
 
 if __name__ == "__main__":
   absl_app.run(main)
+
+## ./benchpress ./get_human_likely/human_or_robot.json ./get_human_likely/test
