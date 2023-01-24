@@ -259,6 +259,8 @@ def start():
   if user_id is None or user_id not in handler.user_cache:
     return flask.redirect(flask.url_for('index'))
   engineer = handler.user_cache[user_id].get("engineer", None)
+  l.logger().error(engineer)
+  l.logger().critical(handler.user_cache)
   if engineer is not None:
     return flask.redirect(flask.url_for('index'))
   user_ip = handler.user_cache[user_id].get("user_ip", None)
@@ -335,15 +337,18 @@ def index():
     # Create user ID.
     user_id = uuid.uuid4()
     handler.set_cookie(resp, user_id = user_id)
+    handler.user_cache[user_id] = {}
   else:
     is_engineer = handler.session_db.is_engineer(user_id = user_id)
+    schedule = handler.session_db.get_schedule(user_id = user_id)
     if is_engineer is not None:
-      handler.user_cache[user_id]["engineer"] = is_engineer
+      handler.user_cache[user_id] = {
+        'engineer': is_engineer,
+        'schedule': schedule,
+      }
   ## Assign a new IP anyway.
   user_ip = flask.request.remote_addr
-  handler.user_cache[str(user_id)] = {
-    "user_ip": user_ip,
-  }
+  handler.user_cache[user_id]["user_ip"] = user_ip
   return resp
 
 def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],

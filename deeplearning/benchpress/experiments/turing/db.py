@@ -222,8 +222,22 @@ class TuringDB(sqlutil.Database):
     Return bool value of engineer status.
     """
     with self.Session() as s:
-      engineer = s.query(UserSession).filter_by(user_id == user_id).first()
-      return engineer
+      user = s.query(UserSession).filter_by(user_id = user_id).first()
+      if user:
+        return user.engineer
+      else:
+        return None
+
+  def get_schedule(self, user_id: str) -> typing.List[str]:
+    """
+    Return assigned schedule.
+    """
+    with self.Session() as s:
+      user = s.query(UserSession).filter_by(user_id = user_id).first()
+      if user:
+        return json.loads(user.schedule)
+      else:
+        return None
 
   def init_session(self) -> None:
     """
