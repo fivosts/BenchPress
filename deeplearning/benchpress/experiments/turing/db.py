@@ -217,6 +217,14 @@ class TuringDB(sqlutil.Database):
     else:
       return None, total
 
+  def is_engineer(self, user_id: str) -> bool:
+    """
+    Return bool value of engineer status.
+    """
+    with self.Session() as s:
+      engineer = s.query(UserSession).filter_by(user_id == user_id).first()
+      return engineer
+
   def init_session(self) -> None:
     """
     TuringSession table must have only one entry.

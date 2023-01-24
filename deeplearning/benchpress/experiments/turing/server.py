@@ -335,6 +335,10 @@ def index():
     # Create user ID.
     user_id = uuid.uuid4()
     handler.set_cookie(resp, user_id = user_id)
+  else:
+    is_engineer = handler.session_db.is_engineer(user_id = user_id)
+    if is_engineer is not None:
+      handler.user_cache[user_id]["engineer"] = is_engineer
   ## Assign a new IP anyway.
   user_ip = flask.request.remote_addr
   handler.user_cache[str(user_id)] = {
