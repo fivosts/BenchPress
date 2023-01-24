@@ -209,7 +209,7 @@ def submit_engineer():
   l.logger().critical("submit engineer")
   user_id  = handler.get_cookie("user_id")
   if user_id is None:
-    user_id = uuid.uuid4()
+    user_id = str(uuid.uuid4())
     handler.user_cache[user_id] = {}
     handler.set_cookie(resp, user_id = user_id)
   engineer = handler.user_cache[user_id].get("engineer", None)
@@ -304,6 +304,8 @@ def submit():
   l.logger().info("Submit")
   user_id = handler.get_cookie("user_id")
   if user_id is None or user_id not in handler.user_cache:
+    l.logger().critical(user_id)
+    l.logger().critical(handler.user_cache)
     return flask.redirect(flask.url_for('index'))
   if "start" in flask.request.form:
     engineer = handler.user_cache[user_id].get("engineer", None)
@@ -335,7 +337,7 @@ def index():
   user_id = handler.get_cookie("user_id")
   if user_id is None:
     # Create user ID.
-    user_id = uuid.uuid4()
+    user_id = str(uuid.uuid4())
     handler.set_cookie(resp, user_id = user_id)
     handler.user_cache[user_id] = {}
   else:

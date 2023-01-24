@@ -86,12 +86,18 @@ p {
   width: 70%;
   margin-left: auto;
   margin-right: auto;
-  padding-top: 40px;
+  padding-top: 20px;
+}
+
+.init_p {
+  width: 70%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .quiz_options {
   display: block;
-  padding-bottom: 20px;
+  padding-bottom: 40px;
 }
 
 .whisper {

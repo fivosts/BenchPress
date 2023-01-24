@@ -576,10 +576,10 @@ function parseString (str) {
                 this.parseString(htmlUnescape(html.innerHTML));
             },
             typeWaitTime: function () {
-                return Math.round(Math.random() * this.typeSpeed) + 50;
+                return Math.round(Math.random() * this.typeSpeed) + 15;
             },
             skipTypeWaitTime: function () {
-                return Math.round(Math.random() * this.typeSpeed / 2);
+                return Math.round(Math.random() * this.typeSpeed) * 130;
             },
             typeChar: function() {
                 if (this.currentToken < this.tokens.length) {
