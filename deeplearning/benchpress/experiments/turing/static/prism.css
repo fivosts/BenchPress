@@ -30,6 +30,14 @@ code[class*=language-], pre[class*=language-] {
 
 }
 
+pre[class*=language-small] {
+    min-height: 25%;
+    max-height: 25%;
+    width: 50%;
+    padding-top: 40px;
+    padding-bottom: 40px;
+}
+
 pre[class*=language-] {
     --scrollbarBG: #4d5659;
     --thumbBG: #242728;

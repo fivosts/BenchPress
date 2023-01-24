@@ -1,10 +1,10 @@
 // Configuration Variables
 
 var seperators = [";", ",",".", ":", "[", "]", "{", "}", "(", ")"];
-var seperatorColor = "#950096";
-var functionColor = "#6196cc";
-var keywords = ["global", "ulong", "local", "kernel", "void", "var", "new", "for", "if", "else", "while", "break", "continue", "return", "class", "struct", "function", "goto", "static", "public", "private", "protected", "void"]; //...
+var seperatorColor = "#ccc";
+var keywords = ["global", "ulong", "local", "kernel", "void", "var", "for", "if", "new", "else", "while", "break", "continue", "return", "class", "struct", "function", "goto", "static", "public", "private", "protected", "void"]; //...
 var keywordColor = "#cc99cd"; // OK
+var functionColor = "#f08d49";
 var stringColor = "#7ec699"; // OK
 var escapeCharacters = ["\\n", "\\t", "\\'", '\\"', "\\\\"];
 var escapeCharacterColor = "violet";
@@ -287,6 +287,9 @@ function isANumber (str, index) {
 
 function isFunction (str, index) {
     //Valid function name first character
+    if (str === "for" || str === "if") {
+        return -1;
+    }
     if (isAlpha(str[index]) || str[index] === "_" || str[index] === "$") {
         var indexOfSpace = str.indexOf(" ", index);
         var indexOfLeftParen = str.indexOf("(", index);
@@ -352,7 +355,16 @@ function parseString (str) {
                 tokenColor: stringColor,
                 tokenCount: 1
             });
-            i += string.length;
+            i += string.leng
+            th;
+        }
+        else if ((keyword = isKeyword(str, i)) !== -1) {
+            tokens.push({
+                tokenName: keyword,
+                tokenColor: keywordColor,
+                tokenCount: 1
+            });
+            i += keyword.length;
         }
         else if ((functionText = isFunction(str, i)) !== -1) {
             tokens.push({
@@ -401,14 +413,6 @@ function parseString (str) {
                 tokenCount: 1
             });
             i += seperator.length;
-        }
-        else if ((keyword = isKeyword(str, i)) !== -1) {
-            tokens.push({
-                tokenName: keyword,
-                tokenColor: keywordColor,
-                tokenCount: 1
-            });
-            i += keyword.length;
         }
         else if ((number = isANumber(str, i)) !== -1) {
             tokens.push({
@@ -486,6 +490,13 @@ function parseString (str) {
                             i += string[it].tokenName.length;
                         }
                     }
+                    else if ((keyword = isKeyword(str, i)) !== -1) {
+                        this.tokens.push({
+                            tokenName: keyword,
+                            tokenColor: keywordColor
+                        });
+                        i += keyword.length;
+                    }
                     else if ((functionText = isFunction(str, i)) !== -1) {
                         this.tokens.push({
                             tokenName: functionText,
@@ -534,13 +545,6 @@ function parseString (str) {
                             tokenColor: seperatorColor
                         });
                         i += seperator.length;
-                    }
-                    else if ((keyword = isKeyword(str, i)) !== -1) {
-                        this.tokens.push({
-                            tokenName: keyword,
-                            tokenColor: keywordColor
-                        });
-                        i += keyword.length;
                     }
                     else if ((number = isANumber(str, i)) !== -1) {
                         this.tokens.push({

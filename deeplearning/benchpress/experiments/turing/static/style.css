@@ -7,7 +7,8 @@ body {
   position: relative;
   background-color:	#101011;
   color: rgba(0, 248, 8, 0.701);
-  font-family: "Lucida Console", "Courier New", monospace;
+  /* font-family: "Lucida Console", "Courier New", monospace; */
+  font-family: Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
   font-size: 24px;
   margin-top: -32px;
   height: 100%;

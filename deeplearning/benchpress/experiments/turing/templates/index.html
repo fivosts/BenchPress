@@ -14,23 +14,26 @@
         <h1>Human Or AI ?</h1>
         <!-- <h2>Human or AI ?</h2> -->
 
-<!-- 
-        <pre style='text-align: left'><code class="language-opencl" id="code_writer">kernel void NN(global LatLong *locs, global float *d_distances) {
-int gID = get_global_id(0);
-          
-if (gID < nR) {
-   global LatLong *LL = locs+gID;
 
-   global float *dist=d_distances+gID;
-   *dist = (float)sqrt((lat-LL->lat)*(lat-LL->lat)+(lng-LL->lng)*(lng-LL->lng));
-}
-}</code></pre> -->
+        <pre style='padding-top: 100px; text-align: left'><code class="language-small-opencl" id="code_writer">kernel void mat_mul(global int *A, global int *B, global int *C)
+{
+  int n = 3, m = 3, l = 3;
+  int idx = get_global_id(0);
+  int idy = get_global_id(1);
+  if (idx < 3 && idy < 3) {
+    int i, sum = 0;
+    for (i = 0 ; i < n ; ++i) {
+      sum += A[idy*n+i] * B[idx+i*n];
+    }
+    C[idx+idy*n] = sum;
+  }
+}</code></pre>
 
 
-        <ul class="directives">
+        <!-- <ul class="directives">
           <li>You will be shown an OpenCL kernel.</li>
           <li>Predict if it is human or AI generated.</li>
-        </ul>
+        </ul> -->
         <p>Can you choose right ?</p>
         <form id="start_button" action = "submit" method = "post">
           <input type="submit" name="start" value = "GO!" />
