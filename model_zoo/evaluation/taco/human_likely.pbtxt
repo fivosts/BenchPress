@@ -1,5 +1,5 @@
 workspace: "get_human_likely/results"
-tokenizer: "get_human_likely/backup_tokenizer.pkl"
+tokenizer: "/var/foivos/results/pact_results/artifacts/backup_tokenizer.pkl"
 evaluator {
   human_likeness {
     target: "rodinia"
@@ -7,27 +7,27 @@ evaluator {
     db_group {
       group_name: "BenchPress"
       db_type: "SamplesDatabase"
-      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely/benchpress_all.db"
+      database: "/home/foivos/PhD/Code/BenchPress/benchpress_all.db"
     }
     db_group {
       group_name: "BenchPress_directed"
       db_type: "SamplesDatabase"
-      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely/benchpress_directed_all.db"
+      database: "/home/foivos/PhD/Code/BenchPress/benchpress_directed_all.db"
     }
     db_group {
       group_name: "CLgen"
       db_type: "SamplesDatabase"
-      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely/clgen.db"
+      database: "/var/foivos/results/pact_results/databases/CLgen/unique_merged_samples.db"
     }
     db_group {
       group_name: "GitHub"
       db_type: "EncodedContentFiles"
-      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely/github.db"
+      database: "/var/foivos/results/pact_results/databases/GitHub/unique_encoded.db"
     }
     db_group {
       group_name: "CLSmith"
       db_type: "CLSmithDatabase"
-      database: "/home/fivosts/PhD/Code/BenchPress/get_human_likely/clsmith.db"
+      database: "/var/foivos/results/pact_results/databases/CLSmith/clsmith_lite.db"
     }
   }
 }
