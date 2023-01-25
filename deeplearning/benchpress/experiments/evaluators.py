@@ -267,7 +267,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       ### KAverageScore
       # Generic Fields
       pbutil.AssertFieldIsSet(config, "workspace")
-      pbutil.AssertFieldIsSet(config, "tokenizer")
       if not pathlib.Path(config.tokenizer).resolve().exists():
         raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
       # DB groups
@@ -283,6 +282,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+        if dbs.type in {"EncodedContentFiles", "CLSmithDatabase"}:
+          pbutil.AssertFieldIsSet("tokenizer")
       # Specialized fields.
       pbutil.AssertFieldConstraint(
         ev.k_average_score,
@@ -301,7 +302,6 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
       ### MinScore
       # Generic Fields
       pbutil.AssertFieldIsSet(config, "workspace")
-      pbutil.AssertFieldIsSet(config, "tokenizer")
       if not pathlib.Path(config.tokenizer).resolve().exists():
         raise FileNotFoundError(pathlib.Path(config.tokenizer).resolve())
       # DB groups
@@ -317,6 +317,8 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
+        if dbs.type in {"EncodedContentFiles", "CLSmithDatabase"}:
+          pbutil.AssertFieldIsSet("tokenizer")
       # Specialized fields.
       pbutil.AssertFieldConstraint(
         ev.min_score,
@@ -906,7 +908,13 @@ def main(config: evaluator_pb2.Evaluation):
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
-          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+          db_cache[key] = DBGroup(
+            dbs.group_name,
+            dbs.db_type,
+            dbs.database,
+            tokenizer = kw_args['tokenizer'] if not dbs.HasField("tokenizer") else dbs.tokenizer,
+            size_limit = size_limit
+          )
         kw_args['db_groups'].append(db_cache[key])
       # Gather feature spaces if applicable.
       if sev.HasField("feature_space"):
@@ -932,7 +940,13 @@ def main(config: evaluator_pb2.Evaluation):
         key = dbs.group_name + ''.join(dbs.database)
         if key not in db_cache:
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
-          db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
+          db_cache[key] = DBGroup(
+            dbs.group_name,
+            dbs.db_type,
+            dbs.database,
+            tokenizer = kw_args['tokenizer'] if not dbs.HasField("tokenizer") else dbs.tokenizer,
+            size_limit = size_limit
+          )
         kw_args['db_groups'].append(db_cache[key])
       # Gather feature spaces if applicable.
       if sev.HasField("feature_space"):

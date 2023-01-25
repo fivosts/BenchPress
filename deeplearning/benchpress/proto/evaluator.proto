@@ -266,6 +266,8 @@ message DatabasesGroups {
   repeated string database   = 3;
   // Length of datapoint threshold.
   optional int32  size_limit = 4;
+  optional string tokenizer  = 5;
+
 }
 
 // Define a message representing a CSV for Grewe's predictive model.
