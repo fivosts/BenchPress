@@ -282,7 +282,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
-        if dbs.type in {"EncodedContentFiles", "CLSmithDatabase"}:
+        if dbs.db_type in {"EncodedContentFiles", "CLSmithDatabase"}:
           pbutil.AssertFieldIsSet("tokenizer")
       # Specialized fields.
       pbutil.AssertFieldConstraint(
@@ -317,7 +317,7 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
             lambda x : x > 0,
             "Size limit must be a positive integer, {}".format(dbs.size_limit)
           )
-        if dbs.type in {"EncodedContentFiles", "CLSmithDatabase"}:
+        if dbs.db_type in {"EncodedContentFiles", "CLSmithDatabase"}:
           pbutil.AssertFieldIsSet("tokenizer")
       # Specialized fields.
       pbutil.AssertFieldConstraint(
