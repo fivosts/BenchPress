@@ -284,6 +284,9 @@ class TokenizerBase(object):
 
     return indices
 
+  def __eq__(self, rhs: 'TokenizerBase') -> bool:
+    return self.vocab == rhs.vocab
+
 class AsciiCharacterTokenizer(TokenizerBase):
   """An tokenizer for character-level syntactic modelling."""
 
