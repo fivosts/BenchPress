@@ -305,22 +305,22 @@ class ActiveFeedDatabase(sqlutil.Database):
   def DictToRawFeats(self, dict_feats: str) -> str:
     """Convert dict based feats to Raw feats"""
     lines = dict_feats.split('\n')
-    grewe = ["GreweFeatures:"]
-    autophase = ["AutophaseFeatures:"]
-    instcount = ["InstCountFeatures:"]
     if len(lines) == 8:
-      grewe.append("file,kernel,comp,rational,mem,localmem,coalesced,atomic,F2:coalesced/mem,F4:comp/mem")
+      flist = ["GreweFeatures:"]
+      flist.append("file,kernel,comp,rational,mem,localmem,coalesced,atomic,F2:coalesced/mem,F4:comp/mem")
       feats = "temp.cl,A"
       for l in lines:
         feats += "," + l.split(':')[-1]
-      grewe.append(feats)
+      flist.append(feats)
     elif len(lines) == 70:
-      instcount += lines
+      flist = ["InstCountFeatures:"]
+      flist += lines
     elif len(lines) == 56:
-      autophase += lines
+      flist = ["AutophaseFeatures:"]
+      flist += lines
     else:
       raise ValueError(dict_feats)
-    return '\n'.join(grewe + instcount + autophase)
+    return '\n'.join(flist)
 
 def merge_databases(dbs: typing.List[ActiveFeedDatabase], out_db: ActiveFeedDatabase) -> None:
   """
