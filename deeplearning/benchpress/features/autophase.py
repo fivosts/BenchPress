@@ -59,10 +59,13 @@ class AutophaseFeatures(object):
   @classmethod
   def ExtractIRRawFeatures(cls, bytecode: str, **kwargs) -> str:
     try:
-      return opencl.CompileOptimizerIR(src, AUTOPHASE)
+      return opencl.CompileOptimizerIR(bytecode, AUTOPHASE)
     except ValueError:
       return ""
 
   @classmethod
   def RawToDictFeats(cls, str_feats: str, **kwargs) -> typing.Dict[str, float]:
+    print("GAMIMENO ", str_feats)
+    print("PORNI", str_feats.split('\n'))
+    # print("AAAAAA ", )
     return {feat.split(' : ')[0]: int(feat.split(' : ')[1]) for feat in str_feats.split('\n') if ' : ' in feat}
