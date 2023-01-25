@@ -1,5 +1,5 @@
 workspace: "/var/foivos/results/conditioned_features_results/results/"
-// Bar plots for relative distance wrt Rodinia targets.
+## Bar plots for relative distance wrt Rodinia targets.
 evaluator {
   min_score {
     target: 'rodinia'
@@ -48,7 +48,7 @@ evaluator {
     }
   }
 }
-// History scatter of distance minimization over time.
+## History scatter of distance minimization over time.
 evaluator {
   analyze_beam_search {
     target: 'rodinia'
@@ -97,7 +97,7 @@ evaluator {
     }
   }
 }
-// Distribution of gen-0 singleshot task.
+## Distribution of gen-0 singleshot task.
 evaluator {
   gen_distance_distribution {
     target: 'rodinia'
