@@ -31,11 +31,13 @@ code[class*=language-], pre[class*=language-] {
 }
 
 pre[class*=language-small] {
-    min-height: 25%;
-    max-height: 25%;
+    min-height: 28%;
+    max-height: 28%;
     width: 50%;
-    padding-top: 40px;
-    padding-bottom: 40px;
+    /* margin-top: 40px; */
+    /* margin-bottom: 40px; */
+    /* padding-top: 40px;
+    padding-bottom: 40px; */
 }
 
 pre[class*=language-] {
