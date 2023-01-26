@@ -304,6 +304,8 @@ class ActiveFeedDatabase(sqlutil.Database):
 
   def DictToRawFeats(self, dict_feats: str) -> str:
     """Convert dict based feats to Raw feats"""
+    if " : " not in dict_feats:
+      dict_feats = dict_feats.replace(":", " : ")
     lines = dict_feats.split('\n')
     if len(lines) == 8:
       flist = ["GreweFeatures:"]
