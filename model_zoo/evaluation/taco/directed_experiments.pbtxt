@@ -1,21 +1,21 @@
 workspace: "/var/foivos/results/conditioned_features_results/results/"
 ## Bar plots for relative distance wrt Rodinia targets.
-evaluator {
-  min_score {
-    target: 'rodinia'
-    feature_space: 'GreweFeatures'
-    db_group {
-      group_name: "BenchPress"
-      db_type: "ActiveFeedDatabase"
-      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/151d0798850577700175ead8f40fe56b0384c44d/sample_corpus/active_feeds.db"
-    }
-    db_group {
-      group_name: "BenchPress_directed"
-      db_type: "ActiveFeedDatabase"
-      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
-    }
-  }
-}
+## evaluator {
+##   min_score {
+##     target: 'rodinia'
+##     feature_space: 'GreweFeatures'
+##     db_group {
+##       group_name: "BenchPress"
+##       db_type: "ActiveFeedDatabase"
+##       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/151d0798850577700175ead8f40fe56b0384c44d/sample_corpus/active_feeds.db"
+##     }
+##     db_group {
+##       group_name: "BenchPress_directed"
+##       db_type: "ActiveFeedDatabase"
+##       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
+##     }
+##   }
+## }
 evaluator {
   min_score {
     target: 'rodinia'
