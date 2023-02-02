@@ -15,6 +15,7 @@
 """Statistical distributions used for sampling"""
 import pathlib
 import sys
+import copy
 import typing
 import math
 import numpy as np
@@ -216,7 +217,7 @@ class GenericDistribution(Distribution):
       l_idx, r_idx = 0, len(self.distribution)
       l,r = self.distribution[l_idx], None
 
-      queue = self.distribution
+      queue = copy.copy(self.distribution)
       cur = queue.pop(0)
       offset = -cur
       if cur != 0:
