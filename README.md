@@ -6,7 +6,7 @@
 
 ***
 
-:orange_book:  __BenchPress: A Deep Active Benchmark Generator__, *PACT 2022*.
+:orange_book:  [__BenchPress: A Deep Active Benchmark Generator__, *PACT 2022*.](https://dl.acm.org/doi/10.1145/3559009.3569644)
 
 __BenchPress__ is a directed program synthesizer for compiler benchmarks. Using active learning, it ranks compiler features based on their significance and produces executables that target them. __BenchPress__ is very accurate in generating compilable code - 87% of single-shot samples from empty feeds compile - while remaining light-weight compared to other massive seq2seq generative models.
 
