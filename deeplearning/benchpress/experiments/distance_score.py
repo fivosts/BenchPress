@@ -15,6 +15,7 @@
 """
 Top-K or min distance of database groups against target benchmark suites.
 """
+import json
 import tqdm
 import typing
 import math
@@ -270,6 +271,14 @@ def GenDistanceDistribution(**kwargs) -> None:
   workspace_path = kwargs.get('workspace_path') / "gen_distance_distr" / feature_space
   workspace_path.mkdir(exist_ok = True, parents = True)
 
+  """
+  groups = {
+    target: {
+      db_group_name: [sample_score]
+    }
+  }
+  """
+
   groups = {}
   for dbg in db_groups:
     ## Flattened list of scores distribution, sorted by target -> group
@@ -284,13 +293,23 @@ def GenDistanceDistribution(**kwargs) -> None:
         groups[target][dbg.group_name] = []
       groups[target][dbg.group_name] += [b.sample_score]*b.frequency
 
+  stats = {}
   for target, groups in groups.items():
     distrs = []
+    stats[target] = {}
     for name, data in groups.items():
       d = distributions.GenericDistribution([int(round(x)) for x in data if x < float('inf')], workspace_path, "{}-{}".format(target, name))
       d.plot()
       distrs.append(d)
+      stats[target][name] = {}
+      stats[target][name]['average'] = d.average
+      stats[target][name]['median'] = d.median
+      stats[target][name]['min'] = d.min
+      stats[target][name]['max'] = d.max
     if len(distrs) == 2:
       diff = distrs[1] - distrs[0]
       diff.plot()
+
+  with open(workspace_path / "stats,json", 'w') as outf:
+    json.dump(stats, outf, indent = 2)
   return
