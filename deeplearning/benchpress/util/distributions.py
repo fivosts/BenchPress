@@ -191,7 +191,14 @@ class GenericDistribution(Distribution):
   to perform statistics on small samples.
   """
   @property
-  def average(self):
+  def min(self) -> int:
+    return self.min_idx
+
+  @property
+  def max(self) -> int:
+    return self.max_idx
+
+  def average(self) -> float:
     if self.avg:
       return self.avg
     else:
@@ -202,7 +209,7 @@ class GenericDistribution(Distribution):
       return self.avg
 
   @property
-  def median(self):
+  def median(self) -> int:
     if self.med:
       return self.med
     else:
