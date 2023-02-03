@@ -199,6 +199,7 @@ class GenericDistribution(Distribution):
   def max(self) -> int:
     return self.max_idx
 
+  @property
   def average(self) -> float:
     if self.avg:
       return self.avg
