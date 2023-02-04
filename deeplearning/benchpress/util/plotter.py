@@ -47,17 +47,20 @@ def _get_generic_figure(**kwargs) -> go.Layout:
 
   # Font sizes
   titlefont   = kwargs.get('titlefont', None)
-  axisfont    = kwargs.get('axisfont', None)
-  tickfont    = kwargs.get('tickfont', None)
+  axisfont    = kwargs.get('axisfont',  None)
+  tickfont    = kwargs.get('tickfont',  None)
 
   # Plot line and axis options
-  showline    = kwargs.get('showline',  None)
-  linecolor   = kwargs.get('linecolor', None)
-  gridcolor   = kwargs.get('gridcolor', None)
-  mirror      = kwargs.get('mirror',    None)
-  showgrid    = kwargs.get('showgrid',  None)
-  linewidth   = kwargs.get('linewidth', None)
-  gridwidth   = kwargs.get('gridwidth', None)
+  showline_x  = kwargs.get('showline_x',  None)
+  showline_y  = kwargs.get('showline_y',  None)
+  linecolor   = kwargs.get('linecolor',   None)
+  gridcolor_x = kwargs.get('gridcolor_x', None)
+  gridcolor_y = kwargs.get('gridcolor_y', None)
+  mirror      = kwargs.get('mirror',      None)
+  showgrid_x  = kwargs.get('showgrid_x',  None)
+  showgrid_y  = kwargs.get('showgrid_y',  None)
+  linewidth   = kwargs.get('linewidth',   None)
+  gridwidth   = kwargs.get('gridwidth',   None)
   margin      = kwargs.get('margin', {'l': 40, 'r': 45, 't': 75, 'b': 0})
   x_tickangle = kwargs.get('x_tickangle', None)
 
@@ -71,22 +74,24 @@ def _get_generic_figure(**kwargs) -> go.Layout:
   plot_bgcolor = kwargs.get('plot_bgcolor', None)
 
   # Violin options
-  violingap  = kwargs.get('violingap', None)
+  violingap  = kwargs.get('violingap',  None)
   violinmode = kwargs.get('violinmode', None)
 
   title = dict(text = title, font = dict(size = titlefont))
   yaxis = dict(
-             title     = y_name,   showgrid = showgrid,
-             showline  = showline, linecolor = linecolor,
-             mirror    = mirror,   linewidth = linewidth,
+             title     = y_name,     showgrid = showgrid_y,
+             showline  = showline_y, linecolor = linecolor,
+             mirror    = mirror,     linewidth = linewidth,
              gridwidth = gridwidth,
+             gridcolor = gridcolor_y,
              tickfont  = dict(size = tickfont),
              titlefont = dict(size = axisfont)
           )
   xaxis = dict(
-            title     = x_name,   showgrid = showgrid,
-            showline  = showline, linecolor = linecolor,
-            mirror    = mirror,   linewidth = linewidth,
+            title     = x_name,     showgrid = showgrid_x,
+            showline  = showline_x, linecolor = linecolor,
+            mirror    = mirror,     linewidth = linewidth,
+            gridcolor = gridcolor_x,
             tickfont  = dict(size = tickfont),
             titlefont = dict(size = axisfont),
           )
