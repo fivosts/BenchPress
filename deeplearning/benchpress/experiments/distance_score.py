@@ -195,7 +195,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       plot_name = "feeds_radar_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
       path      = workspace_path / "radar",
       title     = benchmark.name,
-      **plot_config if plot_config else {},
+      # **plot_config if plot_config else {},
     )
     ## Score convergence per generation.
     plotter.GroupScatterPlot(
@@ -215,7 +215,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     },
     plot_name = "zero_distances_{}_{}".format(feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
     path = workspace_path / "stats",
-    **plot_config if plot_config else {},
+    # **plot_config if plot_config else {},
   )
   plotter.GrouppedBars(
     groups = {
