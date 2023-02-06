@@ -278,33 +278,36 @@ message GreweCSVGroup {
 
 // Plot configurations
 message PlotterConfiguration {
-  optional string title      = 1;
-  optional string x_name     = 2;
-  optional string y_name     = 3;
+  optional string title       = 1;
+  optional string x_name      = 2;
+  optional string y_name      = 3;
   
-  optional int32 titlefont   = 4;
-  optional int32 axisfont    = 5;
-  optional int32 tickfont    = 6;
+  optional int32 titlefont    = 4;
+  optional int32 axisfont     = 5;
+  optional int32 tickfont     = 6;
 
-  optional bool showline     = 7;
-  optional string linecolor  = 8;
-  optional string gridcolor  = 9;
-  optional bool mirror       = 10;
-  optional bool showgrid     = 11;
-  optional int32 linewidth   = 12;
-  optional int32 gridwidth   = 13;
-  optional string margin     = 14;
+  optional bool showline_x    = 7;
+  optional bool showline_y    = 8;
+  optional string linecolor   = 9;
+  optional string gridcolor_x = 10;
+  optional string gridcolor_y = 11;
+  optional bool mirror        = 12;
+  optional bool showgrid_x    = 13;
+  optional bool showgrid_y    = 14;
+  optional int32 linewidth    = 15;
+  optional int32 gridwidth    = 16;
+  optional string margin      = 17;
 
-  optional float legend_x    = 15;
-  optional float legend_y    = 16;
-  optional string traceorder = 17;
-  optional int32 legendfont  = 18;
+  optional float legend_x     = 18;
+  optional float legend_y     = 19;
+  optional string traceorder  = 20;
+  optional int32 legendfont   = 21;
 
-  optional string bg_color   = 19;
+  optional string bg_color    = 22;
 
-  optional int32 height      = 20;
-  optional int32 width       = 21;
+  optional int32 height       = 23;
+  optional int32 width        = 24;
 
-  optional int32 x_tickangle = 22;
-  optional string violinmode = 23;
+  optional int32 x_tickangle  = 25;
+  optional string violinmode  = 26;
 }
