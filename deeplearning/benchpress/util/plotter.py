@@ -131,6 +131,10 @@ def _write_figure(fig       : go.Figure,
       fig.write_image(outf("png"), width = kwargs.get('width', 1024), height = kwargs.get('height', 768))
     except ValueError:
       l.logger().warn("PNG plot failed", ddp_nodes = True)
+    try:
+      fig.write_image(outf("pdf"))
+    except ValueError:
+      l.logger().warn("PDF plot failed", ddp_nodes = True)
   else:
     fig.show()
   return
