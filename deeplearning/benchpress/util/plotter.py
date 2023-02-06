@@ -65,13 +65,13 @@ def _get_generic_figure(**kwargs) -> go.Layout:
   x_tickangle = kwargs.get('x_tickangle', None)
 
   # Legend
-  legend_x   = kwargs.get('legend_x', 1.02)
+  legend_x   = kwargs.get('legend_x', 1.0)
   legend_y   = kwargs.get('legend_y', 1.0)
   traceorder = kwargs.get('traceorder', None)
   legendfont = kwargs.get('legendfont', None)
 
   # Background
-  plot_bgcolor = kwargs.get('plot_bgcolor', None)
+  bg_color = kwargs.get('bg_color', None)
 
   # Violin options
   violingap  = kwargs.get('violingap',  None)
@@ -96,7 +96,7 @@ def _get_generic_figure(**kwargs) -> go.Layout:
             titlefont = dict(size = axisfont),
           )
   layout = go.Layout(
-    plot_bgcolor = plot_bgcolor,
+    plot_bgcolor = bg_color,
     margin       = margin,
     legend       = dict(x = legend_x, y = legend_y, traceorder = traceorder, font = dict(size = legendfont)),
     title        = title,
