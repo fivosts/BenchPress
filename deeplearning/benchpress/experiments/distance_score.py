@@ -203,7 +203,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
       plot_name = "Beam_generation_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
       path      = workspace_path / "scatter",
       mode      = "lines+markers",
-      title     = benchmark.name,
+      title     = "{}, {}".format(feature_space, benchmark.name),
       **plot_config if plot_config else {},
     )
   plotter.GrouppedBars(
