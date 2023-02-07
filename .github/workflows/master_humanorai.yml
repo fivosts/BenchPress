@@ -28,17 +28,12 @@ jobs:
           source venv/bin/activate
       
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: python -m pip install numpy eupy flask SQLAlchemy==1.3.10 absl-py humanize protobuf portpicker waitress
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
       
       - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v2
-        with:
-          name: python-app
-          path: |
-            . 
-            !venv/
+        run: git clone https://github.com/fivosts/test.git
 
   deploy:
     runs-on: ubuntu-latest
