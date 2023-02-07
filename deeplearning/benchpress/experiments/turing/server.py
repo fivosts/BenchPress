@@ -396,7 +396,7 @@ def main(*args, **kwargs):
   serve(
     databases      = dbs,
     workspace_path = pathlib.Path(sys.argv[2]).resolve(),
-    http_port      = 40822,
+    http_port      = 443,
   )
 
 if __name__ == "__main__":
