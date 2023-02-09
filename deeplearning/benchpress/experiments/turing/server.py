@@ -359,8 +359,9 @@ def index():
     else:
       handler.user_cache[user_id] = {}
   ## Assign a new IP anyway.
-  user_ip = flask.request.remote_addr
+  user_ip = flask.request.access_route[0]
   handler.user_cache[user_id]["user_ip"] = user_ip
+  l.logger().warn("User login user id: {}, user_ip: {}".format(user_id, user_ip))
   return resp
 
 def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],
