@@ -307,8 +307,8 @@ def GenDistanceDistribution(**kwargs) -> None:
       stats[target][name]['min'] = d.min
       stats[target][name]['max'] = d.max
     if len(distrs) == 2:
-      diff = distrs[1] - distrs[0]
-      stats[target]["likelihood"] = distrs[0] > distrs[1]
+      diff = distrs[0] - distrs[1]
+      stats[target]["likelihood"] = distrs[0] - distrs[1] < 0
       diff.plot()
 
   with open(workspace_path / "stats.json", 'w') as outf:
