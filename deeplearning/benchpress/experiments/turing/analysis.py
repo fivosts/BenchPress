@@ -16,6 +16,7 @@
 Analysis of Human or AI experiment.
 """
 import pathlib
+import json
 
 from deeplearning.benchpress.experiments import public
 from deeplearning.benchpress.experiments.turing import db
@@ -46,22 +47,22 @@ def HumanLikenessAnalysis(**kwargs) -> None:
   prediction_distr = data.get_prediction_distr()
   labels = {
     "engineer": {
-      "human": ([], []),
-      "AI"   : ([], [])
+      "human": [[], []],
+      "AI"   : [[], []]
     },
     "non-engineer": {
-      "human": ([], []),
-      "AI"   : ([], [])
+      "human": [[], []],
+      "AI"   : [[], []]
     }
   }
   for label in labels.keys():
     for dset, values in prediction_distr[label].items():
       if values["predictions"]["human"] > 0:
-        labels[label]["human"][0] += dset
-        labels[label]["human"][1] += values["predictions"]["human"]
+        labels[label]["human"][0].append(dset)
+        labels[label]["human"][1].append(values["predictions"]["human"])
       if values["predictions"]["robot"] > 0:
-        labels[label]["AI"][0] += dset
-        labels[label]["AI"][1] += values["predictions"]["robot"]
+        labels[label]["AI"][0].append(dset)
+        labels[label]["AI"][1].append(values["predictions"]["robot"])
     plotter.GrouppedBars(
       labels[label],
       plot_name = "Engineers_scores_per_set",
@@ -69,16 +70,14 @@ def HumanLikenessAnalysis(**kwargs) -> None:
     )
   plotter.GrouppedBars(
     {
-      key: {
-        "human": labels["engineer"][key]["human"] + labels["non-engineer"][key]["human"],
-        "AI": labels["engineer"][key]["AI"] + labels["non-engineer"][key]["AI"], 
-      }
-      for key in labels["engineer"].keys()
+      label: [labels["engineer"][label][0], labels["engineer"][label][1]]
+      for label in labels["engineer"].keys()
     },
     plot_name = "Total_scores_per_set",
     path = workspace,
   )
-  unique_datasets = set(prediction_distr["engineer"].keys()).update(set(prediction_distr["non-engineer"].keys()))
+  unique_datasets = set(prediction_distr["engineer"].keys())
+  unique_datasets.update(set(prediction_distr["non-engineer"].keys()))
   ## Distributions
   user_prediction_distr = data.get_user_prediction_distr()
   distrs = {
@@ -89,8 +88,8 @@ def HumanLikenessAnalysis(**kwargs) -> None:
     for dset in unique_datasets:
       distrs[label][dset] = distributions.GenericDistribution(
         [
-          x[dset]["predictions"]["human"] / x[dset]["predictions"]["robot"]
-          for x in user_prediction_distr[label] if dset in x
+          int(100 * user[dset]["predictions"]["human"] / (user[dset]["predictions"]["robot"] + user[dset]["predictions"]["human"]))
+          for user in user_prediction_distr[label] if dset in user
         ],
         log_path = workspace,
         set_name = "{}_{}_distrib".format(label, dset)

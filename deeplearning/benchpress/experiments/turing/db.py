@@ -222,7 +222,7 @@ class TuringDB(sqlutil.Database):
     Return turing_session.prediction_distr
     """
     with self.Session() as s:
-      return s.query(TuringSession.prediction_distr).all()
+      return json.loads(s.query(TuringSession.prediction_distr).all()[0][0])
 
   def get_user_prediction_distr(self) -> typing.Dict[str, typing.List[typing.Dict[str, typing.Any]]]:
     """
@@ -230,8 +230,8 @@ class TuringDB(sqlutil.Database):
     """
     with self.Session() as s:
       return {
-        "engineer": s.query(UserSession).filter_by(engineer = 1).prediction_distr.all(),
-        "non-engineer": s.query(UserSession).filter_by(engineer = 0).prediction_distr.all(),
+        "engineer": [json.loads(x[0]) for x in s.query(UserSession.prediction_distr).filter_by(engineer = 1).all()],
+        "non-engineer": [json.loads(x[0]) for x in s.query(UserSession.prediction_distr).filter_by(engineer = 0).all()],
       }
 
   def is_engineer(self, user_id: str) -> bool:
