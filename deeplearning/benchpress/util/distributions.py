@@ -432,10 +432,16 @@ class GenericDistribution(Distribution):
       self.pdf[idx] = cur
     return
 
-  def plot(self) -> None:
+  def plot(self, with_avg: bool = False) -> None:
     """
     Plot distribution.
     """
+    vlines = None
+    if with_avg:
+      vlines = [
+        (self.average, "Average"),
+        (self.median, "Median"),
+      ]
     plotter.FrequencyBars(
       x = [idx + self.min_idx for idx, _ in enumerate(self.distribution)],
       y = [v for v in self.distribution],
@@ -443,6 +449,7 @@ class GenericDistribution(Distribution):
       path      = self.log_path,
       title     = "pmf_{}".format(self.set_name),
       x_name    = self.set_name,
+      vlines = vlines,
     )
     plotter.FrequencyBars(
       x = [idx + self.min_idx for idx, _ in enumerate(self.pdf)],
@@ -451,5 +458,6 @@ class GenericDistribution(Distribution):
       path      = self.log_path,
       title     = "pdf_{}".format(self.set_name),
       x_name    = self.set_name,
+      vlines = vlines,
     )
     return
