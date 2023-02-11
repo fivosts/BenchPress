@@ -237,6 +237,7 @@ def FrequencyBars(x         : np.array,
                   y         : np.array,
                   plot_name : str,
                   path      : pathlib.Path = None,
+                  vlines    : typing.List[typing.Tuple[int, str]] = None,
                   **kwargs,
                   ) -> None:
   """Plot frequency bars based on key."""
@@ -250,6 +251,16 @@ def FrequencyBars(x         : np.array,
       opacity = 0.75,
     )
   )
+  if vlines:
+    for (vline, annotation) in vlines:
+      fig.add_vline(
+        x = vline,
+        line_width          = 1,
+        line_dash           = "solid",
+        line_color          = "black",
+        annotation_position = "bottom",
+        annotation_text     = annotation,
+      )
   _write_figure(fig, plot_name, path, **kwargs)
   return
 
