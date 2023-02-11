@@ -90,11 +90,21 @@ def KAverageScore(**kwargs) -> None:
       groups[dbg.group_name][1].append(avg_dist)
       groups[dbg.group_name][2].append([s for s, _, _ in src_distances[:top_k]])
 
+  averages = {}
+  counters = {}
   for group_name, tup in groups.items():
     bench_names, raw_dists, _ = tup
+    averages[group_name] = 0.0
+    counters[group_name] = 0
     for idx, (bench_name, raw_dist) in enumerate(zip(bench_names, raw_dists)):
       groups[group_name][1][idx] = 100 * ( (target_origin_dists[bench_name] - raw_dist ) / target_origin_dists[bench_name])
+      averages[group_name] += ( (target_origin_dists[bench_name] - raw_dist ) / target_origin_dists[bench_name])
+      if ( (target_origin_dists[bench_name] - raw_dist ) / target_origin_dists[bench_name]) == 1.0:
+        counters[group_name] += 1
+    averages[group_name] = averages[group_name] / len(bench_names)
 
+  l.logger().info(averages)
+  l.logger().info(counters)
   plotter.GrouppedBars(
     groups = {dbname: (c[0], c[1]) for dbname, c in groups.items()},
     plot_name = "avg_{}_dist_{}_{}".format(top_k, feature_space.replace("Features", "Features"), '-'.join([dbg.group_name for dbg in db_groups])),
