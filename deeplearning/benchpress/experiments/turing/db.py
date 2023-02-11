@@ -224,7 +224,7 @@ class TuringDB(sqlutil.Database):
     with self.Session() as s:
       return s.query(TuringSession.prediction_distr)
 
-  def get_user_prediction_distr(self) -> typing.Dict[typing.List[typing.Dict[str, typing.Any]]]:
+  def get_user_prediction_distr(self) -> typing.Dict[str, typing.List[typing.Dict[str, typing.Any]]]:
     """
     Group users to eng/non-eng, each category has a list of prediction_distr one per user.
     """
