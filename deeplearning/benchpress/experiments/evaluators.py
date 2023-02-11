@@ -874,7 +874,7 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.PCASamplesFeatures        : benchmark_analysis.PCASamplesFeatures,
     evaluator_pb2.FeaturesDistribution      : benchmark_analysis.FeaturesDistribution,
     evaluator_pb2.HumanLikeness             : benchmark_analysis.HumanLikeness,
-    evaluator_pb2.HumanLikenessAnalysis     : analysis.HumanLikenesssAnalysis,
+    evaluator_pb2.HumanLikenessAnalysis     : analysis.HumanLikenessAnalysis,
     evaluator_pb2.CompMemGrewe              : comp_vs_mem.CompMemGrewe,
     evaluator_pb2.TopKCLDrive               : cldrive.TopKCLDrive,
     evaluator_pb2.MutecVsBenchPress         : mutec.MutecVsBenchPress,
