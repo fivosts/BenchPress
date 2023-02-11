@@ -224,111 +224,116 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #   }
 # }
 ## Distribution of gen-0 singleshot task.
+# evaluator {
+#   gen_distance_distribution {
+#     target: 'rodinia'
+#     generation_id: 0
+#     feature_space: 'GreweFeatures'
+#     plot_config {
+#       x_name: "Euclidean distance"
+#       y_name: "Probability"
+#       showline_x: True
+#       showline_y: True
+#       linewidth: 2
+#       linecolor: "black"
+#       showgrid_x: True
+#       showgrid_y: False
+#       bg_color: "white"
+#       gridcolor_x: "gray"
+#       gridcolor_y: "gray"
+#       gridwidth: 1
+#       height: 1024
+#       width: 1280
+#       tickfont: 56
+#       axisfont: 56
+#       titlefont: 56
+#     }
+#     db_group {
+#       group_name: "BenchPress_directed"
+#       db_type: "SearchCandidateDatabase"
+#       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/1a7b72ae98d732b45bf2fb76bc3b8da1eb798f29/sample_corpus/evaluated_candidates.db"
+#     }
+#     db_group {
+#       group_name: "BenchPress"
+#       db_type: "SearchCandidateDatabase"
+#       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/6c454ab425e2a9eafc47da07e73b55a221d772e6/sample_corpus/evaluated_candidates.db"
+#     }
+#   }
+# }
+# evaluator {
+#   gen_distance_distribution {
+#     target: 'rodinia'
+#     generation_id: 0
+#     feature_space: 'AutophaseFeatures'
+#     plot_config {
+#       x_name: "Euclidean distance"
+#       y_name: "Probability"
+#       showline_x: True
+#       showline_y: True
+#       linewidth: 2
+#       linecolor: "black"
+#       showgrid_x: True
+#       showgrid_y: False
+#       bg_color: "white"
+#       gridcolor_x: "gray"
+#       gridcolor_y: "gray"
+#       gridwidth: 1
+#       height: 1024
+#       width: 1280
+#       tickfont: 56
+#       axisfont: 56
+#       titlefont: 56
+#     }
+#     db_group {
+#       group_name: "BenchPress_directed"
+#       db_type: "SearchCandidateDatabase"
+#       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/7253878836e02d088a7f1329936d07fa0aed41bd/sample_corpus/evaluated_candidates.db"
+#     }
+#     db_group {
+#       group_name: "BenchPress"
+#       db_type: "SearchCandidateDatabase"
+#       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/30a4e26847247d9b4c992b218d11b9c05515333d/sample_corpus/evaluated_candidates.db"
+#     }
+#   }
+# }
+# evaluator {
+#   gen_distance_distribution {
+#     target: 'rodinia'
+#     generation_id: 0
+#     feature_space: 'InstCountFeatures'
+#     plot_config {
+#       x_name: "Euclidean distance"
+#       y_name: "Probability"
+#       showline_x: True
+#       showline_y: True
+#       linewidth: 2
+#       linecolor: "black"
+#       showgrid_x: True
+#       showgrid_y: False
+#       bg_color: "white"
+#       gridcolor_x: "gray"
+#       gridcolor_y: "gray"
+#       gridwidth: 1
+#       height: 1024
+#       width: 1280
+#       tickfont: 56
+#       axisfont: 56
+#       titlefont: 56
+#     }
+#     db_group {
+#       group_name: "BenchPress_directed"
+#       db_type: "SearchCandidateDatabase"
+#       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/73098aaa7627eafc55383c5a3a8e4d0f96e5ecd2/sample_corpus/evaluated_candidates.db"
+#     }
+#     db_group {
+#       group_name: "BenchPress"
+#       db_type: "SearchCandidateDatabase"
+#       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/08f01f538f4f8019b3d68c0bc3bc9f2c41faf3d4/sample_corpus/evaluated_candidates.db"
+#     }
+#   }
+# }
 evaluator {
-  gen_distance_distribution {
-    target: 'rodinia'
-    generation_id: 0
-    feature_space: 'GreweFeatures'
-    plot_config {
-      x_name: "Euclidean distance"
-      y_name: "Probability"
-      showline_x: True
-      showline_y: True
-      linewidth: 2
-      linecolor: "black"
-      showgrid_x: True
-      showgrid_y: False
-      bg_color: "white"
-      gridcolor_x: "gray"
-      gridcolor_y: "gray"
-      gridwidth: 1
-      height: 1024
-      width: 1280
-      tickfont: 56
-      axisfont: 56
-      titlefont: 56
-    }
-    db_group {
-      group_name: "BenchPress_directed"
-      db_type: "SearchCandidateDatabase"
-      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/1a7b72ae98d732b45bf2fb76bc3b8da1eb798f29/sample_corpus/evaluated_candidates.db"
-    }
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SearchCandidateDatabase"
-      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/6c454ab425e2a9eafc47da07e73b55a221d772e6/sample_corpus/evaluated_candidates.db"
-    }
-  }
-}
-evaluator {
-  gen_distance_distribution {
-    target: 'rodinia'
-    generation_id: 0
-    feature_space: 'AutophaseFeatures'
-    plot_config {
-      x_name: "Euclidean distance"
-      y_name: "Probability"
-      showline_x: True
-      showline_y: True
-      linewidth: 2
-      linecolor: "black"
-      showgrid_x: True
-      showgrid_y: False
-      bg_color: "white"
-      gridcolor_x: "gray"
-      gridcolor_y: "gray"
-      gridwidth: 1
-      height: 1024
-      width: 1280
-      tickfont: 56
-      axisfont: 56
-      titlefont: 56
-    }
-    db_group {
-      group_name: "BenchPress_directed"
-      db_type: "SearchCandidateDatabase"
-      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/7253878836e02d088a7f1329936d07fa0aed41bd/sample_corpus/evaluated_candidates.db"
-    }
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SearchCandidateDatabase"
-      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/30a4e26847247d9b4c992b218d11b9c05515333d/sample_corpus/evaluated_candidates.db"
-    }
-  }
-}
-evaluator {
-  gen_distance_distribution {
-    target: 'rodinia'
-    generation_id: 0
-    feature_space: 'InstCountFeatures'
-    plot_config {
-      x_name: "Euclidean distance"
-      y_name: "Probability"
-      showline_x: True
-      showline_y: True
-      linewidth: 2
-      linecolor: "black"
-      showgrid_x: True
-      showgrid_y: False
-      bg_color: "white"
-      gridcolor_x: "gray"
-      gridcolor_y: "gray"
-      gridwidth: 1
-      height: 1024
-      width: 1280
-      tickfont: 56
-      axisfont: 56
-      titlefont: 56
-    }
-    db_group {
-      group_name: "BenchPress_directed"
-      db_type: "SearchCandidateDatabase"
-      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/73098aaa7627eafc55383c5a3a8e4d0f96e5ecd2/sample_corpus/evaluated_candidates.db"
-    }
-    db_group {
-      group_name: "BenchPress"
-      db_type: "SearchCandidateDatabase"
-      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/08f01f538f4f8019b3d68c0bc3bc9f2c41faf3d4/sample_corpus/evaluated_candidates.db"
-    }
+  human_likeness_analysis {
+    human_or_ai_db: "/home/fivosts/Desktop/turing_results.db"
   }
 }
