@@ -166,14 +166,16 @@ def quiz():
     schedule = handler.user_cache[user_id].get("schedule", None)
     ## Introduce a little bit of randomness to dataset selection.
     dropout = np.random.RandomState().random()
-    if dropout <= 0.3:
-      ## Pick a random dataset instead.
-      dropout = True
-      dataset = schedule[np.random.RandomState().randint(0, len(schedule) - 1)]
-    else:
-      ## Pop database.
-      dropout = False
-      dataset = schedule.pop(0)
+    dataset = schedule[np.random.RandomState().randint(0, len(schedule) - 1)]
+    dropout = True
+    # if dropout <= 0.3:
+    #   ## Pick a random dataset instead.
+    #   dropout = True
+    #   dataset = schedule[np.random.RandomState().randint(0, len(schedule) - 1)]
+    # else:
+    #   ## Pop database.
+    #   dropout = False
+    #   dataset = schedule.pop(0)
     label, data = handler.databases[dataset]["label"], handler.databases[dataset]["code"]
     ## Sample datapoint.
     code = data[np.random.RandomState().randint(0, len(data) - 1)]
@@ -269,8 +271,14 @@ def start():
   print("Cookie schedule: ", schedule)
   if schedule is None:
     schedule = list(handler.databases.keys())
+    if "GitHub" in schedule:
+      new_git = (2*len(schedule) - 5) / 3 ## Github must have a 40% chance.
+      if (new_git + 1 ) / (len(schedule) + new_git) < 0.35:
+        new_git += 1
+      schedule += ["GitHub"] * int(round(new_git))
     np.random.RandomState().shuffle(schedule)
     handler.user_cache[user_id]["schedule"] = schedule
+    l.logger().info("User schedule: {}".format(schedule))
   handler.session_db.update_session(
     user_ips = user_ip,
   )
@@ -351,8 +359,9 @@ def index():
     else:
       handler.user_cache[user_id] = {}
   ## Assign a new IP anyway.
-  user_ip = flask.request.remote_addr
+  user_ip = flask.request.access_route[0]
   handler.user_cache[user_id]["user_ip"] = user_ip
+  l.logger().warn("User login user id: {}, user_ip: {}".format(user_id, user_ip))
   return resp
 
 def serve(databases: typing.Dict[str, typing.Tuple[str, typing.List[str]]],

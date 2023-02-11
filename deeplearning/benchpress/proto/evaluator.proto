@@ -310,4 +310,7 @@ message PlotterConfiguration {
 
   optional int32 x_tickangle  = 25;
   optional string violinmode  = 26;
+
+  optional bool showticklabels_x = 27;
+  optional bool showticklabels_y = 28;
 }

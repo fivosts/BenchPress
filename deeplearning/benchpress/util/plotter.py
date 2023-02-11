@@ -61,8 +61,10 @@ def _get_generic_figure(**kwargs) -> go.Layout:
   showgrid_y  = kwargs.get('showgrid_y',  None)
   linewidth   = kwargs.get('linewidth',   None)
   gridwidth   = kwargs.get('gridwidth',   None)
-  margin      = kwargs.get('margin', {'l': 40, 'r': 45, 't': 75, 'b': 0})
+  margin      = kwargs.get('margin', {'l': 40, 'r': 45, 't': 95, 'b': 0})
   x_tickangle = kwargs.get('x_tickangle', None)
+  showticklabels_x = kwargs.get('showticklabels_x', True)
+  showticklabels_y = kwargs.get('showticklabels_y', True)
 
   # Legend
   legend_x   = kwargs.get('legend_x', 1.0)
@@ -85,7 +87,9 @@ def _get_generic_figure(**kwargs) -> go.Layout:
              gridwidth = gridwidth,
              gridcolor = gridcolor_y,
              tickfont  = dict(size = tickfont),
-             titlefont = dict(size = axisfont)
+             titlefont = dict(size = axisfont),
+             showticklabels = showticklabels_y,
+             rangemode="tozero"
           )
   xaxis = dict(
             title     = x_name,     showgrid = showgrid_x,
@@ -94,6 +98,7 @@ def _get_generic_figure(**kwargs) -> go.Layout:
             gridcolor = gridcolor_x,
             tickfont  = dict(size = tickfont),
             titlefont = dict(size = axisfont),
+            showticklabels = showticklabels_x,
           )
   layout = go.Layout(
     plot_bgcolor = bg_color,
@@ -221,7 +226,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
         mode = kwargs.get('mode', 'markers'),
         showlegend = kwargs.get('showlegend', True),
         opacity    = kwargs.get('opacity', 1.0),
-        marker     = next(miter) if miter else None,
+        marker     = next(miter) if miter else {'size': 18},
         text       = names,
       )
     )
