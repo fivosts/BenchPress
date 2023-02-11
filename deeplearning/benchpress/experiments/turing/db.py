@@ -224,6 +224,16 @@ class TuringDB(sqlutil.Database):
     with self.Session() as s:
       return s.query(TuringSession.prediction_distr)
 
+  def get_user_prediction_distr(self) -> typing.Dict[typing.List[typing.Dict[str, typing.Any]]]:
+    """
+    Group users to eng/non-eng, each category has a list of prediction_distr one per user.
+    """
+    with self.Session() as s:
+      return {
+        "engineer": s.query(UserSession).filter_by(engineer = 1).prediction_distr,
+        "non-engineer": s.query(UserSession).filter_by(engineer = 0).prediction_distr,
+      }
+
   def is_engineer(self, user_id: str) -> bool:
     """
     Return bool value of engineer status.
