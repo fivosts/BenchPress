@@ -48,19 +48,20 @@ message evaluators {
     PCASamplesFeatures        pca_samples_features        = 7;
     FeaturesDistribution      features_distribution       = 8;
     HumanLikeness             human_likeness              = 9;
-    CompMemGrewe              comp_mem_grewe              = 10;
-    TopKCLDrive               topk_cldrive                = 11;
-    MutecVsBenchPress         mutec_vs_benchpress         = 12;
-    SRCIROR_srcVsBenchPress   srciror_src_vs_benchpress   = 13;
-    SRCIROR_IRVsBenchPress    srciror_ir_vs_benchpress    = 14;
-    GenerateCLSmith           generate_clsmith            = 15;
-    GreweTopKCSV              grewe_top_k_csv             = 16;
-    GreweCSV                  grewe_csv                   = 17;
-    TrainGrewe                train_grewe                 = 18;
-    FeatureSpaceCovLabel      feature_space_cov_label     = 19;
-    FeatureSpaceCovGroup      feature_space_cov_group     = 20;
-    AnalyzeBeamSearch         analyze_beam_search         = 21;
-    GenDistanceDistribution   gen_distance_distribution   = 22;
+    HumanLikenessAnalysis     human_likeness_analysis     = 10;
+    CompMemGrewe              comp_mem_grewe              = 11;
+    TopKCLDrive               topk_cldrive                = 12;
+    MutecVsBenchPress         mutec_vs_benchpress         = 13;
+    SRCIROR_srcVsBenchPress   srciror_src_vs_benchpress   = 14;
+    SRCIROR_IRVsBenchPress    srciror_ir_vs_benchpress    = 15;
+    GenerateCLSmith           generate_clsmith            = 16;
+    GreweTopKCSV              grewe_top_k_csv             = 17;
+    GreweCSV                  grewe_csv                   = 18;
+    TrainGrewe                train_grewe                 = 19;
+    FeatureSpaceCovLabel      feature_space_cov_label     = 20;
+    FeatureSpaceCovGroup      feature_space_cov_group     = 21;
+    AnalyzeBeamSearch         analyze_beam_search         = 22;
+    GenDistanceDistribution   gen_distance_distribution   = 23;
   }
 }
 
@@ -257,6 +258,12 @@ message GenDistanceDistribution {
   optional string               feature_space = 3;
   repeated DatabasesGroups      db_group      = 4;
   optional PlotterConfiguration plot_config   = 5;
+}
+
+// 23
+message HumanLikenessAnalysis {
+  optional string              human_or_ai_db = 1;
+  optional PlotterConfiguration plot_config   = 2;
 }
 
 // Define a group of Databases that will be considered jointly.
