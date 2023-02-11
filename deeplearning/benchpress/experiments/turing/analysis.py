@@ -28,7 +28,7 @@ def HumanLikenessAnalysis(**kwargs) -> None:
   Analyse Human or AI experiment.
   """
   workspace = kwargs.get("workspace_path")
-  str_path = kwargs.get("human_likeness_db")
+  str_path = kwargs.get("human_likeness_data")
   path = pathlib.Path(str_path).resolve()
   if not path.exists():
     raise FileNotFoundError(path)
