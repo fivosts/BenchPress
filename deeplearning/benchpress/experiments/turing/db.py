@@ -217,6 +217,13 @@ class TuringDB(sqlutil.Database):
     else:
       return None, total
 
+  def get_prediction_distr(self) -> typing.Dict[str, typing.Any]:
+    """
+    Return turing_session.prediction_distr
+    """
+    with self.Session() as s:
+      return s.query(TuringSession.prediction_distr)
+
   def is_engineer(self, user_id: str) -> bool:
     """
     Return bool value of engineer status.
