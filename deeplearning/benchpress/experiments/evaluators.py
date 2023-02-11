@@ -41,6 +41,7 @@ from deeplearning.benchpress.experiments import mutec
 from deeplearning.benchpress.experiments import srciror
 from deeplearning.benchpress.experiments import workers
 from deeplearning.benchpress.experiments.grewe import api as grewe_api
+from deeplearning.benchpress.experiments.turing import analysis
 
 from deeplearning.benchpress.util import logging as l
 
@@ -453,6 +454,12 @@ def AssertIfValid(config: evaluator_pb2.Evaluation):
         lambda x: x > 0,
         "top-K factor must be positive",
       )
+    elif ev.HasField("human_likeness_analysis"):
+      ### KAverageScore
+      # Generic Fields
+      pbutil.AssertFieldIsSet(config, "workspace")
+      # Human or AI database.
+      pbutil.AssertFieldIsSet(ev.human_likeness_analysis, "human_or_ai_db")
     elif ev.HasField("log_file"):
       ### LogFile
       # DB groups
@@ -867,6 +874,7 @@ def main(config: evaluator_pb2.Evaluation):
     evaluator_pb2.PCASamplesFeatures        : benchmark_analysis.PCASamplesFeatures,
     evaluator_pb2.FeaturesDistribution      : benchmark_analysis.FeaturesDistribution,
     evaluator_pb2.HumanLikeness             : benchmark_analysis.HumanLikeness,
+    evaluator_pb2.HumanLikenessAnalysis     : analysis.HumanLikenesssAnalysis,
     evaluator_pb2.CompMemGrewe              : comp_vs_mem.CompMemGrewe,
     evaluator_pb2.TopKCLDrive               : cldrive.TopKCLDrive,
     evaluator_pb2.MutecVsBenchPress         : mutec.MutecVsBenchPress,
@@ -1028,6 +1036,14 @@ def main(config: evaluator_pb2.Evaluation):
           size_limit = dbs.size_limit if dbs.HasField("size_limit") else None
           db_cache[key] = DBGroup(dbs.group_name, dbs.db_type, dbs.database, tokenizer = kw_args['tokenizer'], size_limit = size_limit)
         kw_args['db_groups'].append(db_cache[key])
+      # Gather plotter configuration
+      if sev.HasField("plot_config"):
+        kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)
+
+    elif ev.HasField("human_likeness_analysis"):
+      sev = ev.human_likeness_analysis
+      # Pass human or AI DB to kwargs.
+      kw_args["human_likeness_data"] = sev.human_or_ai_db
       # Gather plotter configuration
       if sev.HasField("plot_config"):
         kw_args['plot_config'] = pbutil.ToJson(sev.plot_config)

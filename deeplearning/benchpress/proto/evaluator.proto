@@ -262,7 +262,7 @@ message GenDistanceDistribution {
 
 // 23
 message HumanLikenessAnalysis {
-  optional string              human_or_ai_db = 1;
+  optional string               human_or_ai_db = 1;
   optional PlotterConfiguration plot_config   = 2;
 }
 
