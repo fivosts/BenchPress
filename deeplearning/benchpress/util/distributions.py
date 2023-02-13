@@ -192,6 +192,20 @@ class GenericDistribution(Distribution):
   to perform statistics on small samples.
   """
   @property
+  def population_size(self) -> int:
+    """
+    Size of distribution's population.
+    """
+    return len(self.sample_length)
+
+  @property
+  def population(self) -> typing.List[int]:
+    """
+    Get population.
+    """
+    return self.samples
+
+  @property
   def min(self) -> int:
     return self.min_idx
 
@@ -201,20 +215,31 @@ class GenericDistribution(Distribution):
 
   @property
   def average(self) -> float:
-    if self.avg:
+    if self.avg is not None:
       return self.avg
     else:
+      self.avg = sum(self.population) / self.population_size
+      return self.avg
+      """
       avg = 0.0
       for idx, p in enumerate(self.distribution):
         avg += p * (idx + self.min_idx)
       self.avg = avg
       return self.avg
+      """
 
   @property
   def median(self) -> int:
-    if self.med:
+    if self.med is not None:
       return self.med
     else:
+      s = sorted(self.population)
+      if self.population_size % 2 == 1:
+        self.med = s[self.population_size // 2]
+      else:
+        self.med = 0.5 * (s[(self.population_size // 2) - 1] + s[self.population_size // 2])
+      return self.med
+      """
       l_idx, r_idx = 0, len(self.distribution)
       l,r = self.distribution[l_idx], None
 
@@ -243,6 +268,22 @@ class GenericDistribution(Distribution):
       else:
         self.med = (l+r+2*self.min_idx) / 2
       return self.med
+      """
+
+  @property
+  def variance(self) -> float:
+    """
+    Calculate variance of population.
+    """
+    if self.var is not None:
+      return self.var
+    else:
+      self.var = sum([(x - self.average)**2 for x in self.population]) / self.population_size
+      return self.var
+
+  @property
+  def standard_deviation(self) -> float:
+    return math.sqrt(self.variance)
 
   def __init__(self, samples: typing.List[int], log_path: pathlib.Path, set_name: str):
     super(GenericDistribution, self).__init__(
@@ -252,7 +293,8 @@ class GenericDistribution(Distribution):
       set_name        = set_name,
     )
     self.min_idx, self.max_idx = math.inf, -math.inf
-    self.avg, self.med = None, None
+    self.avg, self.med, self.var = None, None, None
+    self.samples = samples
     total = len(samples)
     if len(samples) > 0:
       for s in samples:
@@ -343,6 +385,20 @@ class GenericDistribution(Distribution):
     mul.min_idx = l_idx
     mul.max_idx = r_idx
     return mul
+
+  def cov(self, d: "GenericDistribution") -> float:
+    """
+    Compute covariance of two distributions.
+    """
+    if self.population_size != d.population_size:
+      raise ValueError("Covariance and correlation can only be computed to 1-1 equal-sized distributions. Or you could take two equal-sized samples.")
+    return [(x - self.average)*(y - d.average) for (x, y) in zip(self.population, d.population)] / self.population_size
+
+  def corr(self, d: "GenericDistribution") -> float:
+    """
+    Compute correlation factor between two distributions.
+    """
+    return self.cov(d) / (self.standard_deviation * d.standard_deviation)
 
   def __ge__(self, v: int) -> float:
     """
