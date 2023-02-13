@@ -196,7 +196,7 @@ class GenericDistribution(Distribution):
     """
     Size of distribution's population.
     """
-    return len(self.sample_length)
+    return self.sample_length
 
   @property
   def population(self) -> typing.List[int]:
