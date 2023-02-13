@@ -69,7 +69,10 @@ def HumanLikenessAnalysis(**kwargs) -> None:
     )
   plotter.GrouppedBars(
     {
-      label: [labels["engineer"][label][0], labels["engineer"][label][1]]
+      label: [
+        labels["engineer"][label][0] + labels["non-engineer"][label][0],
+        labels["engineer"][label][1] + labels["non-engineer"][label][1]
+      ]
       for label in labels["engineer"].keys()
     },
     plot_name = "Total_scores_per_set",
@@ -132,16 +135,16 @@ def HumanLikenessAnalysis(**kwargs) -> None:
             correlation_data[label][ai_set]['data'].append(dp)
             correlation_data[label][ai_set]['names'].append("")
 
-  cov_corrs = {
-    'covariance': ([], []),
-    'correlation': ([], []),
-  }
   for label, ai_sets in correlation_data.items():
     correlation_data = {
       "x=y": {
         'data': [[x/100, x/100] for x in range(0, 105, 5)],
         'names': [[""] for x in range(0, 105, 5)]
       }
+    }
+    cov_corrs = {
+      'covariance': ([], []),
+      'correlation': ([], []),
     }
     ai_sets.update(correlation_data)
     """
