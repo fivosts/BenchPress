@@ -33,7 +33,6 @@ def HumanLikenessAnalysis(**kwargs) -> None:
   path = pathlib.Path(str_path).resolve()
   if not path.exists():
     raise FileNotFoundError(path)
-  
   data = db.TuringDB(url = "sqlite:///{}".format(path), must_exist = True)
 
   """
@@ -65,8 +64,8 @@ def HumanLikenessAnalysis(**kwargs) -> None:
         labels[label]["AI"][1].append(values["predictions"]["robot"])
     plotter.GrouppedBars(
       labels[label],
-      plot_name = "Engineers_scores_per_set",
-      path = workspace,
+      plot_name = "{}_scores_per_set".format(label),
+      path = workspace / "scores_per_set" / label,
     )
   plotter.GrouppedBars(
     {
@@ -74,7 +73,7 @@ def HumanLikenessAnalysis(**kwargs) -> None:
       for label in labels["engineer"].keys()
     },
     plot_name = "Total_scores_per_set",
-    path = workspace,
+    path = workspace / "scores_per_set",
   )
   unique_datasets = set(prediction_distr["engineer"].keys())
   unique_datasets.update(set(prediction_distr["non-engineer"].keys()))
@@ -91,11 +90,10 @@ def HumanLikenessAnalysis(**kwargs) -> None:
           int(100 * user[dset]["predictions"]["human"] / (user[dset]["predictions"]["robot"] + user[dset]["predictions"]["human"]))
           for user in user_prediction_distr[label] if dset in user
         ],
-        log_path = workspace,
+        log_path = workspace / label / dset,
         set_name = "{}_{}_distrib".format(label, dset)
       )
       distrs[label][dset].plot()
-
   """
   2. Conditioned probabilities:
     a. Score distribution on robots, given score on human.
@@ -105,6 +103,7 @@ def HumanLikenessAnalysis(**kwargs) -> None:
 
 
   """
+  3. Measure correlation between score on human and score on GitHub.
   Plot scatter:
   x axis: Github score
   y axis: AI-dataset score.
@@ -136,7 +135,7 @@ def HumanLikenessAnalysis(**kwargs) -> None:
     plotter.GroupScatterPlot(
       ai_sets,
       "AI_vs_Human_correlation",
-      path = workspace,
+      path = workspace / "score_correlation" / label,
     )
 
   return
