@@ -392,7 +392,7 @@ class GenericDistribution(Distribution):
     """
     if self.population_size != d.population_size:
       raise ValueError("Covariance and correlation can only be computed to 1-1 equal-sized distributions. Or you could take two equal-sized samples.")
-    return [(x - self.average)*(y - d.average) for (x, y) in zip(self.population, d.population)] / self.population_size
+    return sum([(x - self.average)*(y - d.average) for (x, y) in zip(self.population, d.population)]) / self.population_size
 
   def corr(self, d: "GenericDistribution") -> float:
     """

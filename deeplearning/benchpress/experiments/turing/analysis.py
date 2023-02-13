@@ -131,11 +131,84 @@ def HumanLikenessAnalysis(**kwargs) -> None:
           else:
             correlation_data[label][ai_set]['data'].append(dp)
             correlation_data[label][ai_set]['names'].append("")
+
+  cov_corrs = {
+    'covariance': ([], []),
+    'correlation': ([], []),
+  }
   for label, ai_sets in correlation_data.items():
+    correlation_data = {
+      "x=y": {
+        'data': [[x/100, x/100] for x in range(0, 105, 5)],
+        'names': [[""] for x in range(0, 105, 5)]
+      }
+    }
+    ai_sets.update(correlation_data)
+    """
+    Print the distribution of scores on AI given scores on Github.
+    """
     plotter.GroupScatterPlot(
       ai_sets,
       "AI_vs_Human_correlation",
-      path = workspace / "score_correlation" / label,
+      path = workspace / "score_correlation" / label / "scatter",
+      x_name = "Score on GitHub",
+      y_name = "Score on AI",
+      **kwargs,
     )
-
+    averages = {}
+    for name, values in ai_sets.items():
+      if name == "x=y":
+        continue
+      averages[name] = {}
+      for dp in values["data"]:
+        x, y = dp
+        if x not in averages[name]:
+          averages[name][x] = [y]
+        else:
+          averages[name][x].append(y)
+      averages[name] = [[x, sum(y) / len(y)] for x, y in averages[name].items()]
+      averages[name] = sorted(averages[name], key = lambda x: x[0])
+    """
+    Print the average distribution of scores in AI given scores on Github.
+    """
+    x = [[x[0] for x in data] for dname, data in averages.items()]
+    y = [[y[1] for y in data] for dname, data in averages.items()]
+    names = list(averages.keys())
+    plotter.MultiScatterLine(
+      x = x,
+      y = y,
+      names = names,
+      plot_name = "Avg_AI_vs_Human_correlation",
+      path = workspace / "score_correlation" / label / "scatter_avg",
+      x_name = "Score on GitHub",
+      y_name = "Avg Score on AI",
+      **kwargs,
+    )
+    """
+    Find the covariance and correlation between score on each AI and score on GitHub.
+    """
+    for xx, yy, n in zip(x, y, names):
+      gitd = distributions.GenericDistribution(
+        [int(100*i) for i in xx],
+        workspace / "score_correlation" / label / "distr",
+        set_name = "score_on_git_with_{}_distr".format(n)
+      )
+      aid = distributions.GenericDistribution(
+        [int(i*100) for i in yy],
+        workspace / "score_correlation" / label / "distr",
+        set_name = "score_on_{}_distr".format(n)
+      )
+      gitd.plot()
+      aid.plot()
+      (aid - gitd).plot()
+      cov_corrs['covariance'][0].append(n)
+      cov_corrs['covariance'][1].append(gitd.cov(aid))
+      cov_corrs['correlation'][0].append(n)
+      cov_corrs['correlation'][1].append(gitd.corr(aid))
+    plotter.GrouppedBars(
+      cov_corrs,
+      plot_name = "Cov_Corr_AI_vs_Human",
+      path = workspace / "score_correlation" / label / "stats",
+      **kwargs,
+    )
   return
