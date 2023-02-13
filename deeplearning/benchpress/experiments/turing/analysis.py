@@ -102,4 +102,41 @@ def HumanLikenessAnalysis(**kwargs) -> None:
     b. Score distribution on human, given score on robots.
     c. Score distribution on human and robots, given total ratio of human/robot selections.
   """
+
+
+  """
+  Plot scatter:
+  x axis: Github score
+  y axis: AI-dataset score.
+
+  One datapoint: One user that has given answers to both Github and AI-dataset.
+  """
+  ai_datasets = set([x for x in unique_datasets if x != "GitHub"])
+  correlation_data = {
+    "engineer": {},
+    "non-engineer": {},
+  }
+  for label in labels.keys():
+    for user in user_prediction_distr[label]:
+      for ai_set in ai_datasets:
+        if ai_set in user and "GitHub" in user:
+          dp = [
+            user["GitHub"]["predictions"]["human"] / (user["GitHub"]["predictions"]["human"] + user["GitHub"]["predictions"]["robot"]),
+            user[ai_set]["predictions"]["robot"] / (user[ai_set]["predictions"]["robot"] + user[ai_set]["predictions"]["human"])
+          ]
+          if ai_set not in correlation_data[label]:
+            correlation_data[label][ai_set] = {
+              'data': [dp],
+              'names': [""],
+            }
+          else:
+            correlation_data[label][ai_set]['data'].append(dp)
+            correlation_data[label][ai_set]['names'].append("")
+  for label, ai_sets in correlation_data.items():
+    plotter.GroupScatterPlot(
+      ai_sets,
+      "AI_vs_Human_correlation",
+      path = workspace,
+    )
+
   return
