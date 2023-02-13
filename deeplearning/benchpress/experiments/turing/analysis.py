@@ -67,17 +67,17 @@ def HumanLikenessAnalysis(**kwargs) -> None:
       plot_name = "{}_scores_per_set".format(label),
       path = workspace / "scores_per_set" / label,
     )
-  plotter.GrouppedBars(
-    {
-      label: [
-        labels["engineer"][label][0] + labels["non-engineer"][label][0],
-        labels["engineer"][label][1] + labels["non-engineer"][label][1]
-      ]
-      for label in labels["engineer"].keys()
-    },
-    plot_name = "Total_scores_per_set",
-    path = workspace / "scores_per_set",
-  )
+  # plotter.GrouppedBars(
+  #   {
+  #     label: [
+  #       labels["engineer"][label][0] + labels["non-engineer"][label][0],
+  #       labels["engineer"][label][1] + labels["non-engineer"][label][1]
+  #     ]
+  #     for label in labels["engineer"].keys()
+  #   },
+  #   plot_name = "Total_scores_per_set",
+  #   path = workspace / "scores_per_set",
+  # )
   unique_datasets = set(prediction_distr["engineer"].keys())
   unique_datasets.update(set(prediction_distr["non-engineer"].keys()))
   ## Distributions
@@ -93,7 +93,7 @@ def HumanLikenessAnalysis(**kwargs) -> None:
           int(100 * user[dset]["predictions"]["human"] / (user[dset]["predictions"]["robot"] + user[dset]["predictions"]["human"]))
           for user in user_prediction_distr[label] if dset in user
         ],
-        log_path = workspace / label / dset,
+        log_path = workspace / "distributions" / label / dset,
         set_name = "{}_{}_distrib".format(label, dset)
       )
       distrs[label][dset].plot()
