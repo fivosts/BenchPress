@@ -190,7 +190,12 @@ def HumanLikenessAnalysis(**kwargs) -> None:
     """
     Find the covariance and correlation between score on each AI and score on GitHub.
     """
-    for xx, yy, n in zip(x, y, names):
+    for name, values in ai_sets.items():
+      if name == "x=y":
+        continue
+      xx = [x for x, _ in values["data"]]
+      yy = [y for _, y in values["data"]]
+      n = name
       gitd = distributions.GenericDistribution(
         [int(100*i) for i in xx],
         workspace / "score_correlation" / label / "distr",
