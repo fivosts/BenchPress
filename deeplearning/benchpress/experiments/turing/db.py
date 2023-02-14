@@ -15,6 +15,7 @@
 """
 Evaluation script for kernel execution using cldrive or similar drivers.
 """
+import pathlib
 import datetime
 import sqlite3
 import typing
@@ -30,10 +31,23 @@ from deeplearning.benchpress.util import crypto
 from deeplearning.benchpress.util import logging as l
 
 from absl import flags
+from absl import app as absl_app
 
 Base = declarative.declarative_base()
 
 FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+  "out_results_db",
+  None,
+  "Set path to out results DB."
+)
+
+flags.DEFINE_string(
+  "in_results_db",
+  None,
+  "Set comma-separated paths for input DBs to be merged."
+)
 
 class QuizResult(Base, sqlutil.ProtoBackedMixin):
   """
@@ -199,6 +213,27 @@ class TuringDB(sqlutil.Database):
   def __init__(self, url: str, must_exist: bool = False):
     super(TuringDB, self).__init__(url, Base, must_exist = must_exist)
     self._status_cache = None
+
+  def get_quizzes(self) -> typing.List[QuizResult]:
+    """
+    Return a list of all quizzes.
+    """
+    with self.Session() as s:
+      return s.query(QuizResult).all()
+
+  def get_users(self) -> typing.List[UserSession]:
+    """
+    Return a list of all user sessions.
+    """
+    with self.Session() as s:
+      return s.query(UserSession).all()
+
+  def get_session(self) -> TuringSession:
+    """
+    Return DB's session.
+    """
+    with self.Session() as s:
+      return s.query(TuringSession).first()
 
   def get_user_accuracy(self, user_id: str, min_attempts: int) -> float:
     """
@@ -444,3 +479,133 @@ class TuringDB(sqlutil.Database):
       }
     )
     return 0
+
+def merge_quiz(in_dbs: typing.List[TuringDB], out_db: TuringDB) -> None:
+  data = []
+  for db in in_dbs:
+    data += db.get_quizzes()
+  with out_db.Session(commit = True) as s:
+    for dp in data:
+      s.add(
+        QuizResult(
+          **{
+            "dataset"    : dp.dataset,
+            "code"       : dp.code,
+            "label"      : dp.label,
+            "prediction" : dp.prediction,
+            "user_id"    : dp.user_id,
+            "user_ip"    : dp.user_ip,
+            "engineer"   : dp.engineer,
+            "date_added" : dp.date_added,
+          }
+        )
+      )
+  return
+
+def merge_user(in_dbs: typing.List[TuringDB], out_db: TuringDB) -> None:
+  data = []
+  for db in in_dbs:
+    data += db.get_users()
+  with out_db.Session(commit = True) as s:
+    for dp in data:
+      s.add(
+        UserSession(
+          **{
+            "user_id"          : dp.user_id,
+            "user_ip"          : dp.user_ip,
+            "engineer"         : dp.engineer,
+            "schedule"         : dp.schedule,
+            "dataset_distr"    : dp.dataset_distr,
+            "label_distr"      : dp.label_distr,
+            "prediction_distr" : dp.prediction_distr,
+            "session"          : dp.session,
+            "num_predictions"  : dp.num_predictions,
+            "date_added"       : dp.date_added,
+          }
+        )
+      )
+  return
+
+  id               : int = sql.Column(sql.Integer,    primary_key = True)
+  # Total number of participants by unique ids.
+  num_user_ids     : int = sql.Column(sql.Integer, nullable = False)
+  # A list of all user IDs.
+  user_ids         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Ips of one user.
+  num_user_ips     : int = sql.Column(sql.Integer, nullable = False)
+  # A list of all user IPs.
+  user_ips         : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Engineers distribution
+  engineer_distr   : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Total predictions made per engineer and non engineer
+  num_predictions  : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Predictions distribution per engineer and non engineer per dataset with accuracies.
+  prediction_distr : str = sql.Column(sqlutil.ColumnTypes.UnboundedUnicodeText(), nullable = False)
+  # Date of assigned session.
+  date_added       : datetime.datetime = sql.Column(sql.DateTime, nullable=False)
+
+
+
+def merge_session(in_dbs: typing.List[TuringDB], out_db: TuringDB) -> None:
+  data = None
+  for db in in_dbs:
+    new_s = db.get_session()
+    if data is None:
+      data = new_s
+    else:
+      data.num_user_ids = data.num_user_ids + new_s.num_user_ids
+      data.user_ids = json.dumps(json.loads(data.user_ids) + json.loads(new_s.user_ids))
+      data.num_user_ips = data.num_user_ips + new_s.num_user_ips
+      data.user_ips = json.dumps(json.loads(data.user_ips) + json.loads(new_s.user_ips))
+      ## engineer_distr
+      e1, e2 = json.loads(data.engineer_distr), json.loads(new_s.engineer_distr)
+      e1['engineer'] += e2['engineer']
+      e1['non-engineer'] += e2['non-engineer']
+      data.engineer_distr = json.dumps(e1)
+      ## num_predictions.
+      e1, e2 = json.loads(data.num_predictions), json.loads(new_s.num_predictions)
+      x1, x2 = json.loads(data.prediction_distr), json.loads(new_s.prediction_distr)
+      out = {}
+      out2 = {}
+      keys = {"GitHub", "BenchPress_directed", "CLgen", "CLSmith", "BenchPress"}
+      for l in {"engineer", "non-engineer"}:
+        out[l] = {}
+        out2[l] = {}
+        for k in keys:
+          out[l][k] = 0
+          out2[l][k] = {
+            "label": "human" if k == "GitHub" else "robot",
+            "predictions": {
+              "human": 0,
+              "robot": 0,
+            }
+          }
+          if k in e1[l]:
+            out[l][k] += e1[l][k]
+            out2[l][k]["predictions"]["human"] += x1[l][k]["predictions"]["human"]
+            out2[l][k]["predictions"]["robot"] += x1[l][k]["predictions"]["robot"]
+          if k in e2[l]:
+            out[l][k] += e2[l][k]
+            out2[l][k]["predictions"]["human"] += x2[l][k]["predictions"]["human"]
+            out2[l][k]["predictions"]["robot"] += x2[l][k]["predictions"]["robot"]
+      data.num_predictions = json.dumps(out)
+      data.prediction_distr = json.dumps(out2)
+  return
+
+def merge_results(in_dbs: typing.List[TuringDB], out_db: TuringDB):
+  merge_quiz(in_dbs, out_db)
+  merge_user(in_dbs, out_db)
+  merge_session(in_dbs, out_db)
+  return
+
+def main(*args, **kwargs) -> None:
+  if FLAGS.out_results_db is None:
+    raise ValueError("Please set out results db path")
+  if FLAGS.in_results_db is None:
+    raise ValueError("Please set path for input DBs")
+  out_db = TuringDB(url = "sqlite:///{}".format(pathlib.Path(FLAGS.out_results_db).resolve()))
+  in_dbs = [TuringDB(url = "sqlite:///{}".format(pathlib.Path(p).resolve()), must_exist = True) for p in FLAGS.in_results_db.split(',')]
+  merge_results(in_dbs, out_db)
+
+if __name__ == "__main__":
+  absl_app.run(main)
