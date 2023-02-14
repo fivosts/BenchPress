@@ -590,6 +590,21 @@ def merge_session(in_dbs: typing.List[TuringDB], out_db: TuringDB) -> None:
             out2[l][k]["predictions"]["robot"] += x2[l][k]["predictions"]["robot"]
       data.num_predictions = json.dumps(out)
       data.prediction_distr = json.dumps(out2)
+  with out_db.Session(commit = True) as s:
+    s.add(
+      TuringSession(
+        **{
+          "num_user_ids"     : data.num_user_ids,
+          "user_ids"         : data.user_ids,
+          "num_user_ips"     : data.num_user_ips,
+          "user_ips"         : data.user_ips,
+          "engineer_distr"   : data.engineer_distr,
+          "num_predictions"  : data.num_predictions,
+          "prediction_distr" : data.prediction_distr,
+          "date_added"       : data.date_added,
+        }
+      )
+    )
   return
 
 def merge_results(in_dbs: typing.List[TuringDB], out_db: TuringDB):
