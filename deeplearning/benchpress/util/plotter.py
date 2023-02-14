@@ -203,7 +203,8 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
   groups = {
     'group_name': {
       'data': [[xi, yi], ...],
-      'names': [ni, ...]
+      'names': [ni, ...],
+      'frequency': [1, 1, 2, ...] if you want scatter bubbles based on frequency.
     }
   }
   """
@@ -218,20 +219,80 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
     if len(values['data']) == 0:
       continue
     feats = np.array(values['data'])
-    names = values['names']
+    names = values['names'] 
     fig.add_trace(
       go.Scatter(
         x = feats[:,0], y = feats[:,1],
         name = group,
         mode = kwargs.get('mode', 'markers'),
-        showlegend = kwargs.get('showlegend', True),
-        opacity    = kwargs.get('opacity', 1.0),
-        marker     = next(miter) if miter else {'size': 18},
-        text       = names,
+        showlegend  = kwargs.get('showlegend', True),
+        opacity     = kwargs.get('opacity', 1.0),
+        marker      = next(miter) if miter else ({'size': 18} if 'frequency' not in values else None),
+        marker_size = [14*x for x in values['frequency']] if 'frequency' in values else None,
+        text        = names,
       )
     )
   _write_figure(fig, plot_name, path, **kwargs)
   return
+
+def SliderGroupScatterPlot(steps        : typing.List[typing.Dict[str, typing.Dict[str, list]]],
+                           plot_name    : str,
+                           path         : pathlib.Path = None,
+                           **kwargs,
+                           ) -> None:
+  fig = _get_generic_figure(**kwargs)
+  print(len(steps.keys()))
+  for step, step_data in steps.items():
+    for group, values in step_data.items():
+      if len(values['data']) == 0:
+        fig.add_trace(
+          go.Scatter(
+            visible = False,
+            x = [], y = [],
+            name = group,
+          )
+        )
+      else:
+        feats = np.array(values['data'])
+        names = values['names']
+        fig.add_trace(
+          go.Scatter(
+            visible = False,
+            x = feats[:,0], y = feats[:,1],
+            name = group,
+            mode = kwargs.get('mode', 'markers'),
+            showlegend  = kwargs.get('showlegend', True),
+            opacity     = kwargs.get('opacity', 1.0),
+            marker_size = [14*x for x in values['frequency']] if 'frequency' in values else None,
+            text        = names,
+          )
+        )
+  print(len(fig.data))
+  fig.data[0].visible = True
+  fig.data[1].visible = True
+  fig.data[2].visible = True
+  fig.data[3].visible = True
+  fig.data[4].visible = True
+  slider_steps = []
+  for i in range(len(steps.keys())):
+    step = dict(
+      method = 'update',
+      args = [
+        {'visible': [False] * len(fig.data)},
+        {"title": "Users with total predictions >= {}".format(i+2)}
+      ]
+    )
+    step["args"][0]["visible"][i*5] = True
+    step["args"][0]["visible"][i*5 + 1] = True
+    step["args"][0]["visible"][i*5 + 2] = True
+    step["args"][0]["visible"][i*5 + 3] = True
+    step["args"][0]["visible"][i*5 + 4] = True
+    slider_steps.append(step)
+  sliders = [dict(steps = slider_steps)]
+  fig.update_layout(sliders = sliders)
+  _write_figure(fig, plot_name, path, **kwargs)
+  return
+
 
 def FrequencyBars(x         : np.array,
                   y         : np.array,
@@ -321,6 +382,60 @@ def GrouppedBars(groups    : typing.Dict[str, typing.Tuple[typing.List, typing.L
         textfont = dict(color = "white", size = 140),
       )
     )
+  _write_figure(fig, plot_name, path, **kwargs)
+  return
+
+def SliderGrouppedBars(steps     : typing.Dict[int, typing.Dict[str, typing.Tuple[typing.List, typing.List]]],
+                       plot_name : str,
+                       text      : typing.List[str] = None,
+                       path      : pathlib.Path = None,
+                       **kwargs,
+                       ) -> None:
+  """
+  Similar to LogitsStepsDistrib but more generic.
+  Plots groups of bars.
+
+  Groups must comply to the following format:
+  groups = {
+    'group_name': ([], [])
+  }
+  """
+  # colors
+  fig = _get_generic_figure(**kwargs)
+
+  for step_id, step_data in steps.items():
+    palette = itertools.cycle(px.colors.qualitative.T10)
+    print(step_id)
+    print(step_data.keys())
+    for group, (x, y) in step_data.items():
+      fig.add_trace(
+        go.Bar(
+          visible = False,
+          name = str(group),
+          x = x,
+          y = [(0.0+i if i == 0 else i) for i in y],
+          marker_color = next(palette),
+          textposition = kwargs.get('textposition', 'inside'),
+          text = text,
+          # text = ["" if i < 100 else "*" for i in y],
+          textfont = dict(color = "white", size = 140),
+        )
+      )
+  print(len(fig.data))
+  fig.data[0].visible = True
+  slider_steps = []
+  for i in range(len(steps.keys())):
+    step = dict(
+      method = 'update',
+      args = [
+        {'visible': [False] * len(fig.data)},
+        {"title": "Users with total predictions >= {}".format(i+2)}
+      ]
+    )
+    step["args"][0]["visible"][i] = True
+    slider_steps.append(step)
+  sliders = [dict(steps = slider_steps)]
+  fig.update_layout(sliders = sliders)
   _write_figure(fig, plot_name, path, **kwargs)
   return
 

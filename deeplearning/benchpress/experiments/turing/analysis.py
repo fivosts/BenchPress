@@ -104,7 +104,6 @@ def HumanLikenessAnalysis(**kwargs) -> None:
     c. Score distribution on human and robots, given total ratio of human/robot selections.
   """
 
-
   """
   3. Measure correlation between score on human and score on GitHub.
   Plot scatter:
@@ -114,44 +113,66 @@ def HumanLikenessAnalysis(**kwargs) -> None:
   One datapoint: One user that has given answers to both Github and AI-dataset.
   """
   ai_datasets = set([x for x in unique_datasets if x != "GitHub"])
-  correlation_data = {
-    "engineer": {},
-    "non-engineer": {},
-  }
-  for label in labels.keys():
-    for user in user_prediction_distr[label]:
-      for ai_set in ai_datasets:
-        if ai_set in user and "GitHub" in user:
-          dp = [
-            user["GitHub"]["predictions"]["human"] / (user["GitHub"]["predictions"]["human"] + user["GitHub"]["predictions"]["robot"]),
-            user[ai_set]["predictions"]["robot"] / (user[ai_set]["predictions"]["robot"] + user[ai_set]["predictions"]["human"])
-          ]
-          if ai_set not in correlation_data[label]:
-            correlation_data[label][ai_set] = {
-              'data': [dp],
-              'names': [""],
-            }
-          else:
-            correlation_data[label][ai_set]['data'].append(dp)
-            correlation_data[label][ai_set]['names'].append("")
+  correlation_data_steps = {}
+  num_predictions = 2
+  while True:
+    correlation_data = {
+      "engineer": {ai: {'data': [], 'names': [], 'frequency': []} for ai in ai_datasets},
+      "non-engineer": {ai: {'data': [], 'names': [], 'frequency': []} for ai in ai_datasets}
+      ,
+    }
+    keep_looping = False
+    for label in labels.keys():
+      for user in user_prediction_distr[label]:
+        total = sum([x['predictions']['human'] + x['predictions']['robot'] for x in user.values()])
+        for ai_set in ai_datasets:
+          if ai_set in user and "GitHub" in user and total >= num_predictions:
+            keep_looping = True
+            dp = [
+              user["GitHub"]["predictions"]["human"] / (user["GitHub"]["predictions"]["human"] + user["GitHub"]["predictions"]["robot"]),
+              user[ai_set]["predictions"]["robot"] / (user[ai_set]["predictions"]["robot"] + user[ai_set]["predictions"]["human"])
+            ]
+            # if ai_set not in correlation_data[label]:
+            #   correlation_data[label][ai_set] = {
+            #     'data': [dp],
+            #     'names': [""],
+            #     'frequency': [1],
+            #   }
+            # else:
+            if dp in correlation_data[label][ai_set]['data']:
+              idx = correlation_data[label][ai_set]['data'].index(dp)
+              correlation_data[label][ai_set]['frequency'][idx] += 1
+            else:
+              correlation_data[label][ai_set]['data'].append(dp)
+              correlation_data[label][ai_set]['names'].append("")
+              correlation_data[label][ai_set]['frequency'].append(1)
+    if not keep_looping:
+      break
+    else:
+      correlation_data_steps[num_predictions] = correlation_data
+      num_predictions += 1
 
-  for label, ai_sets in correlation_data.items():
+  for label in correlation_data.keys():
     correlation_data = {
       "x=y": {
         'data': [[x/100, x/100] for x in range(0, 105, 5)],
-        'names': [[""] for x in range(0, 105, 5)]
+        'names': [[""] for x in range(0, 105, 5)],
+        'frequency': [1 for x in range(0, 105, 5)]
       }
     }
-    cov_corrs = {
-      'covariance': ([], []),
-      'correlation': ([], []),
-    }
-    ai_sets.update(correlation_data)
+    step_cov_corrs = {}
+    for step in correlation_data_steps.keys():
+      if len([x for y in correlation_data_steps[step][label].values() for x in y['data']]) > 0:
+        correlation_data_steps[step][label].update(correlation_data)
     """
     Print the distribution of scores on AI given scores on Github.
     """
-    plotter.GroupScatterPlot(
-      ai_sets,
+    plotter.SliderGroupScatterPlot(
+      {
+        s: v[label]
+        for s, v in correlation_data_steps.items()
+        if len([x for y in v[label].values() for x in y['data']]) > 0
+      },
       "AI_vs_Human_correlation",
       path = workspace / "score_correlation" / label / "scatter",
       x_name = "Score on GitHub",
@@ -159,7 +180,7 @@ def HumanLikenessAnalysis(**kwargs) -> None:
       **kwargs,
     )
     averages = {}
-    for name, values in ai_sets.items():
+    for name, values in correlation_data_steps[2][label].items():
       if name == "x=y":
         continue
       averages[name] = {}
@@ -190,32 +211,53 @@ def HumanLikenessAnalysis(**kwargs) -> None:
     """
     Find the covariance and correlation between score on each AI and score on GitHub.
     """
-    for name, values in ai_sets.items():
-      if name == "x=y":
-        continue
-      xx = [x for x, _ in values["data"]]
-      yy = [y for _, y in values["data"]]
-      n = name
-      gitd = distributions.GenericDistribution(
-        [int(100*i) for i in xx],
-        workspace / "score_correlation" / label / "distr",
-        set_name = "score_on_git_with_{}_distr".format(n)
-      )
-      aid = distributions.GenericDistribution(
-        [int(i*100) for i in yy],
-        workspace / "score_correlation" / label / "distr",
-        set_name = "score_on_{}_distr".format(n)
-      )
-      gitd.plot()
-      aid.plot()
-      (aid - gitd).plot()
-      cov_corrs['covariance'][0].append(n)
-      cov_corrs['covariance'][1].append(gitd.cov(aid))
-      cov_corrs['correlation'][0].append(n)
-      cov_corrs['correlation'][1].append(gitd.corr(aid))
-    plotter.GrouppedBars(
-      cov_corrs,
-      plot_name = "Cov_Corr_AI_vs_Human",
+    for step_id, corr_data in correlation_data_steps.items():
+      step_cov_corrs[step_id] = {
+        'covariance': ([], []),
+        'correlation': ([], []),
+      }
+      for name, values in corr_data[label].items():
+        if name == "x=y":
+          continue
+        xx = [x for x, _ in values["data"]]
+        yy = [y for _, y in values["data"]]
+        n = name
+        if len(xx) > 0 and len(yy) > 0:
+          gitd = distributions.GenericDistribution(
+            [int(100*i) for i in xx],
+            workspace / "score_correlation" / label / "distr",
+            set_name = "score_on_git_with_{}_distr".format(n)
+          )
+          aid = distributions.GenericDistribution(
+            [int(i*100) for i in yy],
+            workspace / "score_correlation" / label / "distr",
+            set_name = "score_on_{}_distr".format(n)
+          )
+          # gitd.plot()
+          # aid.plot()
+          # (aid - gitd).plot()
+          step_cov_corrs[step_id]['covariance'][0].append(n)
+          step_cov_corrs[step_id]['covariance'][1].append(gitd.cov(aid))
+          step_cov_corrs[step_id]['correlation'][0].append(n)
+          step_cov_corrs[step_id]['correlation'][1].append(gitd.corr(aid))
+
+    plotter.SliderGrouppedBars(
+      {
+        k: {'covariance': v['covariance']}
+        for k, v in step_cov_corrs.items()
+        if len(v['covariance'][0]) > 0
+      },
+      plot_name = "Cov_AI_vs_Human",
+      path = workspace / "score_correlation" / label / "stats",
+      **kwargs,
+    )
+    plotter.SliderGrouppedBars(
+      {
+        k: {'correlation': v['correlation']}
+        for k, v in step_cov_corrs.items()
+        if len(v['correlation'][0]) > 0
+      },
+      plot_name = "Corr_AI_vs_Human",
       path = workspace / "score_correlation" / label / "stats",
       **kwargs,
     )

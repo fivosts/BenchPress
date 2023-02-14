@@ -398,7 +398,10 @@ class GenericDistribution(Distribution):
     """
     Compute correlation factor between two distributions.
     """
-    return self.cov(d) / (self.standard_deviation * d.standard_deviation)
+    try:
+      return self.cov(d) / (self.standard_deviation * d.standard_deviation)
+    except ZeroDivisionError:
+      return math.inf
 
   def __ge__(self, v: int) -> float:
     """
