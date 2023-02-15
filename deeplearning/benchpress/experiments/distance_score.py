@@ -91,20 +91,26 @@ def KAverageScore(**kwargs) -> None:
       groups[dbg.group_name][2].append([s for s, _, _ in src_distances[:top_k]])
 
   averages = {}
+  abs_average = {}
   counters = {}
   for group_name, tup in groups.items():
     bench_names, raw_dists, _ = tup
     averages[group_name] = 0.0
+    abs_average[group_name] = 0.0
     counters[group_name] = 0
     for idx, (bench_name, raw_dist) in enumerate(zip(bench_names, raw_dists)):
       groups[group_name][1][idx] = 100 * ( (target_origin_dists[bench_name] - raw_dist ) / target_origin_dists[bench_name])
       averages[group_name] += ( (target_origin_dists[bench_name] - raw_dist ) / target_origin_dists[bench_name])
+      abs_average[group_name] += raw_dist
       if ( (target_origin_dists[bench_name] - raw_dist ) / target_origin_dists[bench_name]) == 1.0:
         counters[group_name] += 1
     averages[group_name] = averages[group_name] / len(bench_names)
+    abs_average[group_name] = abs_average[group_name] / len(bench_names)
 
-  l.logger().info(averages)
-  l.logger().info(counters)
+  l.logger().info(feature_space)
+  l.logger().info("Average euclidean distance:\n{}".format(abs_average))
+  l.logger().info("Average relative proxmity:\n{}".format(averages))
+  l.logger().info("Exact target feature matches: {}".format(counters))
   plotter.GrouppedBars(
     groups = {dbname: (c[0], c[1]) for dbname, c in groups.items()},
     plot_name = "avg_{}_dist_{}_{}".format(top_k, feature_space.replace("Features", "Features"), '-'.join([dbg.group_name for dbg in db_groups])),
@@ -319,8 +325,21 @@ def GenDistanceDistribution(**kwargs) -> None:
     if len(distrs) == 2:
       diff = distrs[0] - distrs[1]
       stats[target]["likelihood"] = distrs[0] - distrs[1] < 0
+      stats[target]["closer_than_the_minimum"] = distrs[0] <= distrs[1].min
+      stats[target]["closer_than_2"] = distrs[0] <= distrs[1].get_sorted_index(2)
+      stats[target]["closer_than_4"] = distrs[0] <= distrs[1].get_sorted_index(4)
+      stats[target]["closer_than_8"] = distrs[0] <= distrs[1].get_sorted_index(8)
+      stats[target]["closer_than_16"] = distrs[0] <= distrs[1].get_sorted_index(16)
+      stats[target]["closer_than_32"] = distrs[0] <= distrs[1].get_sorted_index(32)
       diff.plot()
 
+  l.logger().info(feature_space)
+  l.logger().info("Avg closer than 1: {}".format(sum([x['closer_than_the_minimum'] for y, x in stats.items()]) / len(stats.keys())))
+  l.logger().info("Avg closer than 2: {}".format(sum([x['closer_than_2'] for y, x in stats.items()]) / len(stats.keys())))
+  l.logger().info("Avg closer than 4: {}".format(sum([x['closer_than_4'] for y, x in stats.items()]) / len(stats.keys())))
+  l.logger().info("Avg closer than 8: {}".format(sum([x['closer_than_8'] for y, x in stats.items()]) / len(stats.keys())))
+  l.logger().info("Avg closer than 16: {}".format(sum([x['closer_than_16'] for y, x in stats.items()]) / len(stats.keys())))
+  l.logger().info("Avg closer than 32: {}".format(sum([x['closer_than_32'] for y, x in stats.items()]) / len(stats.keys())))
   with open(workspace_path / "stats.json", 'w') as outf:
     json.dump(stats, outf, indent = 2)
   return

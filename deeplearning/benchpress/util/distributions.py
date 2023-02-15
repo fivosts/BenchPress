@@ -484,12 +484,7 @@ class GenericDistribution(Distribution):
     """
     Get the smallest 'idx' sample in the population.
     """
-    i = 0
-    for x, s in enumerate(self.distribution):
-      i += s
-      if i >= idx:
-        return x
-    return 
+    return sorted(self.samples)[min(len(self.samples) - 1, idx)]
 
   def pmf_to_pdf(self) -> None:
     """
