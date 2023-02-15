@@ -1,4 +1,4 @@
-workspace: "/var/foivos/results/conditioned_features_results/results/"
+workspace: "/home/fivosts/Desktop/human_likeness"
 ## Bar plots for relative distance wrt Rodinia targets.
 # evaluator {
 #   min_score {
@@ -25,7 +25,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #     target: 'rodinia'
 #     feature_space: 'GreweFeatures'
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "ActiveFeedDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
 #     }
@@ -61,7 +61,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #     target: 'rodinia'
 #     feature_space: 'AutophaseFeatures'
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "ActiveFeedDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/c88e8d7d6707bb5ef1a544c1a71a510fb2b70295/sample_corpus/active_feeds.db"
 #     }
@@ -97,7 +97,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #     target: 'rodinia'
 #     feature_space: 'InstCountFeatures'
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "ActiveFeedDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/db57f2d0e13be8dee233d3ac0473c918ecf28a00/sample_corpus/active_feeds.db"
 #     }
@@ -136,7 +136,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #       showticklabels_y: False
 #     }
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "ActiveFeedDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
 #     }
@@ -174,7 +174,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #       showticklabels_y: False
 #     }
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "ActiveFeedDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/c88e8d7d6707bb5ef1a544c1a71a510fb2b70295/sample_corpus/active_feeds.db"
 #     }
@@ -212,7 +212,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #       showticklabels_y: False
 #     }
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "ActiveFeedDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/db57f2d0e13be8dee233d3ac0473c918ecf28a00/sample_corpus/active_feeds.db"
 #     }
@@ -249,7 +249,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #       titlefont: 56
 #     }
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "SearchCandidateDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/1a7b72ae98d732b45bf2fb76bc3b8da1eb798f29/sample_corpus/evaluated_candidates.db"
 #     }
@@ -285,7 +285,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #       titlefont: 56
 #     }
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "SearchCandidateDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/7253878836e02d088a7f1329936d07fa0aed41bd/sample_corpus/evaluated_candidates.db"
 #     }
@@ -321,7 +321,7 @@ workspace: "/var/foivos/results/conditioned_features_results/results/"
 #       titlefont: 56
 #     }
 #     db_group {
-#       group_name: "BenchPress_directed"
+#       group_name: "BenchDirect"
 #       db_type: "SearchCandidateDatabase"
 #       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/73098aaa7627eafc55383c5a3a8e4d0f96e5ecd2/sample_corpus/evaluated_candidates.db"
 #     }
