@@ -386,23 +386,6 @@ class GenericDistribution(Distribution):
     mul.max_idx = r_idx
     return mul
 
-  def cov(self, d: "GenericDistribution") -> float:
-    """
-    Compute covariance of two distributions.
-    """
-    if self.population_size != d.population_size:
-      raise ValueError("Covariance and correlation can only be computed to 1-1 equal-sized distributions. Or you could take two equal-sized samples.")
-    return sum([(x - self.average)*(y - d.average) for (x, y) in zip(self.population, d.population)]) / self.population_size
-
-  def corr(self, d: "GenericDistribution") -> float:
-    """
-    Compute correlation factor between two distributions.
-    """
-    try:
-      return self.cov(d) / (self.standard_deviation * d.standard_deviation)
-    except ZeroDivisionError:
-      return math.inf
-
   def __ge__(self, v: int) -> float:
     """
     Probability of P[X >= v]
@@ -479,6 +462,34 @@ class GenericDistribution(Distribution):
     that is leftmost, and aligns it with the others.
     """
     return [0] * offset + self.distribution
+
+  def cov(self, d: "GenericDistribution") -> float:
+    """
+    Compute covariance of two distributions.
+    """
+    if self.population_size != d.population_size:
+      raise ValueError("Covariance and correlation can only be computed to 1-1 equal-sized distributions. Or you could take two equal-sized samples.")
+    return sum([(x - self.average)*(y - d.average) for (x, y) in zip(self.population, d.population)]) / self.population_size
+
+  def corr(self, d: "GenericDistribution") -> float:
+    """
+    Compute correlation factor between two distributions.
+    """
+    try:
+      return self.cov(d) / (self.standard_deviation * d.standard_deviation)
+    except ZeroDivisionError:
+      return math.inf
+
+  def get_sorted_index(self, idx: int) -> int:
+    """
+    Get the smallest 'idx' sample in the population.
+    """
+    i = 0
+    for x, s in enumerate(self.distribution):
+      i += s
+      if i >= idx:
+        return x
+    return 
 
   def pmf_to_pdf(self) -> None:
     """
