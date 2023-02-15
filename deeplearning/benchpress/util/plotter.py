@@ -228,7 +228,7 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
         showlegend  = kwargs.get('showlegend', True),
         opacity     = kwargs.get('opacity', 1.0),
         marker      = next(miter) if miter else ({'size': 18} if 'frequency' not in values else None),
-        marker_size = [14*x for x in values['frequency']] if 'frequency' in values else None,
+        marker_size = [14*x for x in values['frequency']] if 'frequency' in values else 18,
         text        = names,
       )
     )
