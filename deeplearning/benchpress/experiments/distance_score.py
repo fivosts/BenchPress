@@ -73,13 +73,17 @@ def KAverageScore(**kwargs) -> None:
       groups[dbg.group_name][0].append(benchmark.name)
       # Find shortest distances.
       if unique_code:
-        get_data = lambda x: dbg.get_unique_data_features(x)
+        raise NotImplementedError
+        get_data = lambda x: dbg.get_unique_data_features(x, target_name = benchmark.full_name)
       else:
         get_data = lambda x: dbg.get_data_features(x)
 
       src_distances = workers.SortedSrcDistances(get_data(feature_space), benchmark.features, feature_space)
       distances = [d for _, _, d in src_distances]
       # Compute target's distance from O(0,0)
+      if len(distances) == 0:
+        l.logger().error("{}-{}: Empty list, make sure this is expected.".format(benchmark.name, dbg.group_name))
+        continue
       assert len(distances) != 0, "Sorted src list for {} is empty!".format(dbg.group_name)
       avg_dist = sum(distances[:top_k]) / top_k
       if benchmark.name in target_origin_dists:
