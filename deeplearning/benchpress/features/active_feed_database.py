@@ -30,6 +30,7 @@ from deeplearning.benchpress.util import crypto
 from deeplearning.benchpress.util import sqlutil
 from deeplearning.benchpress.util import environment
 from deeplearning.benchpress.util import distrib
+from deeplearning.benchpress.util import logging as l
 
 FLAGS = flags.FLAGS
 
@@ -280,12 +281,6 @@ class ActiveFeedDatabase(sqlutil.Database):
       return [x.output_features for x in s.query(ActiveFeed).yield_per(1000)]
 
   @property
-  def get_data_features(self) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
-    """Return tuple of code + feature vectors"""
-    with self.get_session() as s:
-      return [(x.sample, self.DictToRawFeats(x.output_features)) for x in s.query(ActiveFeed).yield_per(1000)]
-
-  @property
   def active_count(self):
     """Number of active samples in DB."""
     with self.get_session() as s:
@@ -301,6 +296,15 @@ class ActiveFeedDatabase(sqlutil.Database):
       return self.Session
     else:
       return self.replicated.Session
+
+  def get_data_features(self, target_name: str = None) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+    """Return tuple of code + feature vectors"""
+    with self.get_session() as s:
+      r = [(x.sample, self.DictToRawFeats(x.output_features)) for x in s.query(ActiveFeed).yield_per(1000) if (target_name is None or target_name in x.target_benchmark)]
+      if len(r) == 0:
+        l.logger().info([target_name])
+        l.logger().error("{} screwed up.".format(target_name))
+      return r
 
   def DictToRawFeats(self, dict_feats: str) -> str:
     """Convert dict based feats to Raw feats"""

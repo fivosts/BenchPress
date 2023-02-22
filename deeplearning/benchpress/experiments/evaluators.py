@@ -110,14 +110,20 @@ class DBGroup(object):
             self.features[feature_space].append(feats[feature_space])
     return self.features[feature_space]
 
-  def get_data_features(self, feature_space: str, use_mp = True) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
+  def get_data_features(self, feature_space: str, use_mp = True, target_name: str = None) -> typing.List[typing.Tuple[str, typing.Dict[str, float]]]:
     """
     Get or set feature with data list of tuples.
     """
-    if not self.data_features[feature_space]:
+    if not self.data_features[feature_space] or target_name is not None:
       self.data_features[feature_space] = []
       for db in self.databases:
         db_feats = db.get_data_features(self.tokenizer, self.size_limit) if (self.db_type == encoded.EncodedContentFiles or self.db_type == clsmith.CLSmithDatabase) else db.get_data_features
+        if self.db_type in {encoded.EncodedContentFiles, clsmith.CLSmithDatabase}:
+          db_feats = db.get_data_features(self.tokenizer, self.size_limit)
+        elif self.db_type == active_feed_database.ActiveFeedDatabase:
+          db_feats = db.get_data_features(target_name)
+        else:
+          db_feats = db.get_data_features
         if use_mp:
           try:
             pool = multiprocessing.Pool()
@@ -188,10 +194,11 @@ class DBGroup(object):
     return self.unique_data_features[feature_space]
 
 class Benchmark(typing.NamedTuple):
-  path     : pathlib.Path
-  name     : str
-  contents : str
-  features : typing.Dict[str, float]
+  path      : pathlib.Path
+  name      : str
+  full_name : str
+  contents  : str
+  features  : typing.Dict[str, float]
 
 class TargetBenchmarks(object):
   """
@@ -244,12 +251,14 @@ class TargetBenchmarks(object):
           if closest_git[1] == 0:
             continue
         ## Benchmark name shortener.
+        full_name = p.name
         benchmark_name = self.shorten_benchmark_name(p.name)
 
         self.benchmarks[feature_space].append(
           Benchmark(
               p,
               benchmark_name,
+              full_name,
               k,
               features[feature_space],
             )
