@@ -1,41 +1,101 @@
 workspace: "/var/foivos/results/conditioned_features_results/results"
 ## Bar plots for relative distance wrt Rodinia targets.
-# evaluator {
-#   min_score {
-#     plot_config {
-#       title: "Grewe Features"
-#       x_name: ""
-#       showline_x: True
-#       showline_y: True
-#       linewidth: 2
-#       linecolor: "black"
-#       showgrid_x: False
-#       showgrid_y: False
-#       bg_color: "white"
-#       gridcolor_x: "gray"
-#       gridcolor_y: "gray"
-#       gridwidth: 1
-#       height: 480
-#       width: 1856
-#       tickfont: 20
-#       legendfont: 20
-#       titlefont: 32
-#       x_tickangle: 70
-#     }
-#     target: 'rodinia'
-#     feature_space: 'GreweFeatures'
-#     db_group {
-#       group_name: "BenchDirect"
-#       db_type: "ActiveFeedDatabase"
-#       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
-#     }
-#     db_group {
-#       group_name: "BenchPress"
-#       db_type: "ActiveFeedDatabase"
-#       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/151d0798850577700175ead8f40fe56b0384c44d/sample_corpus/active_feeds.db"
-#     }
-#   }
-# }
+evaluator {
+  min_score {
+    plot_config {
+      title: "Grewe Features"
+      x_name: ""
+      showline_x: True
+      showline_y: True
+      linewidth: 2
+      linecolor: "black"
+      showgrid_x: False
+      showgrid_y: False
+      bg_color: "white"
+      gridcolor_x: "gray"
+      gridcolor_y: "gray"
+      gridwidth: 1
+      height: 480
+      width: 1856
+      tickfont: 20
+      legendfont: 20
+      titlefont: 32
+      x_tickangle: 70
+    }
+    target: 'rodinia'
+    feature_space: 'GreweFeatures'
+    db_group {
+      group_name: "BenchDirect"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_1024"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/307976a873381406346a930673358123a6c3b9b6/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/a9380c78506d676b0b5bf1684262278f75592fa2/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/4343646f97994d41653b27c12327949f0a4ecfec/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/8cad998794a18400a599e65c045073c94b3ddd09/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/de5999904d20f124bfeefa3ad4a62b33d994410d/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/73989d31565affcc2e0ca978e5f34affa99f2e8e/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/151d0798850577700175ead8f40fe56b0384c44d/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_1024"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/f13c89bfa637d6d57cdefdce2f81918954835e73/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/52604b1cb6db6587ecf14a2af7dca4a2b7a7af70/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/296f0228715ad973ea616394153e08fa4567abd4/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/d4792eeba0a75ff9d83044e0f0f1413a976e7295/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/386779f5e536d20993f4e1a4c3a2cfad6a1f73b1/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/b16218c2885a99898b932ca83a572a5b89343bbb/sample_corpus/active_feeds.db"
+    }
+  }
+}
 evaluator {
   min_score {
     plot_config {
@@ -72,9 +132,64 @@ evaluator {
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/212f48aae652cb03ac54b63f9511568bea8360ad/sample_corpus/active_feeds.db"
     }
     db_group {
+      group_name: "BenchDirect_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/050a86d8c7464433c9736125403049dbf9662ce2/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/826cfa68fdb8e98cfb370170c2bc340275ce15f8/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/e13e0c3d7d9381ae57bf41a61be85ed774930547/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/a6e80af742dbe9582f55c705825779f7462719c4/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/f523247ae7f169d01d94e7d315dc9843d369e907/sample_corpus/active_feeds.db"
+    }
+    db_group {
       group_name: "BenchPress"
       db_type: "ActiveFeedDatabase"
       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/1515bcd73b711d75fb2dfabfd49840b244c11b0f/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_1024"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/9ae3780a9a1a74bf6da20951537c37f834add517/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/dbb235ab6ee6aef2c7a664a26b0ac782fa44234e/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/f5d848679c5c0183ce318654beee070366f73daf/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/db58ad1f591b1a7aa3c2a3a2e1c665d38e10b7da/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/f141bb73652088f38dcc8fd1fda8fb9e8e067989/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/3417fac6e18b73627e370cc0e24c669bf80aa5b1/sample_corpus/active_feeds.db"
     }
   }
 }
@@ -113,55 +228,72 @@ evaluator {
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/4c4aad3d97f60e44ae360438b8f25172dac0f425/sample_corpus/active_feeds.db"
     }
     db_group {
+      group_name: "BenchDirect_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/4e5e7a87b931f494f4277814456f8323763b442c/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/f9a093a9b58f2e533f381d06655e00c2733f968c/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/7c93bbad6f72c5a7aa8c97f5783fe39f80572438/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/0d3773b7f966cc93062b5ded99dd20d430983578/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/1711b5c7ecd90e22bcaf97af5bb9ba8cd9e53db7/sample_corpus/active_feeds.db"
+    }
+    db_group {
       group_name: "BenchPress"
       db_type: "ActiveFeedDatabase"
       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/aad4e616e884c71887fd2fe6447e495fee406183/sample_corpus/active_feeds.db"
     }
+    db_group {
+      group_name: "BenchPress_1024"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/5b411224d496170d6d95099c8d278ecde6673eb2/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/0f8bcb29f5d2c0868d73e88cc47c6d6a7cb769d8/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/7d1ab6b376cfecf15f2e25549b2f3aeec623801f/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/58c6c0c07927e2b5bea5f4fb87a7a091bcd7d7d8/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/faab573278f0986250e27a7ff8fe0a8e75612ce2/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/5d2ba02b7e7a63e695ced5b1d590567b57839079/sample_corpus/active_feeds.db"
+    }
   }
 }
 ## History scatter of distance minimization over time.
-# evaluator {
-#   analyze_beam_search {
-#     target: 'rodinia'
-#     feature_space: 'GreweFeatures'
-#     plot_config {
-#       x_name: "#Beam Search (it)"
-#       showline_x: True
-#       showline_y: False
-#       linewidth: 2
-#       linecolor: "black"
-#       showgrid_x: False
-#       showgrid_y: False
-#       bg_color: "white"
-#       gridcolor_x: "gray"
-#       gridcolor_y: "gray"
-#       gridwidth: 1
-#       height: 1024
-#       width: 1280
-#       tickfont: 56
-#       axisfont: 56
-#       legendfont: 48
-#       legend_x: 0.7
-#       legend_y: 0.95
-#       titlefont: 56
-#       showticklabels_y: False
-#     }
-#     db_group {
-#       group_name: "BenchDirect"
-#       db_type: "ActiveFeedDatabase"
-#       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
-#     }
-#     db_group {
-#       group_name: "BenchPress"
-#       db_type: "ActiveFeedDatabase"
-#       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/151d0798850577700175ead8f40fe56b0384c44d/sample_corpus/active_feeds.db"
-#     }
-#   }
-# }
 evaluator {
   analyze_beam_search {
     target: 'rodinia'
-    feature_space: 'AutophaseFeatures'
+    feature_space: 'GreweFeatures'
     plot_config {
       x_name: "#Beam Search (it)"
       showline_x: True
@@ -187,6 +319,104 @@ evaluator {
     db_group {
       group_name: "BenchDirect"
       db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/291077593c56fb4c7b2e0c08d0a866c64379d921/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_1024"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/307976a873381406346a930673358123a6c3b9b6/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/a9380c78506d676b0b5bf1684262278f75592fa2/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/4343646f97994d41653b27c12327949f0a4ecfec/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/8cad998794a18400a599e65c045073c94b3ddd09/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/de5999904d20f124bfeefa3ad4a62b33d994410d/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/73989d31565affcc2e0ca978e5f34affa99f2e8e/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/151d0798850577700175ead8f40fe56b0384c44d/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_1024"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/f13c89bfa637d6d57cdefdce2f81918954835e73/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/52604b1cb6db6587ecf14a2af7dca4a2b7a7af70/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/296f0228715ad973ea616394153e08fa4567abd4/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/d4792eeba0a75ff9d83044e0f0f1413a976e7295/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/386779f5e536d20993f4e1a4c3a2cfad6a1f73b1/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/b16218c2885a99898b932ca83a572a5b89343bbb/sample_corpus/active_feeds.db"
+    }
+  }
+}
+evaluator {
+  analyze_beam_search {
+    target: 'rodinia'
+    plot_config {
+      x_name: "#Beam Search (it)"
+      showline_x: True
+      showline_y: False
+      linewidth: 2
+      linecolor: "black"
+      showgrid_x: False
+      showgrid_y: False
+      bg_color: "white"
+      gridcolor_x: "gray"
+      gridcolor_y: "gray"
+      gridwidth: 1
+      height: 1024
+      width: 1280
+      tickfont: 56
+      axisfont: 56
+      legendfont: 48
+      legend_x: 0.7
+      legend_y: 0.95
+      titlefont: 56
+      showticklabels_y: False
+    }
+    feature_space: 'AutophaseFeatures'
+    db_group {
+      group_name: "BenchDirect"
+      db_type: "ActiveFeedDatabase"
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/c88e8d7d6707bb5ef1a544c1a71a510fb2b70295/sample_corpus/active_feeds.db"
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/212f48aae652cb03ac54b63f9511568bea8360ad/sample_corpus/active_feeds.db"
     }
@@ -196,9 +426,64 @@ evaluator {
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/212f48aae652cb03ac54b63f9511568bea8360ad/sample_corpus/active_feeds.db"
     }
     db_group {
+      group_name: "BenchDirect_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/050a86d8c7464433c9736125403049dbf9662ce2/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/826cfa68fdb8e98cfb370170c2bc340275ce15f8/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/e13e0c3d7d9381ae57bf41a61be85ed774930547/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/a6e80af742dbe9582f55c705825779f7462719c4/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/f523247ae7f169d01d94e7d315dc9843d369e907/sample_corpus/active_feeds.db"
+    }
+    db_group {
       group_name: "BenchPress"
       db_type: "ActiveFeedDatabase"
       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/1515bcd73b711d75fb2dfabfd49840b244c11b0f/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_1024"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/9ae3780a9a1a74bf6da20951537c37f834add517/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/dbb235ab6ee6aef2c7a664a26b0ac782fa44234e/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/f5d848679c5c0183ce318654beee070366f73daf/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/db58ad1f591b1a7aa3c2a3a2e1c665d38e10b7da/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/f141bb73652088f38dcc8fd1fda8fb9e8e067989/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/3417fac6e18b73627e370cc0e24c669bf80aa5b1/sample_corpus/active_feeds.db"
     }
   }
 }
@@ -239,9 +524,64 @@ evaluator {
       database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/4c4aad3d97f60e44ae360438b8f25172dac0f425/sample_corpus/active_feeds.db"
     }
     db_group {
+      group_name: "BenchDirect_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/4e5e7a87b931f494f4277814456f8323763b442c/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/f9a093a9b58f2e533f381d06655e00c2733f968c/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/7c93bbad6f72c5a7aa8c97f5783fe39f80572438/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/0d3773b7f966cc93062b5ded99dd20d430983578/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchDirect_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/directed_workspace/AST/sampler/1711b5c7ecd90e22bcaf97af5bb9ba8cd9e53db7/sample_corpus/active_feeds.db"
+    }
+    db_group {
       group_name: "BenchPress"
       db_type: "ActiveFeedDatabase"
       database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/aad4e616e884c71887fd2fe6447e495fee406183/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_1024"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/5b411224d496170d6d95099c8d278ecde6673eb2/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_512"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/0f8bcb29f5d2c0868d73e88cc47c6d6a7cb769d8/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_256"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/7d1ab6b376cfecf15f2e25549b2f3aeec623801f/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_128"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/58c6c0c07927e2b5bea5f4fb87a7a091bcd7d7d8/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_64"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/faab573278f0986250e27a7ff8fe0a8e75612ce2/sample_corpus/active_feeds.db"
+    }
+    db_group {
+      group_name: "BenchPress_32"
+      db_type: "ActiveFeedDatabase"
+      database: "/var/foivos/results/conditioned_features_results/undirected_workspace/AST/sampler/5d2ba02b7e7a63e695ced5b1d590567b57839079/sample_corpus/active_feeds.db"
     }
   }
 }
