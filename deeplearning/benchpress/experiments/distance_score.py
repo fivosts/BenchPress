@@ -121,6 +121,58 @@ def KAverageScore(**kwargs) -> None:
     path = workspace_path,
     **plot_config if plot_config else {},
   )
+  """
+  ## Grewe
+  groups["BenchDirect"]['data'] = [[267*2048, 73.56], [266*1024, 77.79], [512*290, 81.56], [256*289, 82.94], [128*272, 85.30], [64*282, 87.62], [32*151, 96.24]]
+  groups["BenchPress"]['data'] = [[2048*286, 76.79], [1024*306, 83.62], [512*325, 88.27], [256*326, 91.47], [128*333, 95.53], [64*338, 97.30], [32*236, 99.13]]
+
+  groups["BenchDirect"]['names'] = [2048, 1024, 512, 256, 128, 64, 32]
+  groups["BenchPress"]['names'] = [2048, 1024, 512, 256, 128, 64, 32]
+
+  time_speedup = [100*abs(round((x[0]-y[0])) / y[0]) for x, y in zip(groups["BenchDirect"]["data"], groups["BenchPress"]["data"])]
+  acc_speedup = [100*abs(round((x[1]-y[1])) / y[1]) for x, y in zip(groups["BenchDirect"]["data"], groups["BenchPress"]["data"])]
+
+  time_speedup = [[x, y] for x, y in zip([2048, 1024, 512, 256, 128, 64, 32], time_speedup)]
+  acc_speedup = [[x, y] for x, y in zip([2048, 1024, 512, 256, 128, 64, 32], acc_speedup)]
+
+  print(time_speedup)
+  print(acc_speedup)
+
+  plt.GroupScatterPlot(groups, plot_name="grewe")
+  plt.GroupScatterPlot({"time_speedup": {'data': time_speedup, 'names': []}, "accuracy_improvement": {'data': acc_speedup, 'names': []}}, plot_name="grewe_speedup")
+
+  ## Autophase
+  groups["BenchDirect"]['data'] = [[262*2048, 41.02], [262*1024, 44.7], [512*267, 52.36], [256*262, 54.60], [128*254, 58.02], [64*230, 61.09], [32*164, 83.59]]
+  groups["BenchPress"]['data'] = [[2048*292, 48.88], [1024*297, 50.84], [512*302, 57.38], [256*307, 57.63], [128*312, 71.32], [64*312, 74.27], [32*254, 83.59]]
+
+  time_speedup = [100*abs(round((x[0]-y[0])) / y[0]) for x, y in zip(groups["BenchDirect"]["data"], groups["BenchPress"]["data"])]
+  acc_speedup = [100*abs(round((x[1]-y[1])) / y[1]) for x, y in zip(groups["BenchDirect"]["data"], groups["BenchPress"]["data"])]
+
+  time_speedup = [[x, y] for x, y in zip([2048, 1024, 512, 256, 128, 64, 32], time_speedup)]
+  acc_speedup = [[x, y] for x, y in zip([2048, 1024, 512, 256, 128, 64, 32], acc_speedup)]
+
+  print(time_speedup)
+  print(acc_speedup)
+
+  plt.GroupScatterPlot(groups, plot_name="autophase")
+  plt.GroupScatterPlot({"time_speedup": {'data': time_speedup, 'names': []}, "accuracy_improvement": {'data': acc_speedup, 'names': []}}, plot_name="autophase_speedup")
+
+  ## Instcount
+  groups["BenchDirect"]['data'] = [[252*2048, 30.73], [257*1024, 34.36], [512*262, 36.32], [256*259, 39.89], [128*265, 41.96], [64*257, 46.21], [32*163, 48.33]]
+  groups["BenchPress"]['data'] = [[2048*301, 32.63], [1024*307, 40.09], [512*302, 40.49], [256*307, 52.89], [128*307, 56.41], [64*312, 57.77], [32*208, 69.11]]
+
+  time_speedup = [100*abs(round((x[0]-y[0])) / y[0]) for x, y in zip(groups["BenchDirect"]["data"], groups["BenchPress"]["data"])]
+  acc_speedup = [100*abs(round((x[1]-y[1])) / y[1]) for x, y in zip(groups["BenchDirect"]["data"], groups["BenchPress"]["data"])]
+
+  time_speedup = [[x, y] for x, y in zip([2048, 1024, 512, 256, 128, 64, 32], time_speedup)]
+  acc_speedup = [[x, y] for x, y in zip([2048, 1024, 512, 256, 128, 64, 32], acc_speedup)]
+
+  print(time_speedup)
+  print(acc_speedup)
+
+  plt.GroupScatterPlot(groups, plot_name="instcount")
+  plt.GroupScatterPlot({"time_speedup": {'data': time_speedup, 'names': []}, "accuracy_improvement": {'data': acc_speedup, 'names': []}}, plot_name="instcount_speedup")
+  """
   return groups
 
 @public.evaluator
@@ -212,7 +264,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     ## Benchmark characterization.
     plotter.GrouppedRadar(
       groups    = radar_features,
-      plot_name = "feeds_radar_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
+      plot_name = "feeds_radar_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name.replace("BenchPress", "BP").replace("BenchDirect", "BD") for dbg in db_groups])),
       path      = workspace_path / "radar",
       title     = benchmark.name,
       # **plot_config if plot_config else {},
@@ -220,7 +272,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
     ## Score convergence per generation.
     plotter.GroupScatterPlot(
       groups    = generations_score,
-      plot_name = "Beam_generation_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name for dbg in db_groups])),
+      plot_name = "Beam_generation_{}_{}_{}".format(feature_space, benchmark.name, '-'.join([dbg.group_name.replace("BenchPress", "BP").replace("BenchDirect", "BD") for dbg in db_groups])),
       path      = workspace_path / "scatter",
       mode      = "lines+markers",
       title     = "{}, {}".format(feature_space, benchmark.name),
@@ -233,7 +285,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
         [x['zero_distance'] for x in stats.values()],
       )
     },
-    plot_name = "zero_distances_{}_{}".format(feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
+    plot_name = "zero_distances_{}_{}".format(feature_space, '-'.join([dbg.group_name.replace("BenchPress", "BP").replace("BenchDirect", "BD") for dbg in db_groups])),
     path = workspace_path / "stats",
     # **plot_config if plot_config else {},
   )
@@ -244,7 +296,7 @@ def AnalyzeBeamSearch(**kwargs) -> None:
         [x['total_epochs'] for x in stats.values()],
       )
     },
-    plot_name = "total_epochs_{}_{}".format(feature_space, '-'.join([dbg.group_name for dbg in db_groups])),
+    plot_name = "total_epochs_{}_{}".format(feature_space, '-'.join([dbg.group_name.replace("BenchPress", "BP").replace("BenchDirect", "BD") for dbg in db_groups])),
     path = workspace_path / "stats",
     **plot_config if plot_config else {},
   )
