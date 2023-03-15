@@ -89,7 +89,6 @@ def _get_generic_figure(**kwargs) -> go.Layout:
              tickfont  = dict(size = tickfont),
              titlefont = dict(size = axisfont),
              showticklabels = showticklabels_y,
-             rangemode="tozero"
           )
   xaxis = dict(
             title     = x_name,     showgrid = showgrid_x,
@@ -99,11 +98,12 @@ def _get_generic_figure(**kwargs) -> go.Layout:
             tickfont  = dict(size = tickfont),
             titlefont = dict(size = axisfont),
             showticklabels = showticklabels_x,
+             rangemode="tozero"
           )
   layout = go.Layout(
     plot_bgcolor = bg_color,
     margin       = margin,
-    legend       = dict(x = legend_x, y = legend_y, traceorder = traceorder, font = dict(size = legendfont)),
+    legend       = dict(x = legend_x, y = legend_y, bgcolor = 'rgba(0,0,0,0)', traceorder = traceorder, font = dict(size = legendfont)),
     title        = title,
     xaxis        = xaxis,
     yaxis        = yaxis,
@@ -224,12 +224,15 @@ def GroupScatterPlot(groups       : typing.Dict[str, typing.Dict[str, list]],
       go.Scatter(
         x = feats[:,0], y = feats[:,1],
         name = group,
-        mode = kwargs.get('mode', 'markers'),
+        mode = kwargs.get('mode', 'lines+markers+text' if len(names) > 0 else "lines+markers"),
         showlegend  = kwargs.get('showlegend', True),
         opacity     = kwargs.get('opacity', 1.0),
-        marker      = next(miter) if miter else ({'size': 18} if 'frequency' not in values else None),
-        marker_size = [14*x for x in values['frequency']] if 'frequency' in values else 18,
+        marker      = next(miter) if miter else ({'size': 8} if 'frequency' not in values else None),
+        marker_size = [14*x for x in values['frequency']] if 'frequency' in values else 8,
         text        = names,
+        line_shape='spline',
+        textposition = "top center",
+        textfont = dict(size = 16),
       )
     )
   _write_figure(fig, plot_name, path, **kwargs)
